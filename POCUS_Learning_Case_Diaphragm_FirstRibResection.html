@@ -255,9 +255,28 @@ footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line);
   body { font-size: 17px; }
   .hint { display: none; }
 }
+
+/* top nav */
+.topnav{position:sticky;top:0;z-index:100;background:var(--paper);border-bottom:2px solid var(--ink);
+  font-family:var(--sans);}
+.topnav-inner{max-width:980px;margin:0 auto;padding:0 40px;display:flex;gap:0;}
+.topnav a{display:inline-block;padding:14px 20px;font-size:12.5px;letter-spacing:.14em;
+  text-transform:uppercase;font-weight:700;color:var(--ink-soft);text-decoration:none;
+  border-bottom:3px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s;}
+.topnav a:hover{color:var(--petrol);}
+@media (max-width:560px){.topnav-inner{padding:0 12px;}.topnav a{padding:12px 14px;}}
 </style>
 </head>
 <body>
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <a href="index.html">Home</a>
+    <a href="index.html#about">About</a>
+    <a href="index.html#resources">Resources</a>
+  </div>
+</nav>
+
 <div class="wrap">
 
   <header class="masthead">
