@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>POCUS Learning Case &mdash; Optic Nerve Sheath Diameter &amp; Post-Dural Puncture Headache</title>
+<style>
+:root {
+  --ink: #1c2b2e;
+  --ink-soft: #3d5256;
+  --teal: #14595c;
+  --teal-bright: #1f7d80;
+  --rust: #b45309;
+  --rust-deep: #9a4708;
+  --paper: #f6f1e7;
+  --paper-card: #fffdf8;
+  --line: #d8cfbe;
+  --line-soft: #e7dfce;
+  --crisis: #8c2f2a;
+  --crisis-bg: #f7e9e6;
+  --shadow: 0 1px 2px rgba(28,43,46,.06), 0 8px 24px rgba(28,43,46,.06);
+  --serif: "Iowan Old Style","Palatino Linotype","Palatino","Georgia",serif;
+  --sans: "Helvetica Neue","Segoe UI",Arial,sans-serif;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 18px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 880px; margin: 0 auto; padding: 0 40px 120px; }
+
+/* ---- Masthead ---- */
+header.masthead {
+  padding: 64px 0 28px;
+  border-bottom: 3px solid var(--ink);
+  margin-bottom: 8px;
+}
+.kicker {
+  font-family: var(--sans);
+  font-weight: 600;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  font-size: 13px;
+  color: var(--teal);
+  margin: 0 0 14px;
+}
+h1.title {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: clamp(30px, 5vw, 46px);
+  line-height: 1.05;
+  letter-spacing: -.01em;
+  margin: 0 0 18px;
+  color: var(--ink);
+}
+.byline {
+  font-style: italic;
+  font-size: 17px;
+  color: var(--ink-soft);
+  margin: 0;
+}
+.byline strong { font-style: normal; font-weight: 600; color: var(--teal); }
+
+
+/* ---- Sections ---- */
+section.block { margin: 40px 0 0; }
+h2.section {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 27px;
+  letter-spacing: -.01em;
+  color: var(--teal);
+  margin: 0 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.part-tag {
+  display: inline-block;
+  font-family: var(--sans); font-weight: 600;
+  font-size: 12px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--paper-card); background: var(--teal);
+  padding: 5px 12px; border-radius: 4px; margin-bottom: 16px;
+}
+ul { margin: 10px 0 16px; padding-left: 0; list-style: none; }
+ul li { position: relative; padding-left: 26px; margin: 9px 0; }
+ul li::before {
+  content: ""; position: absolute; left: 6px; top: .68em;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--rust);
+}
+p { margin: 12px 0; }
+h4 {
+  font-family: var(--sans); font-weight: 600;
+  font-size: 19px; color: var(--ink);
+  margin: 22px 0 6px;
+}
+
+/* ---- Vignette cards ---- */
+.vignette {
+  background: linear-gradient(180deg, var(--paper-card), #fbf7ee);
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--teal);
+  border-radius: 10px;
+  padding: 22px 26px;
+  box-shadow: var(--shadow);
+  margin: 18px 0 8px;
+}
+.vignette.crisis { border-left-color: var(--crisis); background: linear-gradient(180deg, #fffaf8, var(--crisis-bg)); }
+.vignette .vh {
+  font-family: var(--sans); font-weight: 600;
+  letter-spacing: .03em; font-size: 14px; text-transform: uppercase;
+  color: var(--teal); margin: 0 0 10px;
+}
+.vignette.crisis .vh { color: var(--crisis); }
+.vignette p { margin: 8px 0; }
+
+/* ---- Questions / collapsible answers ---- */
+section.qa { margin: 30px 0; }
+h3.q {
+  font-family: var(--sans); font-weight: 600;
+  font-size: 21px; line-height: 1.3; color: var(--ink);
+  margin: 0 0 0; padding: 0;
+}
+.qnum {
+  display: block;
+  font-size: 12px; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--rust-deep); font-weight: 700; margin-bottom: 5px;
+}
+details.answer {
+  margin: 12px 0 0;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  background: var(--paper-card);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+details.answer > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 18px;
+  font-family: var(--sans); font-weight: 600;
+  color: var(--teal);
+  background: linear-gradient(180deg, #fffefb, #f3ede1);
+  user-select: none;
+  transition: background .2s ease;
+}
+details.answer > summary::-webkit-details-marker { display: none; }
+details.answer > summary:hover { background: #efe8da; }
+.reveal { font-size: 16px; letter-spacing: .02em; }
+.reveal::before {
+  content: "\25B6"; display: inline-block; margin-right: 10px;
+  font-size: 11px; color: var(--rust); transition: transform .25s ease;
+  transform: translateY(-1px);
+}
+details.answer[open] .reveal::before { transform: rotate(90deg) translateX(-1px); }
+.hint { margin-left: auto; font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 13px; color: var(--ink-soft); opacity: .8; }
+.answer-body { padding: 6px 22px 20px; animation: fade .35s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+/* ---- Tables ---- */
+figure.tbl { margin: 18px 0; overflow-x: auto; }
+table {
+  width: 100%; border-collapse: collapse; font-size: 15.5px; line-height: 1.5;
+  background: var(--paper-card); border: 1px solid var(--line);
+}
+thead th {
+  background: var(--teal); color: #f3efe6;
+  font-family: var(--sans); font-weight: 600; font-size: 14px;
+  text-align: left; padding: 10px 13px; letter-spacing: .01em;
+  border-right: 1px solid rgba(255,255,255,.12);
+}
+tbody td { padding: 10px 13px; border-top: 1px solid var(--line-soft); border-right: 1px solid var(--line-soft); vertical-align: top; }
+tbody tr:nth-child(even) { background: #faf6ec; }
+figure.tbl figcaption { font-style: italic; font-size: 14px; color: var(--ink-soft); margin-top: 8px; }
+
+/* ---- Figures ---- */
+figure.img { margin: 22px 0; text-align: center; }
+figure.img img {
+  max-width: 100%; height: auto; border-radius: 8px;
+  border: 1px solid var(--line); box-shadow: var(--shadow);
+}
+figure.img svg { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--line); box-shadow: var(--shadow); background: var(--paper-card); }
+.figtitle { font-family: var(--sans); font-weight: 600; font-size: 16px; color: var(--ink); margin-bottom: 10px; }
+.figdesc { font-style: italic; font-size: 14.5px; color: var(--ink-soft); margin-top: 10px; text-align: left; }
+.attr { font-size: 12.5px; color: var(--ink-soft); opacity: .85; margin-top: 6px; }
+.attr a, .ref-list a { color: var(--teal-bright); }
+
+/* ---- Figure placeholder (swap in your own image) ---- */
+.imgslot {
+  border: 2px dashed #c7bfae; border-radius: 8px; background: repeating-linear-gradient(45deg,#fbf9f3,#fbf9f3 12px,#f4eee1 12px,#f4eee1 24px);
+  padding: 34px 20px; color: #8a8170; font-family: var(--sans); font-size: 14px; text-align: center;
+}
+
+/* ---- Callout / pearl ---- */
+.pearl {
+  background: linear-gradient(180deg, #fff8ec, #fbeed4);
+  border: 1px solid #e6c98c; border-left: 5px solid var(--rust);
+  border-radius: 10px; padding: 16px 20px; margin: 20px 0;
+}
+.pearl-label {
+  display: block; font-family: var(--sans); font-weight: 700;
+  font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--rust-deep); margin-bottom: 6px;
+}
+
+/* ---- Evidence badge ---- */
+.evgrade {
+  display:inline-block; font-family:var(--sans); font-weight:700; font-size:11px;
+  letter-spacing:.08em; text-transform:uppercase; padding:3px 9px; border-radius:20px;
+  border:1px solid var(--line); color:var(--teal); background:#eef4ec; margin-left:4px;
+}
+
+/* ---- References ---- */
+.ref-list { list-style: none; counter-reset: r; padding-left: 0; font-size: 15px; line-height: 1.5; }
+.ref-list li { counter-increment: r; position: relative; padding-left: 34px; margin: 12px 0; }
+.ref-list li::before {
+  content: counter(r) "."; position: absolute; left: 0; top: 0;
+  font-family: var(--sans); font-weight: 700; color: var(--rust-deep);
+}
+.ref-title { font-weight: 600; }
+.ref-detail { color: var(--ink-soft); }
+.ref-list a { word-break: break-all; font-size: 13px; }
+
+footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); font-style: italic; font-size: 14px; color: var(--ink-soft); }
+
+@media print {
+  details.answer { box-shadow: none; }
+  details.answer[open] .answer-body { animation: none; }
+}
+@media (max-width: 560px) {
+  body { font-size: 17px; }
+  .hint { display: none; }
+}
+
+/* top nav */
+.topnav{position:sticky;top:0;z-index:100;background:var(--paper);border-bottom:2px solid var(--ink);
+  font-family:var(--sans);}
+.topnav-inner{max-width:980px;margin:0 auto;padding:0 40px;display:flex;gap:0;}
+.topnav a{display:inline-block;padding:14px 20px;font-size:12.5px;letter-spacing:.14em;
+  text-transform:uppercase;font-weight:700;color:var(--ink-soft);text-decoration:none;
+  border-bottom:3px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s;}
+.topnav a:hover{color:var(--teal);}
+@media (max-width:560px){.topnav-inner{padding:0 12px;}.topnav a{padding:12px 14px;}}
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <a href="index.html">Home</a>
+    <a href="index.html#about">About</a>
+    <a href="index.html#resources">Resources</a>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="kicker">POCUS Learning Case Series · Perioperative Medicine</p>
+    <h1 class="title">Neuraxial POCUS: Optic Nerve Sheath Diameter and the Post-Dural Puncture Headache</h1>
+    <p class="byline">Case developed by <strong>Raphael Lessard, MD</strong></p>
+  </header>
+
+  <section class="block">
+    <h2 class="section">Learning objectives</h2>
+    <p>By the end of this case, the learner should be able to:</p>
+    <ul>
+      <li>Generate a structured differential diagnosis for postpartum headache and recognize the red-flag features that mandate urgent neuroimaging rather than reassurance.</li>
+      <li>State the major etiologies and approximate incidence of postpartum headache, and describe the clinical features that characterize post-dural puncture headache (PDPH).</li>
+      <li>Explain the anatomical and physiological basis for ultrasonographic optic nerve sheath diameter (ONSD) as a non-invasive surrogate for intracranial pressure, and perform the measurement correctly and safely.</li>
+      <li>Interpret ONSD findings in the specific context of <em>intracranial hypotension</em>, and critically appraise the quality and strength of the current evidence for this application.</li>
+      <li>Outline the evidence-based conservative and interventional management of PDPH &mdash; including the epidural blood patch &mdash; in line with the 2023 multisociety consensus guideline.</li>
+    </ul>
+  </section>
+
+  <p style="font-size:18px;margin:28px 0 0;line-height:1.62;">This case follows a single patient through a two-part clinical scenario. Work through each question before opening the answer key.</p>
+
+  <section class="block">
+    <span class="part-tag">Part I &mdash; The Case</span>
+    <div class="vignette">
+      <p class="vh">Clinical scenario</p>
+      <p>You are the obstetric anesthesiology resident on the postpartum ward. A <strong>29-year-old G1P1 woman</strong>, 24 hours after an uncomplicated spontaneous vaginal delivery at term, asks to be seen for a headache. She had <strong>labour epidural analgesia</strong>; the chart notes a &ldquo;<strong>technically difficult placement at L3&ndash;L4 with one ambiguous loss-of-resistance</strong>&rdquo; before a catheter was sited one interspace higher, with good subsequent analgesia. There was no documented frank cerebrospinal fluid (CSF) return.</p>
+      <p>She describes a <strong>bilateral fronto-occipital headache that began this morning</strong>. It is <strong>mild when she lies flat but becomes severe within a minute or two of sitting or standing</strong>, radiating to the neck. She has associated <strong>neck stiffness, mild photophobia, nausea, and intermittent ringing in the ears</strong>. She is afebrile, normotensive at 118/74 mmHg, with no focal neurological deficit, no visual field loss, and brisk symmetric reflexes. She is breastfeeding and keen to go home.</p>
+    </div>
+
+  <section class="qa">
+    <h3 class="q"><span class="qnum">Question 1</span>Assess this patient. What is your differential diagnosis for a postpartum headache, and what must you not miss?</h3>
+    <details class="answer">
+      <summary><span class="reveal">Answer key</span><span class="hint">click to collapse / expand</span></summary>
+      <div class="answer-body">
+    <ul>
+      <li>Postpartum headache is common &mdash; it affects roughly <strong>one-third to 40% of women in the first week</strong> after delivery &mdash; and the great majority are benign <strong>primary</strong> headaches. The clinical task is to identify the minority with a <strong>dangerous secondary cause</strong>.</li>
+      <li>Approach it as a structured bedside assessment: a focused <strong>history</strong> (headache onset and tempo, <strong>postural character</strong>, prior headaches, the neuraxial record, pre-eclampsia features, fever), a <strong>neurological and fundoscopic exam</strong>, blood pressure, and a deliberate search for <strong>red flags</strong>.</li>
+      <li>This patient&rsquo;s <strong>postural (orthostatic) headache</strong> &mdash; worse upright, relieved supine &mdash; after a difficult epidural with an ambiguous loss-of-resistance points strongly toward <strong>PDPH from intracranial hypotension</strong>, but PDPH is a <strong>diagnosis of exclusion</strong> and the differential must be worked first (Table 1).</li>
+    </ul>
+    <figure class="tbl"><table><thead><tr><th>Category</th><th>Diagnoses</th><th>Discriminating features</th></tr></thead><tbody>
+    <tr><td><strong>Primary (benign)</strong></td><td>Tension-type headache; migraine (with/without aura); &ldquo;exacerbation of pre-existing&rdquo; primary headache.</td><td>Prior similar headaches; non-postural; bilateral pressing (tension) or unilateral throbbing with photophobia/aura (migraine); normal exam.</td></tr>
+    <tr><td><strong>Neuraxial / CSF</strong></td><td><strong>Post-dural puncture headache (PDPH)</strong>; pneumocephalus.</td><td><strong>Postural</strong> headache within 5 days of dural puncture; fronto-occipital; neck stiffness, tinnitus/hypoacusis, photophobia, nausea, occasionally diplopia (CN VI traction).</td></tr>
+    <tr><td><strong>Hypertensive / vascular</strong></td><td><strong>Pre-eclampsia / eclampsia</strong>; posterior reversible encephalopathy syndrome (PRES); reversible cerebral vasoconstriction syndrome (RCVS).</td><td>Hypertension, proteinuria, hyperreflexia, visual scotomata, epigastric pain, seizure; thunderclap headache in RCVS.</td></tr>
+    <tr><td><strong>Intracranial catastrophe</strong></td><td><strong>Cerebral venous sinus thrombosis (CVST)</strong>; subarachnoid / intracerebral hemorrhage; ischemic stroke; subdural hematoma.</td><td>Thunderclap or progressive headache, focal deficit, seizure, depressed consciousness, papilledema; a PDPH that <strong>loses its postural quality</strong> or becomes constant is a warning for subdural hematoma.</td></tr>
+    <tr><td><strong>Infective / other</strong></td><td>Meningitis; sinusitis; caffeine/sleep withdrawal; pituitary apoplexy / Sheehan, lymphocytic hypophysitis.</td><td>Fever, meningism, photophobia; visual-field loss and endocrine features for pituitary causes.</td></tr>
+    </tbody></table><figcaption>Table 1. Differential diagnosis of postpartum headache, grouped from benign to dangerous.</figcaption></figure>
+    <h4>Red flags that mandate urgent imaging rather than reassurance</h4>
+    <ul>
+      <li><strong>Loss of the postural pattern</strong> (a previously orthostatic headache becoming constant), <strong>focal neurology, seizure, altered consciousness, papilledema, thunderclap onset, fever/meningism,</strong> or <strong>hypertension with proteinuria/visual symptoms</strong>.</li>
+      <li>Any of these moves the workup toward <strong>blood pressure/pre-eclampsia evaluation and neuroimaging</strong> (MRI/MRV is preferred where available, given CVST and the radiation considerations of CT in a young woman).</li>
+    </ul>
+    <div class="pearl"><span class="pearl-label">Teaching pearl</span>The single most useful question at the bedside is &ldquo;<em>what happens to the headache when you sit up?</em>&rdquo; A crisp postural pattern after neuraxial anesthesia is the hallmark of PDPH; its <strong>absence, or its loss over time,</strong> should redirect you to the dangerous differential.</div>
+      </div>
+    </details>
+  </section>
+
+  <section class="qa">
+    <h3 class="q"><span class="qnum">Question 2</span>What are the etiologies of postpartum headache, and roughly how common is each? What clinical features define PDPH specifically?</h3>
+    <details class="answer">
+      <summary><span class="reveal">Answer key</span><span class="hint">click to collapse / expand</span></summary>
+      <div class="answer-body">
+    <ul>
+      <li>Across cohorts, <strong>primary headaches dominate</strong> (tension-type and migraine together account for roughly half to three-quarters of cases), but <strong>secondary causes are over-represented in women referred for evaluation</strong>, and these are the ones that carry risk.</li>
+      <li>The frequently-cited distribution below comes from a referral cohort (Stella et al.) and is echoed in subsequent reviews; treat the percentages as <strong>order-of-magnitude</strong> figures that vary with the population and with referral/selection bias, not as fixed numbers (Table 2).</li>
+    </ul>
+    <figure class="tbl"><table><thead><tr><th>Etiology</th><th>Approx. share of postpartum headaches*</th><th>Notes</th></tr></thead><tbody>
+    <tr><td>Tension-type headache</td><td>~39%</td><td>Most common; bilateral, pressing, non-postural.</td></tr>
+    <tr><td>Pre-eclampsia / eclampsia</td><td>~24%</td><td>Over-represented in referral cohorts; always check BP and for proteinuria/HELLP features.</td></tr>
+    <tr><td>Post-dural puncture headache (PDPH)</td><td>~16%</td><td>Postural; follows intentional or unintentional dural puncture.</td></tr>
+    <tr><td>Migraine</td><td>~11%</td><td>Often a flare of pre-existing migraine as oestrogen falls postpartum.</td></tr>
+    <tr><td>Hemorrhage, thrombosis, vasculopathy (e.g. CVST, SAH, RCVS, PRES)</td><td>~10%</td><td>The dangerous minority; disproportionate morbidity. Maintain a low threshold to image.</td></tr>
+    </tbody></table><figcaption>Table 2. Etiology and approximate incidence of postpartum headache. *Referral-cohort figures (Stella et al.; BJA Education review); proportions differ in unselected populations, where primary headaches make up an even larger share.</figcaption></figure>
+    <h4>How common is PDPH after neuraxial anesthesia?</h4>
+    <ul>
+      <li><strong>Unintentional (accidental) dural puncture</strong> complicates roughly <strong>1% (range ~0.4&ndash;1.5%)</strong> of labour epidurals; when it occurs with an epidural (Tuohy) needle, <strong>~50&ndash;80% of those women go on to develop PDPH</strong> because of the large-gauge breach.</li>
+      <li>With modern <strong>pencil-point (atraumatic) spinal needles</strong> the risk after deliberate dural puncture is far lower (often &lt;1&ndash;2%). Younger age, female sex, pregnancy, lower BMI, prior PDPH, and larger/cutting needles all increase risk.</li>
+    </ul>
+    <h4>Defining clinical features of PDPH</h4>
+    <ul>
+      <li><strong>Postural headache</strong> developing within <strong>5 days</strong> of dural puncture &mdash; worse within ~15 minutes of sitting/standing, improving within ~15 minutes of lying flat (ICHD-3 / 2023 consensus framing).</li>
+      <li>Typically <strong>fronto-occipital</strong>, with one or more of: <strong>neck stiffness, tinnitus, hypoacusis, photophobia, nausea</strong>, and occasionally <strong>cranial-nerve signs</strong> (CN VI palsy &rarr; diplopia; rarely CN VII/VIII) from downward traction on pain-sensitive structures as the brain sags.</li>
+      <li>Pathophysiology is <strong>CSF leak &rarr; intracranial hypotension</strong>, with compensatory venous/meningeal distension and caudal traction generating the pain &mdash; the mechanism that ONSD aims to detect.</li>
+    </ul>
+      </div>
+    </details>
+  </section>
+
+  <section class="qa">
+    <h3 class="q"><span class="qnum">Question 3</span>Explain the concept of ultrasonographic optic nerve sheath diameter (ONSD). How is it performed, and how reliable and effective is it?</h3>
+    <details class="answer">
+      <summary><span class="reveal">Answer key</span><span class="hint">click to collapse / expand</span></summary>
+      <div class="answer-body">
+    <h4>The concept &mdash; why the eye reports intracranial pressure</h4>
+    <ul>
+      <li>The optic nerve is an extension of the brain, wrapped in a <strong>dural sheath that is continuous with the intracranial subarachnoid space</strong>. CSF circulates within this sheath, so the sheath behaves like a <strong>pressure-coupled compartment</strong> with the intracranial CSF.</li>
+      <li>When <strong>intracranial pressure rises</strong>, CSF is forced anteriorly and the sheath <strong>distends</strong> &mdash; the basis for ONSD as a non-invasive marker of raised ICP. The relationship runs the <strong>other way</strong> too: when intracranial pressure <strong>falls</strong> (as in a CSF leak / PDPH), the sheath is <strong>less distended / smaller</strong>. The retrobulbar segment, ~3&nbsp;mm behind the globe, is the most distensible and the standard place to measure.</li>
+    </ul>
+    <figure class="img">
+      <p class="figtitle">Figure 1. Principle of the ONSD measurement</p>
+      <svg viewBox="0 0 700 330" role="img" aria-label="Schematic of optic nerve sheath diameter measurement 3 mm behind the globe">
+        <!-- probe -->
+        <rect x="150" y="14" width="120" height="26" rx="4" fill="#14595c"/>
+        <text x="210" y="32" text-anchor="middle" font-family="Helvetica Neue,Arial,sans-serif" font-size="12" fill="#f3efe6" font-weight="700">LINEAR PROBE &gt;10 MHz</text>
+        <polygon points="160,40 260,40 235,60 185,60" fill="#9fc6c4" opacity="0.5"/>
+        <!-- globe -->
+        <circle cx="210" cy="170" r="78" fill="#eaf2f1" stroke="#14595c" stroke-width="2.5"/>
+        <circle cx="172" cy="170" r="20" fill="#cfe0de" stroke="#14595c" stroke-width="1.5"/>
+        <text x="210" y="174" text-anchor="middle" font-family="Iowan Old Style,Georgia,serif" font-size="13" fill="#3d5256" font-style="italic">globe</text>
+        <!-- optic nerve sheath -->
+        <rect x="286" y="146" width="300" height="48" fill="#f3e3cf" stroke="#b45309" stroke-width="2"/>
+        <!-- optic nerve core -->
+        <rect x="286" y="159" width="300" height="22" fill="#e7c8a3" stroke="#9a4708" stroke-width="1.5"/>
+        <text x="470" y="138" text-anchor="middle" font-family="Helvetica Neue,Arial,sans-serif" font-size="12.5" fill="#9a4708" font-weight="700">optic nerve sheath (dural sleeve, CSF-filled)</text>
+        <text x="470" y="174" text-anchor="middle" font-family="Iowan Old Style,Georgia,serif" font-size="12" fill="#6a4a25" font-style="italic">optic nerve</text>
+        <!-- 3 mm marker -->
+        <line x1="288" y1="245" x2="288" y2="265" stroke="#3d5256" stroke-width="1.5"/>
+        <line x1="360" y1="245" x2="360" y2="265" stroke="#3d5256" stroke-width="1.5"/>
+        <line x1="288" y1="255" x2="360" y2="255" stroke="#3d5256" stroke-width="1.5" marker-start="url(#a)" marker-end="url(#a)"/>
+        <text x="324" y="283" text-anchor="middle" font-family="Helvetica Neue,Arial,sans-serif" font-size="12" fill="#3d5256" font-weight="700">3 mm behind globe</text>
+        <!-- ONSD caliper -->
+        <line x1="360" y1="146" x2="360" y2="194" stroke="#8c2f2a" stroke-width="2.5" marker-start="url(#b)" marker-end="url(#b)"/>
+        <text x="372" y="128" font-family="Helvetica Neue,Arial,sans-serif" font-size="13" fill="#8c2f2a" font-weight="700">ONSD</text>
+        <text x="372" y="214" font-family="Iowan Old Style,Georgia,serif" font-size="11.5" fill="#8c2f2a" font-style="italic">measured perpendicular to nerve axis</text>
+        <defs>
+          <marker id="a" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M1,1 L7,4 L1,7" fill="none" stroke="#3d5256" stroke-width="1.3"/></marker>
+          <marker id="b" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M1,1 L7,4 L1,7" fill="none" stroke="#8c2f2a" stroke-width="1.3"/></marker>
+        </defs>
+      </svg>
+      <p class="figdesc">The dural sheath surrounding the optic nerve is continuous with the intracranial subarachnoid space. ONSD is measured 3&nbsp;mm posterior to the globe, perpendicular to the nerve. It <strong>widens</strong> with raised intracranial pressure and is <strong>narrower / less distended</strong> with intracranial hypotension.</p>
+      <p class="attr">Original schematic (R. Lessard) for this teaching case.</p>
+    </figure>
+
+    <h4>How to perform the measurement</h4>
+    <ul>
+      <li><strong>Patient &amp; preset:</strong> supine with the head elevated ~20&ndash;30&deg;, eyes closed and looking straight ahead. Use a <strong>high-frequency linear probe (&gt;10 MHz)</strong> and select an <strong>ophthalmic/ocular preset</strong> to keep acoustic output low (low mechanical and thermal index, <strong>ALARA</strong>) &mdash; the eye is sensitive to ultrasound energy.</li>
+      <li><strong>Technique:</strong> apply a generous layer of gel over the closed upper eyelid; rest the probe lightly &mdash; <strong>no pressure on the globe</strong> &mdash; in a transverse orientation until the hypoechoic optic nerve is seen running posteriorly from the globe.</li>
+      <li><strong>Measure:</strong> drop a reference line <strong>3&nbsp;mm posterior to the retina/globe</strong>, then measure the sheath width <strong>perpendicular to the nerve axis</strong> at that point. Repeat in a second (sagittal) plane and in <strong>both eyes</strong>, and <strong>average</strong> the measurements to reduce error.</li>
+      <li><strong>Interpretation anchors:</strong> normal adult ONSD is roughly <strong>&le;5.0&ndash;5.7&nbsp;mm</strong>; values above this suggest <strong>raised</strong> ICP. For <strong>intracranial hypotension</strong> there is <strong>no validated absolute cut-off</strong> &mdash; the signal of interest is a <strong>low ONSD</strong> and, more usefully, a <strong>decrease from the patient&rsquo;s own baseline</strong> (see Part II).</li>
+    </ul>
+
+    <figure class="img">
+      <p class="figtitle">Figure 2. Representative ocular ultrasound (to be inserted)</p>
+      <!-- PLACEHOLDER: replace this .imgslot block with your own figure, e.g.:
+           <img src="onsd_ultrasound.png" alt="Ocular ultrasound showing optic nerve sheath and ONSD calipers">
+           Keep it inside <figure class="img"> so it inherits the border/shadow styling. -->
+      <div class="imgslot">Figure slot &mdash; insert your annotated ocular ultrasound image here<br>(globe, optic nerve, sheath, and the 3&nbsp;mm caliper).</div>
+      <p class="figdesc">Suggested caption once added: B-mode image of the right eye; calipers placed 3&nbsp;mm behind the globe measuring the optic nerve sheath diameter.</p>
+    </figure>
+
+    <h4>How effective and reliable is it? <span class="evgrade">Appraise the evidence</span></h4>
+    <ul>
+      <li><strong>For raised ICP, the evidence is robust.</strong> Meta-analyses report <strong>pooled sensitivity ~0.90 and specificity ~0.85</strong> (summary AUC ~0.93) against invasive ICP / imaging references in adults, with similar performance in children. This validates the <strong>core premise</strong> that ONSD tracks intracranial CSF pressure.</li>
+      <li><strong>For intracranial hypotension / PDPH, the evidence is preliminary and lower-strength.</strong> It rests on <strong>small single-centre prospective observational studies, a cross-sectional comparison, and case reports</strong> &mdash; no randomized data, heterogeneous measurement methods, and no agreed threshold. It is best regarded as <strong>hypothesis-generating and adjunctive</strong>, not diagnostic in isolation.</li>
+      <li><strong>Reliability is operator-dependent.</strong> ONSD has a measurable <strong>learning curve</strong>; inter-observer variability falls with training and with averaging multiple planes/eyes. It is cheap, fast, radiation-free, and repeatable at the bedside &mdash; well suited to <strong>serial</strong> assessment.</li>
+    </ul>
+    <div class="pearl"><span class="pearl-label">Bottom line</span>ONSD is a <strong>validated surrogate for intracranial pressure in general</strong>, but its use to confirm the <strong>intracranial hypotension</strong> of PDPH is <strong>emerging and unvalidated</strong>. PDPH remains a <strong>clinical diagnosis</strong>; ONSD is a supportive, bedside data point &mdash; not a replacement for history, examination, and (when red flags appear) imaging.</div>
+      </div>
+    </details>
+  </section>
+  </section>
+
+  <section class="block">
+    <span class="part-tag">Part II &mdash; Bedside Ultrasound &amp; Management</span>
+    <div class="vignette">
+      <p class="vh">Clinical scenario (continued)</p>
+      <p>You perform ocular POCUS at the bedside. The optic nerve sheath is clearly seen behind each globe. Averaging both eyes in two planes, the <strong>ONSD measures ~4.1&nbsp;mm</strong> &mdash; at the <strong>low end of normal</strong> &mdash; and when you repeat it after she has been <strong>upright for several minutes her symptoms intensify</strong> while the sheath appears, if anything, <strong>slightly narrower</strong>. There is <strong>no papilledema</strong> and the globes are otherwise normal. The findings are <strong>concordant with intracranial hypotension</strong>, not raised pressure, and fit the postural history.</p>
+      <p>Blood pressure remains normal with no proteinuria; the neurological exam is unchanged and non-focal. You make a working diagnosis of <strong>PDPH following unintentional dural puncture</strong> and discuss management.</p>
+    </div>
+
+  <section class="qa">
+    <h3 class="q"><span class="qnum">Question 4</span>What are the management options for PDPH? Structure your answer using the 2023 multisociety consensus.</h3>
+    <details class="answer">
+      <summary><span class="reveal">Answer key</span><span class="hint">click to collapse / expand</span></summary>
+      <div class="answer-body">
+    <ul>
+      <li>Management is a <strong>stepwise, severity-driven</strong> process: <strong>set expectations and treat conservatively first</strong>, reserve <strong>interventional</strong> options for headache that is severe or that limits daily function (including caring for a newborn), and keep <strong>re-evaluating the diagnosis</strong> if the course is atypical.</li>
+      <li>Most PDPH improves with time, but in a postpartum mother &ldquo;wait it out&rdquo; is often <strong>not acceptable</strong> functionally &mdash; the threshold to offer definitive treatment is therefore lower than the natural history alone would suggest.</li>
+    </ul>
+    <figure class="tbl"><table><thead><tr><th>Tier</th><th>Option</th><th>Evidence / consensus note</th></tr></thead><tbody>
+    <tr><td><strong>Conservative<br>(offer to all)</strong></td><td>Reassurance and explanation; <strong>multimodal oral analgesia</strong> (acetaminophen + NSAIDs unless contraindicated); oral hydration; antiemetics as needed; allow position of comfort.</td><td>Recommended for all patients. <strong>Bed rest and aggressive IV fluids are not</strong> recommended as <em>preventives</em> and bed rest is not mandated as treatment.</td></tr>
+    <tr><td><strong>Pharmacologic adjunct</strong></td><td><strong>Caffeine</strong> may be offered (consensus: up to ~900&nbsp;mg/day; limit to ~200&ndash;300&nbsp;mg/day if breastfeeding).</td><td>Short-term symptomatic benefit; modest and often transient effect.</td></tr>
+    <tr><td><strong>Regional adjuncts</strong></td><td><strong>Greater occipital nerve (GON) block</strong> may be offered, particularly after spinal anesthesia with a narrow-gauge (&le;22G) needle. <strong>Sphenopalatine ganglion block</strong> and acupuncture are <strong>not</strong> routinely recommended.</td><td>GON block: reasonable, low-risk temporizing measure. SPG block: evidence does not support routine use.</td></tr>
+    <tr><td><strong>Definitive</strong></td><td><strong>Epidural blood patch (EBP)</strong> for severe or refractory PDPH limiting daily function (see Q5).</td><td>Most effective treatment. <strong>Not</strong> recommended <em>prophylactically</em> on a routine basis (insufficient evidence), but the treatment of choice once PDPH is established and severe.</td></tr>
+    </tbody></table><figcaption>Table 3. Tiered management of PDPH, aligned with the 2023 multisociety consensus practice guidelines.</figcaption></figure>
+    <h4>Putting it together for this patient</h4>
+    <ul>
+      <li>Start <strong>conservative therapy now</strong> (scheduled acetaminophen + NSAID, hydration, &plusmn; caffeine within breastfeeding limits), <strong>explain the diagnosis and natural history</strong>, and arrange <strong>close follow-up</strong> with clear return precautions for red flags.</li>
+      <li>Because she is a <strong>new mother with a functionally disabling postural headache after a large-bore breach</strong>, proactively discuss <strong>EBP</strong> as the definitive option if she does not settle quickly.</li>
+    </ul>
+      </div>
+    </details>
+  </section>
+
+  <section class="qa">
+    <h3 class="q"><span class="qnum">Question 5</span>She elects definitive treatment. Describe the epidural blood patch &mdash; indications, technique, efficacy, and risks.</h3>
+    <details class="answer">
+      <summary><span class="reveal">Answer key</span><span class="hint">click to collapse / expand</span></summary>
+      <div class="answer-body">
+    <ul>
+      <li><strong>Concept:</strong> autologous blood injected into the epidural space forms a clot that <strong>tamponades the dural breach</strong> and acutely raises epidural/CSF pressure, relieving the traction that drives the headache; the clot then promotes <strong>sealing of the leak</strong>.</li>
+      <li><strong>Indications:</strong> established PDPH that is <strong>severe or limiting function</strong> and not adequately controlled by conservative measures. Confirm the diagnosis and exclude red-flag mimics first.</li>
+    </ul>
+    <h4>Technique (key points)</h4>
+    <ul>
+      <li>Full <strong>aseptic technique with two operators</strong>: one identifies the epidural space (typically at or one space below the original puncture level), while the second draws <strong>~15&ndash;20&nbsp;mL of the patient&rsquo;s own venous blood</strong> sterilely.</li>
+      <li>Inject blood slowly into the epidural space; <strong>stop when the patient reports back/buttock fullness or pressure</strong> rather than chasing a fixed volume.</li>
+      <li>Keep the patient <strong>supine for a short period</strong> afterward and counsel against straining/heavy lifting for ~24&ndash;48 h.</li>
+    </ul>
+    <h4>Efficacy</h4>
+    <ul>
+      <li>Provides <strong>substantial or complete relief in roughly 65&ndash;90%</strong> after the first patch; a proportion relapse and <strong>a second patch can be performed</strong> and is often successful.</li>
+      <li>Lower &ldquo;cure&rdquo; rates in the obstetric population reflect the <strong>large-gauge Tuohy breach</strong>; counsel accordingly.</li>
+    </ul>
+    <h4>Risks / complications</h4>
+    <ul>
+      <li>Common and self-limiting: <strong>back/neck ache, transient radicular discomfort, low-grade fever</strong>.</li>
+      <li>Procedure-related (shared with any epidural): <strong>a further dural puncture</strong>, infection, bleeding/neuraxial hematoma, and (rare) neurological injury.</li>
+      <li>Counsel that EBP <strong>may complicate future neuraxial procedures</strong> in a minority; weigh against the disability of an untreated severe PDPH.</li>
+    </ul>
+    <div class="pearl"><span class="pearl-label">Practice point</span>Inject to <strong>symptom/pressure tolerance, not to a target millilitre count</strong>. If a patch fails or the headache changes character, re-examine the diagnosis before simply repeating &mdash; an evolving or non-postural headache warrants imaging for subdural hematoma or CVST.</div>
+      </div>
+    </details>
+  </section>
+
+  <section class="qa">
+    <h3 class="q"><span class="qnum">Question 6</span>Twelve days later she returns: the headache is now constant, no longer relieved by lying down, and she has new mild drowsiness. What is your concern, and how does the earlier reasoning apply?</h3>
+    <details class="answer">
+      <summary><span class="reveal">Answer key</span><span class="hint">click to collapse / expand</span></summary>
+      <div class="answer-body">
+    <ul>
+      <li>The alarming change is the <strong>loss of the postural pattern</strong> together with a <strong>new neurological symptom (drowsiness)</strong>. A PDPH that becomes <strong>constant, worsening, or non-postural</strong> &mdash; especially with focal signs, seizure, or reduced consciousness &mdash; is a <strong>red flag</strong>.</li>
+      <li>The leading concern is an <strong>intracranial subdural hematoma</strong>: prolonged intracranial hypotension causes the brain to sag and stretches/tears bridging veins. <strong>Cerebral venous sinus thrombosis</strong> (to which pregnancy and the puerperium predispose) must also be excluded, along with other secondary causes.</li>
+      <li><strong>Action:</strong> this is no longer a bedside-ultrasound problem &mdash; arrange <strong>urgent neuroimaging</strong> (MRI/MRV or CT/CTV), involve neurology/neurosurgery, and treat the underlying cause. ONSD cannot exclude these diagnoses.</li>
+    </ul>
+    <h4>How the earlier reasoning carries through</h4>
+    <ul>
+      <li>It closes the loop on Q1: PDPH is a <strong>diagnosis of exclusion</strong>, and the postural pattern is the feature that both <strong>supports it and, when lost, refutes it</strong>.</li>
+      <li>It reinforces the limits of ONSD from Q3: a non-invasive surrogate is useful for <strong>supporting</strong> a hypotension picture early, but it does <strong>not have the negative predictive value</strong> to rule out a structural intracranial catastrophe. Clinical trajectory and imaging govern.</li>
+    </ul>
+    <div class="pearl"><span class="pearl-label">Safety pearl</span>Any dural-puncture headache that <strong>changes character &mdash; loses its postural quality, becomes constant, or acquires neurological features &mdash; is a subdural/CVST until imaging proves otherwise.</strong></div>
+      </div>
+    </details>
+  </section>
+  </section>
+
+  <section class="block">
+    <h2 class="section">Selected references</h2>
+    <p><em>Key recent sources underpinning the incidence figures, ultrasound technique, evidence appraisal, and management recommendations used above.</em></p>
+    <ul class="ref-list">
+      <li><span class="ref-title">Uppal V, et al. Consensus Practice Guidelines on Postdural Puncture Headache From a Multisociety, International Working Group: A Summary Report.</span> <span class="ref-detail">JAMA Netw Open, 2023;6(8):e2325387 (also in Reg Anesth Pain Med, 2023) &mdash; prevention, diagnosis, and tiered management; basis for Table 3.</span> <a href="https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2808365" target="_blank" rel="noopener">https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2808365</a></li>
+      <li><span class="ref-title">Boyac&#305; S, Onay M, G&uuml;le&ccedil; MS. Optic nerve sheath diameter measurement for prediction of postdural puncture headache.</span> <span class="ref-detail">J Clin Monit Comput, 2024;38:415&ndash;422 &mdash; 83 spinal-anesthesia patients; change in ONSD discriminated PDPH (ROC AUC 0.843).</span> <a href="https://link.springer.com/article/10.1007/s10877-023-01067-5" target="_blank" rel="noopener">https://link.springer.com/article/10.1007/s10877-023-01067-5</a></li>
+      <li><span class="ref-title">Peng Q, et al. The Value of the Optic Nerve Sheath Diameter (ONSD) in Predicting Postdural Puncture Headache (PDPH): A Prospective Observational Study.</span> <span class="ref-detail">Pain Physician, 2023;26(1):45&ndash;52 &mdash; 156 cesarean patients; serial ONSD around dural puncture.</span> <a href="https://pubmed.ncbi.nlm.nih.gov/36791293/" target="_blank" rel="noopener">https://pubmed.ncbi.nlm.nih.gov/36791293/</a></li>
+      <li><span class="ref-title">Ultrasonographic optic nerve sheath diameter as a noninvasive marker for intracranial hypotension.</span> <span class="ref-detail">2022 cross-sectional study &mdash; ONSD lower in intracranial hypotension than in normal and raised-ICP groups, illustrating the directional gradient (methods/values are population-dependent).</span> <a href="https://pubmed.ncbi.nlm.nih.gov/35186123/" target="_blank" rel="noopener">https://pubmed.ncbi.nlm.nih.gov/35186123/</a></li>
+      <li><span class="ref-title">Ultrasonic optic nerve sheath diameter as a diagnostic measure after accidental dural puncture during cesarean section: a case report.</span> <span class="ref-detail">2024 &mdash; bedside ONSD used to support intracranial hypotension after a wet tap.</span> <a href="https://pubmed.ncbi.nlm.nih.gov/38254029/" target="_blank" rel="noopener">https://pubmed.ncbi.nlm.nih.gov/38254029/</a></li>
+      <li><span class="ref-title">Diagnostic accuracy of optic nerve sheath diameter on ultrasound for increased intracranial pressure in traumatic brain injury: a systematic review and meta-analysis.</span> <span class="ref-detail">Biomed Rep, 2023 &mdash; pooled sensitivity ~0.90, specificity ~0.85, summary AUC ~0.93 (validation of ONSD&ndash;ICP coupling).</span> <a href="https://www.spandidos-publications.com/10.3892/br.2023.1685" target="_blank" rel="noopener">https://www.spandidos-publications.com/10.3892/br.2023.1685</a></li>
+      <li><span class="ref-title">Diagnostic accuracy of ONSD ultrasonography for raised intracranial pressure in pediatric patients: a systematic review and meta-analysis.</span> <span class="ref-detail">2024 &mdash; pooled sensitivity ~92%, specificity ~89%.</span> <a href="https://pubmed.ncbi.nlm.nih.gov/39142382/" target="_blank" rel="noopener">https://pubmed.ncbi.nlm.nih.gov/39142382/</a></li>
+      <li><span class="ref-title">Postpartum headache &ndash; diagnosis and treatment.</span> <span class="ref-detail">BJA Education, 2022;22(5):xx &mdash; differential diagnosis, red flags, and management framework.</span> <a href="https://www.bjaed.org/article/S2058-5349(22)00009-9/fulltext" target="_blank" rel="noopener">https://www.bjaed.org/article/S2058-5349(22)00009-9/fulltext</a></li>
+      <li><span class="ref-title">Stella CL, et al. Postpartum headache: is your work-up complete?</span> <span class="ref-detail">Am J Obstet Gynecol, 2007;196(4):318.e1&ndash;7 &mdash; referral-cohort source for the etiology distribution in Table 2.</span> <a href="https://www.ajog.org/article/S0002-9378(07)00145-7/fulltext" target="_blank" rel="noopener">https://www.ajog.org/article/S0002-9378(07)00145-7/fulltext</a></li>
+      <li><span class="ref-title">Optic Nerve Sheath Ultrasound.</span> <span class="ref-detail">StatPearls (NCBI Bookshelf) &mdash; probe selection, ocular-preset/ALARA safety, and the 3&nbsp;mm measurement technique.</span> <a href="https://www.ncbi.nlm.nih.gov/books/NBK554479/" target="_blank" rel="noopener">https://www.ncbi.nlm.nih.gov/books/NBK554479/</a></li>
+      <li><span class="ref-title">Epidural Blood Patch.</span> <span class="ref-detail">StatPearls (NCBI Bookshelf) &mdash; indications, technique, efficacy, and complications.</span> <a href="https://www.ncbi.nlm.nih.gov/books/NBK482336/" target="_blank" rel="noopener">https://www.ncbi.nlm.nih.gov/books/NBK482336/</a></li>
+    </ul>
+  </section>
+
+  <footer>
+    Prepared as a teaching aid for senior anesthesiology residents. The use of ONSD to support a diagnosis of intracranial hypotension in PDPH rests on preliminary, mostly observational evidence; PDPH remains a clinical diagnosis. Institutional protocols and individual clinical judgment should always take precedence.
+  </footer>
+
+</div>
+
+</body>
+</html>
