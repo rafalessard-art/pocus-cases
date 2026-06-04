@@ -71,32 +71,6 @@ h1.title {
 }
 .byline strong { font-style: normal; font-weight: 600; color: var(--teal); }
 
-/* ---- Toolbar ---- */
-.toolbar {
-  position: sticky; top: 0; z-index: 20;
-  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  padding: 12px 0;
-  margin: 0 0 8px;
-  background: linear-gradient(var(--paper) 70%, rgba(246,241,231,0));
-  backdrop-filter: blur(2px);
-}
-.toolbar .label { font-size: 13px; letter-spacing: .04em; color: var(--ink-soft); text-transform: uppercase; font-family: "Fraunces", serif; font-weight: 600; }
-button.ctl {
-  font-family: "Fraunces", serif;
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--paper-card);
-  background: var(--teal);
-  border: none;
-  padding: 8px 16px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: transform .15s ease, background .2s ease, box-shadow .2s ease;
-  box-shadow: var(--shadow);
-}
-button.ctl:hover { background: var(--teal-bright); transform: translateY(-1px); }
-button.ctl.alt { background: transparent; color: var(--teal); border: 1.5px solid var(--teal); box-shadow: none; }
-button.ctl.alt:hover { background: rgba(20,89,92,.08); }
 
 /* ---- Sections ---- */
 section.block { margin: 40px 0 0; }
@@ -247,7 +221,6 @@ figure.img img {
 footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); font-style: italic; font-size: 14px; color: var(--ink-soft); }
 
 @media print {
-  .toolbar { display: none; }
   details.answer { box-shadow: none; }
   details.answer[open] .answer-body { animation: none; }
 }
@@ -263,7 +236,7 @@ footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line);
 .topnav a{display:inline-block;padding:14px 20px;font-size:12.5px;letter-spacing:.14em;
   text-transform:uppercase;font-weight:700;color:var(--ink-soft);text-decoration:none;
   border-bottom:3px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s;}
-.topnav a:hover{color:var(--petrol);}
+.topnav a:hover{color:var(--teal);}
 @media (max-width:560px){.topnav-inner{padding:0 12px;}.topnav a{padding:12px 14px;}}
 </style>
 </head>
@@ -280,16 +253,10 @@ footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line);
 <div class="wrap">
 
   <header class="masthead">
-    <p class="kicker">POCUS Learning Case</p>
+    <p class="kicker">POCUS Learning Case Series · Perioperative Medicine</p>
     <h1 class="title">Perioperative Diaphragm Ultrasound: Diaphragmatic Dysfunction after First Rib Resection</h1>
     <p class="byline">Case developed by <strong>Raphael Lessard, MD</strong></p>
   </header>
-
-  <div class="toolbar">
-    <span class="label">Model answers</span>
-    <button class="ctl" id="expandAll">Expand all</button>
-    <button class="ctl alt" id="collapseAll">Collapse all</button>
-  </div>
 
   <section class="block">
     <h2 class="section">Learning objectives</h2>
@@ -303,6 +270,8 @@ footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line);
     </ul>
   </section>
 
+  <p style="font-size:18px;margin:28px 0 0;line-height:1.62;">This case follows a single patient through a two-part clinical scenario. Work through each question before opening the answer key.</p>
+
   <section class="block">
     <span class="part-tag">Part I &mdash; The Case</span>
     <div class="vignette">
@@ -314,7 +283,7 @@ footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line);
   <section class="qa">
     <h3 class="q"><span class="qnum">Question 1</span>What are the subtypes of thoracic outlet syndrome, what causes them, and what are the indications for first rib resection?</h3>
     <details class="answer">
-      <summary><span class="reveal">Model answer</span><span class="hint">click to collapse / expand</span></summary>
+      <summary><span class="reveal">Answer key</span><span class="hint">click to collapse / expand</span></summary>
       <div class="answer-body">
     <ul>
       <li>TOS is compression of the neurovascular bundle as it traverses the thoracic outlet, at three anatomical spaces: the <strong>interscalene triangle</strong>, the <strong>costoclavicular space</strong>, and the <strong>retropectoralis (subcoracoid) space</strong>.</li>
@@ -338,7 +307,7 @@ footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line);
   <section class="qa">
     <h3 class="q"><span class="qnum">Question 2</span>Construct a differential diagnosis for her respiratory distress. How common is phrenic nerve injury / diaphragmatic dysfunction in this setting, and why does it occur?</h3>
     <details class="answer">
-      <summary><span class="reveal">Model answer</span><span class="hint">click to collapse / expand</span></summary>
+      <summary><span class="reveal">Answer key</span><span class="hint">click to collapse / expand</span></summary>
       <div class="answer-body">
     <ul>
       <li>Approach this <strong>systematically</strong> rather than anchoring on the radiograph; the differential spans surgical/pleural complications, the phrenic injury itself, and the usual early post-anesthetic causes (Table 2).</li>
@@ -369,7 +338,7 @@ footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line);
   <section class="qa">
     <h3 class="q"><span class="qnum">Question 3</span>How do you assess the diaphragm with POCUS? Describe the views, the measurements, and the quantitative cutoffs you would use.</h3>
     <details class="answer">
-      <summary><span class="reveal">Model answer</span><span class="hint">click to collapse / expand</span></summary>
+      <summary><span class="reveal">Answer key</span><span class="hint">click to collapse / expand</span></summary>
       <div class="answer-body">
     <ul>
       <li>Use two complementary windows (Figure 2): <strong>diaphragmatic excursion</strong> (how far the dome moves) and <strong>diaphragm thickening</strong> (how hard the muscle works).</li>
@@ -426,7 +395,7 @@ footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line);
   <section class="qa">
     <h3 class="q"><span class="qnum">Question 4</span>How do you manage this acutely deteriorating PACU patient? Describe your systematic approach.</h3>
     <details class="answer">
-      <summary><span class="reveal">Model answer</span><span class="hint">click to collapse / expand</span></summary>
+      <summary><span class="reveal">Answer key</span><span class="hint">click to collapse / expand</span></summary>
       <div class="answer-body">
     <ul>
       <li>Priority is a simultaneous <strong>resuscitate-while-you-diagnose</strong> approach.</li>
@@ -453,7 +422,7 @@ footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line);
   <section class="qa">
     <h3 class="q"><span class="qnum">Question 5</span>How do you use lung and diaphragm POCUS to drive your decision here? What is the significance of unilateral versus bilateral involvement?</h3>
     <details class="answer">
-      <summary><span class="reveal">Model answer</span><span class="hint">click to collapse / expand</span></summary>
+      <summary><span class="reveal">Answer key</span><span class="hint">click to collapse / expand</span></summary>
       <div class="answer-body">
     <ul>
       <li>POCUS is the fastest way to triage this patient at the bedside.</li>
@@ -480,7 +449,7 @@ footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line);
   <section class="qa">
     <h3 class="q"><span class="qnum">Question 6</span>Her diaphragm dysfunction is later confirmed to persist beyond the block. What are the longer-term management options for confirmed phrenic nerve palsy?</h3>
     <details class="answer">
-      <summary><span class="reveal">Model answer</span><span class="hint">click to collapse / expand</span></summary>
+      <summary><span class="reveal">Answer key</span><span class="hint">click to collapse / expand</span></summary>
       <div class="answer-body">
     <ul>
       <li>Most post-surgical phrenic injuries are <strong>neuropraxic and recover spontaneously</strong>, so management is staged: <strong>expectant and supportive first</strong>, with intervention reserved for symptomatic palsy that fails to recover.</li>
@@ -530,10 +499,5 @@ footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line);
 
 </div>
 
-<script>
-  const details = Array.from(document.querySelectorAll('details.answer'));
-  document.getElementById('expandAll').addEventListener('click', () => details.forEach(d => d.open = true));
-  document.getElementById('collapseAll').addEventListener('click', () => details.forEach(d => d.open = false));
-</script>
 </body>
 </html>
