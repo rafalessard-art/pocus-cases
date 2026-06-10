@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    { "source": "/cases/glp1-gastric", "destination": "/GLP1_Gastric_Ultrasound_Learning_Case.html" },
+    { "source": "/cases/diaphragm-first-rib", "destination": "/POCUS_Learning_Case_Diaphragm_FirstRibResection.html" },
+    { "source": "/cases/onsd-pdph", "destination": "/POCUS_Learning_Case_ONSD_PDPH.html" }
+  ],
+  "redirects": [
+    { "source": "/GLP1_Gastric_Ultrasound_Learning_Case.html", "destination": "/cases/glp1-gastric", "permanent": false },
+    { "source": "/POCUS_Learning_Case_Diaphragm_FirstRibResection.html", "destination": "/cases/diaphragm-first-rib", "permanent": false },
+    { "source": "/POCUS_Learning_Case_ONSD_PDPH.html", "destination": "/cases/onsd-pdph", "permanent": false }
+  ]
+}
