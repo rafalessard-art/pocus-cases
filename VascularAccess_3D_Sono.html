@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Arm + Live Ultrasound — Systematic Vascular Access (RaPeVA)</title>
+<style>
+:root{
+  --ink:#1c2b2e;--ink-soft:#3d5256;--teal:#14595c;--teal-bright:#1f7d80;
+  --rust:#b45309;--rust-deep:#9a4708;--paper:#f6f1e7;--paper-card:#fffdf8;
+  --line:#d8cfbe;--line-soft:#e7dfce;--shadow:0 1px 2px rgba(28,43,46,.06),0 8px 24px rgba(28,43,46,.06);
+  --serif:"Iowan Old Style","Palatino Linotype","Palatino","Georgia",serif;
+  --sans:"Helvetica Neue","Segoe UI",Arial,sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;height:100%;}
+body{background:var(--paper);color:var(--ink);font-family:var(--serif);-webkit-font-smoothing:antialiased;}
+.head{padding:18px 24px 10px;}
+.kicker{font-family:var(--sans);font-weight:600;letter-spacing:.2em;text-transform:uppercase;font-size:11px;color:var(--teal);margin:0 0 6px;}
+h1{font-family:var(--sans);font-weight:700;font-size:clamp(19px,2.6vw,26px);line-height:1.1;margin:0;}
+.qlink{display:inline-block;font-family:var(--sans);font-weight:600;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--paper-card);background:var(--rust);padding:4px 10px;border-radius:4px;margin-top:7px;}
+
+.stage{display:flex;height:calc(100vh - 92px);min-height:560px;border-top:1px solid var(--line);}
+@media(max-width:900px){.stage{flex-direction:column;height:auto;}}
+.viewport{position:relative;flex:1 1 auto;min-height:440px;background:radial-gradient(120% 120% at 50% 16%,#fffdf9,#ece3d2 62%,#e1d6c1);}
+#scene{display:block;width:100%;height:100%;cursor:grab;}
+#scene:active{cursor:grabbing;}
+.vhint{position:absolute;left:12px;bottom:10px;font-family:var(--sans);font-size:11px;color:var(--ink-soft);background:rgba(255,253,248,.8);border:1px solid var(--line);border-radius:7px;padding:5px 9px;}
+.loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--sans);color:var(--ink-soft);}
+
+.panel{flex:0 0 360px;max-width:360px;border-left:1px solid var(--line);background:var(--paper-card);overflow-y:auto;padding:14px 14px 28px;}
+@media(max-width:900px){.panel{flex:1 1 auto;max-width:none;border-left:none;border-top:1px solid var(--line);}}
+.panel h2{font-family:var(--sans);font-weight:700;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--teal);margin:10px 0 7px;}
+
+/* ultrasound */
+.usbox{border:1px solid #2a2a2a;border-radius:9px;overflow:hidden;background:#000;box-shadow:var(--shadow);}
+#us{display:block;width:100%;height:auto;background:#05080a;cursor:crosshair;}
+.uslevel{font-family:var(--sans);font-size:12px;color:var(--ink);font-weight:600;margin:8px 0 4px;display:flex;justify-content:space-between;}
+.uslevel small{color:var(--ink-soft);font-weight:400;}
+.probe-row{display:flex;align-items:center;gap:8px;margin:2px 0 8px;}
+.probe-row span{font-family:var(--sans);font-size:10.5px;color:var(--ink-soft);white-space:nowrap;}
+input[type=range]{width:100%;accent-color:var(--rust);}
+.usctrls{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 2px;}
+.tbtn{flex:1 1 auto;font-family:var(--sans);font-size:11.5px;font-weight:600;border:1px solid var(--line);background:#fff;color:var(--ink-soft);padding:7px 6px;border-radius:7px;cursor:pointer;transition:all .12s;}
+.tbtn.on{background:var(--teal);color:#fff;border-color:var(--teal);}
+
+.grp{margin:2px 0 8px;}
+.grp .gh{font-family:var(--sans);font-weight:700;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--rust-deep);margin:8px 0 4px;border-bottom:1px solid var(--line-soft);padding-bottom:3px;}
+.row{display:flex;align-items:center;gap:8px;padding:4px 5px;border-radius:6px;cursor:pointer;}
+.row:hover{background:#f3ede1;}
+.row input{accent-color:var(--teal);width:14px;height:14px;}
+.sw{width:13px;height:13px;border-radius:4px;border:1px solid rgba(0,0,0,.18);flex:0 0 auto;}
+.row .nm{font-family:var(--sans);font-size:13px;}
+.opts{border:1px solid var(--line-soft);border-radius:8px;padding:6px 9px;background:#fffefb;margin:2px 0 8px;}
+.opts .row{padding:3px 2px;}
+.btnrow{display:flex;gap:7px;margin-top:5px;}
+.btn{flex:1;font-family:var(--sans);font-size:11.5px;font-weight:600;border:1px solid var(--teal);background:#fff;color:var(--teal);padding:7px;border-radius:7px;cursor:pointer;}
+.btn:hover{background:#eef4ec;}
+
+.info{border:1px solid var(--line-soft);border-left:4px solid var(--teal);border-radius:9px;background:#fff;padding:11px 13px;min-height:120px;}
+.info .tag{display:inline-block;font-family:var(--sans);font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:12px;margin-bottom:7px;color:#fff;}
+.info h3{font-family:var(--sans);font-size:15px;margin:0 0 3px;}
+.info .step{font-family:var(--sans);font-size:11px;font-weight:600;color:var(--rust-deep);margin:0 0 7px;}
+.info p{font-size:13px;line-height:1.48;margin:6px 0;}
+.info .acc{background:#f3ede1;border-radius:7px;padding:7px 9px;font-size:12.5px;margin-top:7px;}
+.info .acc b{color:var(--teal);}
+.info.empty{border-left-color:var(--line);color:var(--ink-soft);}
+.info.empty p{font-style:italic;}
+</style>
+</head>
+<body>
+<div class="head">
+  <p class="kicker">POCUS Learning Case · Systematic Approach to Vascular Access</p>
+  <h1>3D Arm + Live Ultrasound — the RaPeVA survey</h1>
+  <span class="qlink">Accompanies Q2 (survey &amp; selection)</span>
+</div>
+
+<div class="stage">
+  <div class="viewport">
+    <canvas id="scene"></canvas>
+    <div class="vhint">Drag to rotate · scroll to zoom · drag the probe slider or click the arm · click a vessel for detail</div>
+    <div class="loading" id="loading">Loading 3D model…</div>
+  </div>
+
+  <aside class="panel">
+    <h2>Live ultrasound · short axis</h2>
+    <div class="usbox"><canvas id="us" width="360" height="300"></canvas></div>
+    <div class="uslevel"><span id="levelName">—</span><small id="levelDepth"></small></div>
+    <div class="probe-row"><span>axilla</span><input type="range" id="probe" min="0" max="100" value="42"><span>forearm</span></div>
+    <div class="usctrls">
+      <button class="tbtn" id="compress">Compress</button>
+      <button class="tbtn" id="doppler">Color Doppler</button>
+      <button class="tbtn" id="freeze">Freeze</button>
+      <button class="tbtn on" id="uslabels">Labels</button>
+    </div>
+
+    <h2>Structures</h2>
+    <div id="toggles"></div>
+
+    <div class="opts">
+      <label class="row"><input type="checkbox" id="xray" checked><span class="nm">Translucent skin</span></label>
+      <label class="row"><input type="checkbox" id="orientcb" checked><span class="nm">Hand &amp; orientation labels</span></label>
+      <label class="row"><input type="checkbox" id="autorot"><span class="nm">Auto-rotate</span></label>
+      <div class="btnrow"><button class="btn" id="reset">Reset view</button><button class="btn" id="clear">Clear selection</button></div>
+    </div>
+
+    <h2>RaPeVA detail</h2>
+    <div class="info empty" id="info"><p>Drag the probe along the arm and watch the ultrasound update. Click any vessel — in the 3D view or the ultrasound — to see its role in the survey and access suitability.</p></div>
+  </aside>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function(){
+"use strict";
+if(typeof THREE==="undefined"){document.getElementById('loading').textContent="Could not load 3D library (offline?).";return;}
+var COL={supf:0x3b86b5,deep:0x235a82,art:0xb23b34,nerve:0xd8a72b,bone:0xeae2cf,skin:0xdf9f7e};
+function hex(c){return '#'+('000000'+c.toString(16)).slice(-6);}
+
+/* ============================================================
+   STRUCTURE META (shared by 3D, ultrasound, toggles, info)
+============================================================ */
+var STR={
+  cephalic:{name:"Cephalic vein",group:"Superficial veins",color:COL.supf,deep:false,
+    info:{tag:"Superficial vein · candidate",step:"RaPeVA — cephalic at the antecubital fossa & over biceps",
+      role:"Runs up the <b>lateral</b> arm and joins the axillary <b>high</b> at the deltopectoral groove. Superficial, but often small or shallow.",
+      acc:"Target only if ≥3 mm; shallow depth limits long-catheter seating."}},
+  basilic:{name:"Basilic vein",group:"Superficial veins",color:COL.supf,deep:false,
+    info:{tag:"Superficial vein · BEST target",step:"RaPeVA — basilic in the bicipital-humeral groove",
+      role:"Runs up the <b>medial</b> arm, then <b>dives deep mid-arm</b> to join the brachial veins. Away from artery and nerve.",
+      acc:"Often the <b>best peripheral target</b>: good calibre, compressible, safe neighbourhood."}},
+  mediancubital:{name:"Median cubital vein",group:"Superficial veins",color:COL.supf,deep:false,
+    info:{tag:"Superficial vein",step:"Antecubital fossa connector",
+      role:"Superficial diagonal joining cephalic and basilic across the elbow crease.",
+      acc:"Classic phlebotomy vein, but over a joint and mobile — less ideal for a dwelling catheter."}},
+  accessorycephalic:{name:"Accessory cephalic vein",group:"Superficial veins",color:COL.supf,deep:false,
+    info:{tag:"Superficial vein",step:"Forearm — accessory cephalic",
+      role:"Drains the dorsolateral forearm into the cephalic.",acc:"A small backup superficial forearm option."}},
+  medianantebrachial:{name:"Median antebrachial vein",group:"Superficial veins",color:COL.supf,deep:false,
+    info:{tag:"Superficial vein",step:"Forearm — median antebrachial",
+      role:"Central anterior forearm vein draining toward the cubital veins.",acc:"Variable; a superficial forearm fallback."}},
+  brachialveins:{name:"Brachial veins",group:"Deep veins",color:COL.deep,deep:true,
+    info:{tag:"Deep vein · bundle",step:"RaPeVA — neurovascular bundle of the arm",
+      role:"Deep, <b>paired</b>, flanking the brachial artery; receive the basilic and continue as axillary.",
+      acc:"Usable <b>deep target</b> under ultrasound — but artery and median nerve are immediate neighbours."}},
+  axillary:{name:"Axillary vein",group:"Deep veins",color:COL.deep,deep:true,
+    info:{tag:"Deep vein · proximal",step:"RaPeVA — axillary vein (infraclavicular)",
+      role:"Deep, proximal convergence of basilic + brachial; continues as the subclavian.",
+      acc:"Large/reliable but proximal & deep — the boundary where peripheral gives way to midline/PICC."}},
+  brachialartery:{name:"Brachial / axillary artery",group:"Artery — do not cannulate",color:COL.art,deep:true,
+    info:{tag:"Artery · AVOID",step:"Identify FIRST — do not cannulate",
+      role:"<b>Pulsatile, non-compressible</b>; runs with the median nerve in the bundle.",
+      acc:"<b>Avoid.</b> Confirm with colour Doppler; keep every needle pass clear of it."}},
+  mediannerve:{name:"Median nerve",group:"Nerves — avoid",color:COL.nerve,deep:true,
+    info:{tag:"Nerve · AVOID",step:"Identify & avoid",
+      role:"Hyperechoic <b>'honeycomb'</b> running with the brachial artery.",
+      acc:"<b>Avoid.</b> Pain/paraesthesia on advancing = stop and redirect."}},
+  ulnarnerve:{name:"Ulnar nerve",group:"Nerves — avoid",color:COL.nerve,deep:true,
+    info:{tag:"Nerve · AVOID",step:"Identify & avoid",
+      role:"Runs <b>posteromedially behind the medial epicondyle</b>, then deep in the medial forearm.",
+      acc:"<b>Avoid</b>, especially with medial-elbow punctures."}},
+  radialveins:{name:"Radial veins",group:"Deep veins",color:COL.deep,deep:true,
+    info:{tag:"Deep vein · venae comitantes",step:"Forearm deep veins",
+      role:"<b>Paired</b> deep veins flanking the radial artery; unite with the ulnar veins at the elbow to form the brachial veins.",
+      acc:"Deep and small — not a peripheral target; relevant as the <b>origin of the deep system</b>."}},
+  ulnarveins:{name:"Ulnar veins",group:"Deep veins",color:COL.deep,deep:true,
+    info:{tag:"Deep vein · venae comitantes",step:"Forearm deep veins",
+      role:"<b>Paired</b> deep veins flanking the ulnar artery (with the ulnar nerve distally); join the radial veins to form the brachial veins.",
+      acc:"Deep and small — not a peripheral target."}},
+  subscapular:{name:"Subscapular vein",group:"Deep veins",color:COL.deep,deep:true,
+    info:{tag:"Deep vein · tributary",step:"Axillary tributary",
+      role:"Drains the scapular region into the <b>axillary vein</b> near the axilla.",acc:"Deep proximal tributary; not an access target."}},
+  subclavian:{name:"Subclavian vein",group:"Deep veins",color:COL.deep,deep:true,
+    info:{tag:"Deep vein · central",step:"Continuation of the axillary",
+      role:"The axillary vein becomes the <b>subclavian</b> under the clavicle, then the brachiocephalic — the central circulation.",acc:"<b>Central territory.</b>"}},
+  radialartery:{name:"Radial artery",group:"Artery — do not cannulate",color:COL.art,deep:true,
+    info:{tag:"Artery · AVOID",step:"Identify & avoid",
+      role:"Deep forearm artery — the <b>radial pulse</b> you palpate at the wrist.",acc:"<b>Avoid.</b>"}},
+  ulnarartery:{name:"Ulnar artery",group:"Artery — do not cannulate",color:COL.art,deep:true,
+    info:{tag:"Artery · AVOID",step:"Identify & avoid",
+      role:"Deep forearm artery running with the ulnar nerve distally.",acc:"<b>Avoid.</b>"}},
+  radialnerve:{name:"Radial nerve",group:"Nerves — avoid",color:COL.nerve,deep:true,
+    info:{tag:"Nerve · AVOID",step:"Identify & avoid",
+      role:"Spirals <b>posteriorly around the humerus</b> in the radial groove, then emerges <b>anterolateral</b> at the elbow; its superficial branch runs down the <b>lateral forearm</b> with the radial artery.",
+      acc:"<b>Avoid</b> — watch the lateral/posterolateral arm and the radial forearm. (Spiral-groove injury → wrist drop.)"}},
+  humerus:{name:"Humerus",group:"Bone",color:COL.bone,deep:true,
+    info:{tag:"Bone · landmark",step:"Depth backstop",
+      role:"Bright cortical line with a clean acoustic shadow beneath.",acc:"Not cannulatable; frames how deep the bundle sits."}}
+};
+var visible={}; var offByDefault={mediannerve:1,ulnarnerve:1,radialnerve:1,subscapular:1};
+Object.keys(STR).forEach(function(k){visible[k]=!offByDefault[k];}); // default ON: superficial+deep veins (no subscapular), arteries, humerus; nerves OFF
+
+/* ============================================================
+   RaPeVA LEVELS — short-axis cross-sections (proximal → distal)
+   u = lateral(+)/medial(-) cm ; d = depth from skin cm ; mm = diameter
+============================================================ */
+var LEVELS=[
+ {y:4.6,name:"Axillary — infraclavicular",depth:"~2.5 cm",s:[
+   {id:"axillary",u:-0.2,d:1.55,mm:6.8},{id:"brachialartery",u:-0.55,d:1.95,mm:4.0},
+   {id:"cephalic",u:0.7,d:1.0,mm:2.6},{id:"mediannerve",u:-0.85,d:1.7,mm:3.0},
+   {id:"subscapular",u:-1.05,d:1.95,mm:3.0}]},
+ {y:3.6,name:"Proximal arm — basilic joining",depth:"~3 cm",s:[
+   {id:"basilic",u:-0.65,d:1.0,mm:4.0},{id:"axillary",u:-0.2,d:1.45,mm:5.2},
+   {id:"brachialartery",u:-0.35,d:1.65,mm:3.6},{id:"cephalic",u:1.2,d:0.7,mm:2.8},
+   {id:"mediannerve",u:-0.5,d:1.4,mm:3.0}]},
+ {y:2.6,name:"Mid-arm — bicipital groove",depth:"~3 cm",s:[
+   {id:"basilic",u:-1.35,d:0.9,mm:4.4},{id:"cephalic",u:1.5,d:0.5,mm:3.0},
+   {id:"brachialartery",u:-0.1,d:1.5,mm:3.4},{id:"brachialveins",u:-0.45,d:1.5,mm:2.8},
+   {id:"brachialveins",u:0.18,d:1.5,mm:2.6},{id:"mediannerve",u:-0.4,d:1.25,mm:3.0},
+   {id:"radialnerve",u:0.9,d:2.05,mm:2.6},{id:"humerus",u:0.0,d:2.55,mm:14}]},
+ {y:1.4,name:"Distal upper arm — neurovascular bundle",depth:"~3 cm",s:[
+   {id:"basilic",u:-1.5,d:0.7,mm:4.0},{id:"cephalic",u:1.55,d:0.5,mm:3.0},
+   {id:"brachialartery",u:-0.2,d:1.3,mm:3.4},{id:"brachialveins",u:-0.5,d:1.3,mm:2.6},
+   {id:"brachialveins",u:0.12,d:1.3,mm:2.6},{id:"mediannerve",u:-0.5,d:1.05,mm:3.0},
+   {id:"radialnerve",u:1.35,d:1.45,mm:2.4},{id:"humerus",u:0.0,d:2.4,mm:14}]},
+ {y:0.4,name:"Antecubital fossa",depth:"~2.5 cm",s:[
+   {id:"cephalic",u:1.7,d:0.4,mm:3.0},{id:"mediancubital",u:0.2,d:0.4,mm:3.2},
+   {id:"basilic",u:-1.5,d:0.6,mm:3.6},{id:"brachialartery",u:-0.35,d:1.1,mm:3.2},
+   {id:"brachialveins",u:-0.6,d:1.25,mm:2.4},{id:"brachialveins",u:-0.1,d:1.25,mm:2.4},
+   {id:"mediannerve",u:-0.7,d:1.0,mm:2.6},{id:"radialnerve",u:1.45,d:1.0,mm:2.4},{id:"humerus",u:0.0,d:2.2,mm:13}]},
+ {y:-1.4,name:"Mid-forearm",depth:"~2.5 cm",s:[
+   {id:"cephalic",u:1.6,d:0.4,mm:2.6},{id:"accessorycephalic",u:2.0,d:0.4,mm:2.0},
+   {id:"medianantebrachial",u:0.0,d:0.5,mm:2.5},{id:"basilic",u:-1.6,d:0.5,mm:3.0},
+   {id:"radialartery",u:1.25,d:1.35,mm:2.4},{id:"radialveins",u:1.45,d:1.35,mm:1.8},{id:"radialveins",u:1.05,d:1.35,mm:1.8},
+   {id:"ulnarartery",u:-1.15,d:1.3,mm:2.4},{id:"ulnarveins",u:-1.35,d:1.3,mm:1.8},{id:"ulnarveins",u:-0.95,d:1.3,mm:1.8},
+   {id:"ulnarnerve",u:-1.55,d:1.12,mm:2.4},{id:"radialnerve",u:1.75,d:0.95,mm:1.8}]}
+];
+
+/* ============================================================
+   ULTRASOUND PANEL (canvas 2D, anatomically driven)
+============================================================ */
+var usCanvas=document.getElementById('us'), uctx=usCanvas.getContext('2d');
+var UW=usCanvas.width, UH=usCanvas.height;
+var FOV_W=5.0, FOV_D=4.0;          // cm field of view (width, depth)
+var us={compress:false,doppler:false,freeze:false,labels:true,level:LEVELS[3],t:0,selId:null,hot:[]};
+function ux(u){return UW*0.5 + (u/FOV_W)*UW;}     // cm lateral → px
+function uy(d){return 18 + (d/FOV_D)*(UH-26);}    // cm depth → px (skin band at top)
+
+// static speckle texture
+var speckle=document.createElement('canvas'); speckle.width=UW; speckle.height=UH;
+(function(){var s=speckle.getContext('2d');var img=s.createImageData(UW,UH);
+  for(var i=0;i<img.data.length;i+=4){var n=18+Math.random()*46; var streak=Math.sin(i*0.0007)*6;
+    var v=Math.max(0,Math.min(60,n+streak)); img.data[i]=v*0.7;img.data[i+1]=v*0.9;img.data[i+2]=v; img.data[i+3]=255;}
+  s.putImageData(img,0,0);
+})();
+
+function drawUS(){
+  us.t+=0.05; var puls=0.5+0.5*Math.sin(us.t*2.4); // arterial pulsation
+  uctx.clearRect(0,0,UW,UH);
+  // tissue background + speckle
+  uctx.fillStyle="#070b0d"; uctx.fillRect(0,0,UW,UH);
+  uctx.globalAlpha=0.9; uctx.drawImage(speckle,0,0); uctx.globalAlpha=1;
+  // skin / subcutaneous fascia bands
+  var g=uctx.createLinearGradient(0,0,0,40); g.addColorStop(0,"rgba(180,180,170,.55)");g.addColorStop(1,"rgba(60,60,58,0)");
+  uctx.fillStyle=g; uctx.fillRect(0,8,UW,34);
+  for(var f=0;f<3;f++){uctx.strokeStyle="rgba(150,150,140,"+(0.18-f*0.04)+")";uctx.lineWidth=1;
+    uctx.beginPath();for(var x=0;x<UW;x+=6){uctx.lineTo(x,26+f*9+Math.sin(x*0.05+f)*1.5);}uctx.stroke();}
+
+  us.hot=[];
+  var items=us.level.s.filter(function(it){return visible[it.id];});
+  // sort by depth so deep drawn first
+  items.slice().sort(function(a,b){return b.d-a.d;}).forEach(function(it){
+    var S=STR[it.id], cx=ux(it.u), cy=uy(it.d), rPx=(it.mm/10)/FOV_W*UW*0.5;
+    if(it.id==="humerus"){ // bright cortex + shadow
+      uctx.save();
+      var hw=(it.mm/10)/FOV_W*UW*0.5;
+      var grd=uctx.createLinearGradient(0,cy-6,0,cy+4); grd.addColorStop(0,"#000");grd.addColorStop(.5,"#f2eede");grd.addColorStop(1,"#9a937e");
+      uctx.fillStyle="rgba(5,7,8,.85)"; uctx.fillRect(cx-hw,cy,hw*2,UH-cy); // acoustic shadow
+      uctx.strokeStyle="#f4efe0"; uctx.lineWidth=4; uctx.lineCap="round";
+      uctx.beginPath(); uctx.arc(cx,cy+10,hw,Math.PI*1.15,Math.PI*1.85); uctx.stroke();
+      uctx.restore();
+      us.hot.push({id:it.id,x:cx,y:cy,r:hw}); return;
+    }
+    var type = S.color===COL.art?"art":S.color===COL.nerve?"nerve":"vein";
+    var ry=rPx, rx=rPx;
+    if(type==="vein"){ rx*=1.02; if(us.compress){ ry*=0.16; } } // compressible
+    if(type==="art"){ rx=ry=rPx*(0.92+0.16*puls); }              // pulsatile
+    // posterior acoustic enhancement (brighter beneath vessels)
+    if(type!=="nerve"){ var pe=uctx.createLinearGradient(0,cy,0,cy+ry*3.4);
+      pe.addColorStop(0,"rgba(120,150,160,.0)");pe.addColorStop(.3,"rgba(130,160,170,.20)");pe.addColorStop(1,"rgba(130,160,170,0)");
+      uctx.fillStyle=pe; uctx.beginPath(); uctx.ellipse(cx,cy+ry*1.8,rx*0.9,ry*2.0,0,0,7); uctx.fill(); }
+    if(type==="nerve"){
+      uctx.fillStyle="rgba(150,140,90,.55)"; uctx.beginPath(); uctx.ellipse(cx,cy,rx,ry,0,0,7);uctx.fill();
+      uctx.fillStyle="rgba(20,22,18,.85)";
+      for(var k=0;k<7;k++){var a=k/7*6.28; uctx.beginPath(); uctx.ellipse(cx+Math.cos(a)*rx*0.45,cy+Math.sin(a)*ry*0.45,rx*0.16,ry*0.16,0,0,7);uctx.fill();}
+      uctx.strokeStyle="rgba(210,195,120,.8)";uctx.lineWidth=1.4;uctx.beginPath();uctx.ellipse(cx,cy,rx,ry,0,0,7);uctx.stroke();
+    } else {
+      // anechoic lumen
+      uctx.fillStyle="#04090c"; uctx.beginPath(); uctx.ellipse(cx,cy,rx,ry,0,0,7); uctx.fill();
+      // colour Doppler fill
+      if(us.doppler){ uctx.save(); uctx.beginPath(); uctx.ellipse(cx,cy,rx*0.92,ry*0.92,0,0,7); uctx.clip();
+        if(type==="art"){ uctx.fillStyle="rgba(210,40,30,"+(0.45+0.45*puls)+")"; } else { uctx.fillStyle="rgba(40,90,210,.6)"; }
+        uctx.fillRect(cx-rx,cy-ry,rx*2,ry*2);
+        // mosaic flecks
+        uctx.fillStyle=type==="art"?"rgba(255,180,60,.5)":"rgba(120,170,255,.5)";
+        for(var m=0;m<6;m++)uctx.fillRect(cx-rx+Math.random()*rx*2,cy-ry+Math.random()*ry*2,2,2);
+        uctx.restore();
+      }
+      // vessel wall
+      uctx.strokeStyle = type==="art" ? "rgba(220,170,150,.95)" : "rgba(150,180,190,.85)";
+      uctx.lineWidth = type==="art" ? 2.4 : 1.6; uctx.beginPath(); uctx.ellipse(cx,cy,rx,ry,0,0,7); uctx.stroke();
+    }
+    // selection ring
+    if(us.selId===it.id){ uctx.strokeStyle="#ffd24a"; uctx.lineWidth=2.2; uctx.setLineDash([4,3]);
+      uctx.beginPath(); uctx.ellipse(cx,cy,rx+5,ry+5,0,0,7); uctx.stroke(); uctx.setLineDash([]); }
+    us.hot.push({id:it.id,x:cx,y:cy,r:Math.max(rx,ry)+4});
+    // label
+    if(us.labels){ uctx.fillStyle="rgba(255,255,255,.92)"; uctx.font="600 10px Helvetica,Arial"; uctx.textAlign="center";
+      var nm = it.id==="brachialartery"?"a.":it.id==="mediannerve"?"n.":it.id==="ulnarnerve"?"ulnar n.":STR[it.id].name.replace(" vein","").replace(" veins"," v.");
+      uctx.fillText(nm,cx,cy-ry-4); }
+  });
+  // probe footprint + depth scale
+  uctx.fillStyle="rgba(255,255,255,.5)"; uctx.font="9px Helvetica"; uctx.textAlign="left";
+  for(var dd=1;dd<FOV_D;dd++){uctx.fillRect(UW-5,uy(dd)-0.5,5,1);uctx.fillText(dd+"cm",UW-26,uy(dd)+3);}
+  if(us.compress){uctx.fillStyle="rgba(255,210,74,.95)";uctx.font="700 11px Helvetica";uctx.textAlign="left";uctx.fillText("COMPRESSION",8,UH-8);}
+}
+
+usCanvas.addEventListener('pointerdown',function(e){
+  var r=usCanvas.getBoundingClientRect(), mx=(e.clientX-r.left)*(UW/r.width), my=(e.clientY-r.top)*(UH/r.height);
+  for(var i=0;i<us.hot.length;i++){var h=us.hot[i]; if(Math.hypot(mx-h.x,my-h.y)<h.r+3){ selectStruct(h.id); return; }}
+});
+
+/* ============================================================
+   THREE SCENE
+============================================================ */
+var canvas=document.getElementById('scene'), viewport=canvas.parentElement;
+var renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.outputEncoding=THREE.sRGBEncoding; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.05;
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMappingExposure=1.0;
+var scene=new THREE.Scene();
+var camera=new THREE.PerspectiveCamera(38,1,0.1,200); camera.position.set(6.2,2.6,14.5);
+var orbit=new THREE.OrbitControls(camera,renderer.domElement);
+orbit.enableDamping=true; orbit.dampingFactor=0.08; orbit.target.set(0.35,0.6,0.2);
+orbit.minDistance=5; orbit.maxDistance=26; orbit.maxPolarAngle=Math.PI*0.92;
+
+scene.add(new THREE.HemisphereLight(0xffffff,0x4a443c,0.55));
+var key=new THREE.DirectionalLight(0xfff2e2,1.05); key.position.set(5,9,7); key.castShadow=true;
+key.shadow.mapSize.set(2048,2048); key.shadow.camera.near=1; key.shadow.camera.far=40;
+key.shadow.camera.left=-9;key.shadow.camera.right=9;key.shadow.camera.top=11;key.shadow.camera.bottom=-9;
+key.shadow.bias=-0.0004; key.shadow.radius=4; scene.add(key);
+var fill=new THREE.DirectionalLight(0xbcd2ff,0.4); fill.position.set(-7,2,4); scene.add(fill);
+var rim=new THREE.DirectionalLight(0xffffff,0.5); rim.position.set(-3,5,-7); scene.add(rim);
+var ground=new THREE.Mesh(new THREE.PlaneGeometry(60,60),new THREE.ShadowMaterial({opacity:0.16}));
+ground.rotation.x=-Math.PI/2; ground.position.y=-5.0; ground.receiveShadow=true; scene.add(ground);
+var root=new THREE.Group(); scene.add(root);
+
+// image-based lighting — PMREM from a soft studio gradient (nicer specular on skin & vessels)
+var pmrem=new THREE.PMREMGenerator(renderer);
+(function(){var c=document.createElement('canvas');c.width=16;c.height=128;var g=c.getContext('2d');
+  var grd=g.createLinearGradient(0,0,0,128);grd.addColorStop(0,"#fdfaf3");grd.addColorStop(.5,"#efe6d4");grd.addColorStop(.78,"#ddd0bb");grd.addColorStop(1,"#c7bba6");
+  g.fillStyle=grd;g.fillRect(0,0,16,128);
+  var tex=new THREE.CanvasTexture(c);tex.mapping=THREE.EquirectangularReflectionMapping;
+  scene.environment=pmrem.fromEquirectangular(tex).texture;tex.dispose();})();
+
+// centreline
+var controls=[{y:5.7,x:0,z:0,r:1.30},{y:4.2,x:.18,z:.10,r:1.02},{y:2.6,x:.34,z:.18,r:.86},{y:1.0,x:.46,z:.30,r:.75},{y:.4,x:.5,z:.40,r:.72},{y:-.6,x:.62,z:.60,r:.80},{y:-2.2,x:.74,z:.90,r:.60},{y:-3.6,x:.82,z:1.12,r:.46},{y:-4.5,x:.90,z:1.24,r:.50}];
+function lerp(a,b,t){return a+(b-a)*t;}
+function atY(y){if(y>=controls[0].y)return controls[0];if(y<=controls[controls.length-1].y)return controls[controls.length-1];
+  for(var i=0;i<controls.length-1;i++){var a=controls[i],b=controls[i+1];if(y<=a.y&&y>=b.y){var t=(a.y-y)/(a.y-b.y);return{x:lerp(a.x,b.x,t),z:lerp(a.z,b.z,t),r:lerp(a.r,b.r,t),y:y};}}return controls[0];}
+function P(y,dx,dz,frac){var c=atY(y),L=Math.hypot(dx,dz)||1,rad=c.r*frac;return new THREE.Vector3(c.x+dx/L*rad,y,c.z+dz/L*rad);}
+
+function buildLimb(){
+  var cps=controls.map(function(c){return new THREE.Vector3(c.x,c.y,c.z);});
+  var curve=new THREE.CatmullRomCurve3(cps,false,'catmullrom',0.5);
+  var M=260,K=42,pts=curve.getSpacedPoints(M),fr=curve.computeFrenetFrames(M,false),pos=[],uv=[],idx=[];
+  for(var i=0;i<=M;i++){var p=pts[i],N=fr.normals[i],B=fr.binormals[i],r=atY(p.y).r;
+    for(var k=0;k<K;k++){var a=k/K*6.2832,dx=Math.cos(a),dz=Math.sin(a)*0.82;
+      pos.push(p.x+r*(dx*N.x+dz*B.x),p.y+r*(dx*N.y+dz*B.y),p.z+r*(dx*N.z+dz*B.z)); uv.push(k/K,i/M);}}
+  for(var i2=0;i2<M;i2++)for(var k2=0;k2<K;k2++){var a1=i2*K+k2,a2=i2*K+(k2+1)%K,b1=(i2+1)*K+k2,b2=(i2+1)*K+(k2+1)%K;idx.push(a1,b1,a2,a2,b1,b2);}
+  function cap(rs,c,flip){var ci=pos.length/3;pos.push(c.x,c.y,c.z);uv.push(0.5,flip?0:1);for(var k=0;k<K;k++){var a=rs+k,b=rs+(k+1)%K;if(flip)idx.push(ci,a,b);else idx.push(ci,b,a);}}
+  cap(0,cps[0],true); cap(M*K,pts[M],false);
+  var g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2)); g.setIndex(idx); g.computeVertexNormals(); return g;
+}
+function skinMaps(){
+  var c=document.createElement('canvas');c.width=c.height=512;var x=c.getContext('2d');
+  x.fillStyle="#df9f7e";x.fillRect(0,0,512,512);
+  for(var i=0;i<160;i++){x.fillStyle=(Math.random()<.5?"rgba(188,118,92,":"rgba(228,184,154,")+(0.04+Math.random()*0.06)+")";x.beginPath();x.arc(Math.random()*512,Math.random()*512,30+Math.random()*130,0,7);x.fill();}
+  var col=new THREE.CanvasTexture(c);col.wrapS=col.wrapT=THREE.RepeatWrapping;col.encoding=THREE.sRGBEncoding;
+  var c2=document.createElement('canvas');c2.width=c2.height=256;var y=c2.getContext('2d');var im=y.createImageData(256,256);
+  for(var p=0;p<im.data.length;p+=4){var v=140+Math.random()*80;im.data[p]=im.data[p+1]=im.data[p+2]=v;im.data[p+3]=255;}
+  y.putImageData(im,0,0);var rg=new THREE.CanvasTexture(c2);rg.wrapS=rg.wrapT=THREE.RepeatWrapping;rg.repeat.set(2,5);
+  return {map:col,rough:rg};
+}
+var sktx=skinMaps();
+var skinMat=new THREE.MeshPhysicalMaterial({map:sktx.map,roughness:0.6,roughnessMap:sktx.rough,metalness:0.0,clearcoat:0.16,clearcoatRoughness:0.55,envMapIntensity:0.5,side:THREE.DoubleSide});
+var skin=new THREE.Mesh(buildLimb(),skinMat); skin.castShadow=true; skin.receiveShadow=true; root.add(skin);
+
+// hand + orientation labels (no torso/shoulder)
+var orient=new THREE.Group(); root.add(orient);
+function blob(sx,sy,sz,x,y,z,rz){var m=new THREE.Mesh(new THREE.SphereGeometry(1,24,18),skinMat);m.scale.set(sx,sy,sz);m.position.set(x,y,z);if(rz)m.rotation.z=rz;m.castShadow=true;m.receiveShadow=true;orient.add(m);return m;}
+blob(0.46,0.62,0.20,0.95,-5.00,1.32,0);
+blob(0.15,0.30,0.15,1.42,-4.92,1.30,-0.7);
+blob(0.10,0.33,0.12,1.27,-5.86,1.45,0);blob(0.10,0.37,0.12,1.05,-5.93,1.46,0);blob(0.10,0.35,0.12,0.84,-5.91,1.45,0);blob(0.10,0.30,0.12,0.64,-5.78,1.42,0);
+function roundRect(x,a,b,w,h,r){x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath();}
+function label(text,bg,sx){var c=document.createElement('canvas');c.width=256;c.height=100;var x=c.getContext('2d');
+  x.fillStyle=bg;roundRect(x,6,14,244,70,16);x.fill();x.fillStyle="#fff";x.font="bold 40px Helvetica,Arial";x.textAlign="center";x.textBaseline="middle";x.fillText(text,128,51);
+  var t=new THREE.CanvasTexture(c);t.anisotropy=4;var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,transparent:true}));sp.scale.set(sx,sx*0.39,1);return sp;}
+[["LATERAL","#b45309",1.9,new THREE.Vector3(2.2,-1.0,0.6)],["MEDIAL","#14595c",1.8,new THREE.Vector3(-1.7,-1.0,0.6)],
+ ["ANTERIOR","#3d5256",1.8,new THREE.Vector3(0.3,-1.0,1.6)],["POSTERIOR","#3d5256",1.9,new THREE.Vector3(0.5,-1.0,-1.5)]].forEach(function(L){var s=label(L[0],L[1],L[2]);s.position.copy(L[3]);orient.add(s);});
+
+// shared junction points — connecting vessels reuse the SAME point so their curves coincide (welded, no gap)
+var JC=P(.4,.7,.55,1), JB=P(.85,-.62,.52,1), JMC=P(.55,.1,.8,1), JACC=P(-1.5,.78,.4,1),
+    JDEEP=P(3.5,-.08,.11,.32), JDELT=P(5.45,-.06,.2,.34), JSUBSC=P(4.2,-.1,.12,.33), JSUBCL=P(6.05,-.1,.25,.34);
+// vessels (radii arrays give a proximal caliber gradient; pts listed distal→proximal)
+var defs=[
+ {id:"cephalic",radii:[.05,.052,.055,.058,.06,.058,.05,.04],pts:[P(-3.5,.7,.45,1),JACC,JC,P(1.8,.7,.5,1),P(3.2,.62,.55,1),P(4.4,.3,.72,1),P(5,.02,.45,.7),JDELT]},
+ {id:"basilic",radii:[.05,.056,.062,.068,.072,.06,.046],pts:[P(-3.5,-.6,.45,1),P(-1.6,-.74,.4,1),P(.4,-.68,.5,1),JB,P(1.8,-.66,.42,1),P(2.8,-.45,.25,.95),P(3.3,-.18,.08,.5),JDEEP]},
+ {id:"mediancubital",radii:[.05,.056,.052],pts:[JC,JMC,JB]},
+ {id:"accessorycephalic",radii:[.038,.044,.05],pts:[P(-3.4,.5,.05,1),P(-2.4,.7,.2,1),JACC]},
+ {id:"medianantebrachial",radii:[.04,.046,.048,.05],pts:[P(-3.5,-.05,.6,1),P(-2.4,-.05,.72,1),P(-1.3,-.05,.74,1),JMC]},
+ {id:"brachialveins",radii:[.046,.052,.06],pts:[P(.45,-.12,.18,.37),P(1.4,-.16,.15,.34),P(2.5,-.16,.14,.32),JDEEP],pts2:[P(.45,.04,.18,.37),P(1.4,.05,.15,.34),P(2.5,.05,.14,.32),JDEEP]},
+ {id:"axillary",radii:[.082,.092,.10,.108],pts:[JDEEP,JSUBSC,JDELT,JSUBCL]},
+ {id:"subclavian",radii:[.108,.10,.092],pts:[JSUBCL,P(6.5,-.55,.28,.5),P(7.0,-1.25,.28,.72)]},
+ {id:"subscapular",radii:[.045,.036,.03],pts:[JSUBSC,P(4.35,-.5,-.05,.5),P(4.5,-.8,-.25,.7)]},
+ {id:"radialveins",radii:[.026,.03,.034,.038,.044],pts:[P(-3.4,.62,.2,.56),P(-2.0,.58,.25,.52),P(-.6,.42,.3,.47),P(.1,.2,.3,.42),P(.45,.04,.18,.37)],pts2:[P(-3.4,.48,.2,.54),P(-2.0,.42,.25,.5),P(-.6,.28,.3,.45),P(.1,.12,.3,.42),P(.45,.04,.18,.37)]},
+ {id:"ulnarveins",radii:[.028,.032,.038,.042,.046],pts:[P(-3.4,-.58,.2,.56),P(-2.0,-.55,.25,.52),P(-.6,-.42,.3,.47),P(.1,-.22,.3,.42),P(.45,-.12,.18,.37)],pts2:[P(-3.4,-.42,.2,.54),P(-2.0,-.4,.25,.5),P(-.6,-.28,.3,.45),P(.1,-.14,.3,.42),P(.45,-.12,.18,.37)]},
+ {id:"brachialartery",radii:[.05,.05,.05,.052],pts:[P(.3,-.05,.2,.36),P(1.4,-.04,.14,.33),P(2.5,-.04,.13,.32),P(4.2,-.05,.14,.32)]},
+ {id:"radialartery",radii:[.024,.026,.028,.03,.032],pts:[P(-3.4,.55,.2,.55),P(-2.0,.5,.25,.5),P(-.6,.35,.3,.46),P(.05,.14,.28,.4),P(.3,-.05,.2,.36)]},
+ {id:"ulnarartery",radii:[.026,.028,.03,.032,.034],pts:[P(-3.4,-.5,.2,.55),P(-2.0,-.48,.25,.5),P(-.6,-.35,.3,.46),P(.05,-.14,.28,.4),P(.3,-.05,.2,.36)]},
+ {id:"mediannerve",rad:0.046,pts:[P(-1.5,-.1,.5,.72),P(.4,-.12,.3,.5),P(2.5,-.14,.12,.34),P(4.2,-.12,.1,.34)]},
+ {id:"ulnarnerve",rad:0.044,pts:[P(-1.5,-.42,.18,.86),P(.3,-.6,-.1,.9),P(.6,-.62,-.26,.95),P(2.2,-.4,-.05,.6),P(3.6,-.2,0,.4)]},
+ {id:"radialnerve",rad:0.044,pts:[P(-3.4,.5,-.05,.7),P(-2.2,.6,.18,.55),P(-.6,.6,.3,.55),P(.3,.62,.38,.6),P(1.2,.45,0,.55),P(2.6,.25,-.42,.5),P(3.6,-.05,-.45,.45),P(4.5,-.15,-.35,.42)]}
+];
+var meshes=[];
+function radiusAt(rr,u){if(rr.length===1)return rr[0];var f=u*(rr.length-1),i=Math.floor(f),t=f-i;if(i>=rr.length-1)return rr[rr.length-1];return rr[i]+(rr[i+1]-rr[i])*t;}
+function taperGeom(pts,rr){var curve=new THREE.CatmullRomCurve3(pts,false,'catmullrom',0.5);var seg=Math.max(30,pts.length*16),K=14,cp=curve.getSpacedPoints(seg),fr=curve.computeFrenetFrames(seg,false),pos=[],idx=[];
+  for(var i=0;i<=seg;i++){var u=i/seg,r=radiusAt(rr,u),N=fr.normals[i],B=fr.binormals[i],p=cp[i];for(var k=0;k<K;k++){var a=k/K*6.2832,dx=Math.cos(a),dz=Math.sin(a);pos.push(p.x+r*(dx*N.x+dz*B.x),p.y+r*(dx*N.y+dz*B.y),p.z+r*(dx*N.z+dz*B.z));}}
+  for(var i2=0;i2<seg;i2++)for(var k2=0;k2<K;k2++){var a1=i2*K+k2,a2=i2*K+(k2+1)%K,b1=(i2+1)*K+k2,b2=(i2+1)*K+(k2+1)%K;idx.push(a1,b1,a2,a2,b1,b2);}
+  var g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();return g;}
+function vesselMesh(pts,rad,rr,color){var g=rr?taperGeom(pts,rr):new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts,false,'catmullrom',0.5),Math.max(24,pts.length*14),rad,16,false);
+  var m=new THREE.MeshPhysicalMaterial({color:color,roughness:0.4,metalness:0.0,clearcoat:0.42,clearcoatRoughness:0.3,envMapIntensity:0.7,emissive:0x000000});var mesh=new THREE.Mesh(g,m);mesh.castShadow=true;return mesh;}
+defs.forEach(function(d){var S=STR[d.id];var grp=new THREE.Group();grp.add(vesselMesh(d.pts,d.rad,d.radii,S.color));if(d.pts2)grp.add(vesselMesh(d.pts2,d.rad,d.radii2||d.radii,S.color));
+  grp.children.forEach(function(ch){ch.userData.id=d.id;});S.grp3=grp;grp.visible=visible[d.id];root.add(grp);meshes.push.apply(meshes,grp.children);});
+
+// PROBE (transducer + scan plane), slides along the arm
+var probeGrp=new THREE.Group(); root.add(probeGrp);
+var trans=new THREE.Mesh(new THREE.BoxGeometry(1.7,0.5,0.6),new THREE.MeshStandardMaterial({color:0x2b2f33,roughness:0.5}));
+var transTip=new THREE.Mesh(new THREE.BoxGeometry(1.7,0.5,0.14),new THREE.MeshStandardMaterial({color:0x6cd0e0,emissive:0x1d6f7d,emissiveIntensity:0.6,roughness:0.3}));
+transTip.position.z=-0.31; trans.add(transTip); trans.castShadow=true; probeGrp.add(trans); // active face toward skin (-Z)
+var planeMat=new THREE.MeshBasicMaterial({color:0x6cd0e0,transparent:true,opacity:0.16,side:THREE.DoubleSide,depthWrite:false});
+var plane=new THREE.Mesh(new THREE.PlaneGeometry(3.4,3.4),planeMat); probeGrp.add(plane); // transverse (short-axis) imaging plane
+function setProbe(y){
+  var c=atY(y); // anterior approach (+Z), short-axis transverse plane
+  probeGrp.position.set(c.x, y, c.z + c.r + 0.30);
+  plane.rotation.set(-Math.PI/2,0,0);
+  plane.position.set(0,0,-(c.r+0.30));
+  // pick nearest level
+  var best=LEVELS[0],bd=1e9; LEVELS.forEach(function(L){var dd=Math.abs(L.y-y);if(dd<bd){bd=dd;best=L;}});
+  us.level=best;
+  document.getElementById('levelName').textContent=best.name;
+  document.getElementById('levelDepth').textContent=best.depth;
+}
+
+/* ============================================================
+   SELECTION + INFO
+============================================================ */
+var selId=null;
+function setEmissive(id,on){var g=STR[id].grp3;if(!g)return;g.children.forEach(function(ch){ch.material.emissive.setHex(on?STR[id].color:0);ch.material.emissiveIntensity=on?0.55:0;});}
+function showInfo(id){var S=STR[id],i=S.info,el=document.getElementById('info');el.className="info";
+  el.innerHTML='<span class="tag" style="background:'+hex(S.color)+'">'+i.tag+'</span><h3>'+S.name+'</h3><p class="step">'+i.step+'</p><p>'+i.role+'</p><div class="acc"><b>Access:</b> '+i.acc+'</div>';}
+function selectStruct(id){
+  if(selId)setEmissive(selId,false);
+  selId=id; us.selId=id; setEmissive(id,true); showInfo(id);
+  if(!visible[id]){visible[id]=true;var cb=document.getElementById('cb-'+id);if(cb)cb.checked=true;if(STR[id].grp3)STR[id].grp3.visible=true;updateXray();}
+}
+function clearSel(){if(selId)setEmissive(selId,false);selId=null;us.selId=null;var el=document.getElementById('info');el.className="info empty";
+  el.innerHTML='<p>Drag the probe along the arm and watch the ultrasound update. Click any vessel — in the 3D view or the ultrasound — to see its role in the survey and access suitability.</p>';}
+
+var ray=new THREE.Raycaster(),mouse=new THREE.Vector2(),downXY=null;
+function pick(e){var r=canvas.getBoundingClientRect();mouse.x=((e.clientX-r.left)/r.width)*2-1;mouse.y=-((e.clientY-r.top)/r.height)*2+1;ray.setFromCamera(mouse,camera);
+  var hitV=ray.intersectObjects(meshes.filter(function(m){return m.parent.visible;}),false);
+  if(hitV.length){selectStruct(hitV[0].object.userData.id);return;}
+  // else: click on the arm sets probe position
+  var hitArm=ray.intersectObject(skin,false); if(hitArm.length){var y=Math.max(-3.0,Math.min(4.6,hitArm[0].point.y)); setProbe(y); document.getElementById('probe').value=(4.6-y)/(4.6-(-3.0))*100;}}
+canvas.addEventListener('pointerdown',function(e){downXY=[e.clientX,e.clientY];});
+canvas.addEventListener('pointerup',function(e){if(downXY&&Math.hypot(e.clientX-downXY[0],e.clientY-downXY[1])<5)pick(e);});
+
+/* ============================================================
+   PANEL WIRING
+============================================================ */
+var order=["Superficial veins","Deep veins","Artery — do not cannulate","Nerves — avoid","Bone"],tog=document.getElementById('toggles');
+order.forEach(function(gn){var any=Object.keys(STR).filter(function(k){return STR[k].group===gn;});if(!any.length)return;
+  var gd=document.createElement('div');gd.className='grp';var h=document.createElement('div');h.className='gh';h.textContent=gn;gd.appendChild(h);
+  any.forEach(function(id){var S=STR[id];var row=document.createElement('label');row.className='row';
+    row.innerHTML='<input type="checkbox" id="cb-'+id+'" '+(visible[id]?'checked':'')+'><span class="sw" style="background:'+hex(S.color)+'"></span><span class="nm">'+S.name+'</span>';
+    var cb=row.querySelector('input');
+    cb.addEventListener('change',function(){visible[id]=cb.checked;if(S.grp3)S.grp3.visible=cb.checked;if(!cb.checked&&selId===id)clearSel();updateXray();});
+    row.querySelector('.nm').addEventListener('click',function(ev){ev.preventDefault();if(cb.checked)selectStruct(id);});
+    gd.appendChild(row);});
+  tog.appendChild(gd);});
+
+function anyDeep(){return Object.keys(STR).some(function(k){return STR[k].deep&&visible[k];});}
+var xrayCb=document.getElementById('xray');
+function updateXray(){var on=xrayCb.checked||anyDeep();skinMat.transparent=on;skinMat.opacity=on?0.34:1;skinMat.depthWrite=!on;skinMat.needsUpdate=true;}
+xrayCb.addEventListener('change',updateXray);
+document.getElementById('orientcb').addEventListener('change',function(){orient.visible=this.checked;});
+document.getElementById('autorot').addEventListener('change',function(){orbit.autoRotate=this.checked;orbit.autoRotateSpeed=1.0;});
+document.getElementById('reset').addEventListener('click',function(){orbit.reset();});
+document.getElementById('clear').addEventListener('click',clearSel);
+function tbtn(id,key){var b=document.getElementById(id);b.addEventListener('click',function(){us[key]=!us[key];b.classList.toggle('on',us[key]);});}
+tbtn('compress','compress');tbtn('doppler','doppler');tbtn('freeze','freeze');tbtn('uslabels','labels');
+document.getElementById('probe').addEventListener('input',function(){var y=4.6-(this.value/100)*(4.6-(-3.0));setProbe(y);});
+
+/* ============================================================
+   RUN
+============================================================ */
+function resize(){var w=viewport.clientWidth,h=viewport.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+window.addEventListener('resize',resize);resize();
+setProbe(LEVELS[3].y); document.getElementById('probe').value=(4.6-LEVELS[3].y)/(4.6-(-3.0))*100;
+updateXray(); orbit.saveState();
+document.getElementById('loading').style.display='none';
+var last=0;
+(function loop(t){requestAnimationFrame(loop);orbit.update();
+  // gentle probe-tip pulse
+  transTip.material.emissiveIntensity=0.45+0.25*Math.sin(t*0.004);
+  renderer.render(scene,camera);
+  if(!us.freeze && t-last>33){last=t;drawUS();}
+})(0);
+})();
+</script>
+</body>
+</html>

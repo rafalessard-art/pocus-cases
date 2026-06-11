@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Systematic Vascular Access — The Difficult IV in the Edematous Critically Ill Patient</title>
+<style>
+:root {
+  --ink: #1c2b2e;
+  --ink-soft: #3d5256;
+  --teal: #14595c;
+  --teal-bright: #1f7d80;
+  --rust: #b45309;
+  --rust-deep: #9a4708;
+  --paper: #f6f1e7;
+  --paper-card: #fffdf8;
+  --line: #d8cfbe;
+  --line-soft: #e7dfce;
+  --crisis: #8c2f2a;
+  --crisis-bg: #f7e9e6;
+  --good: #2f7d4f;
+  --good-bg: #e7f2ea;
+  --bad: #8c2f2a;
+  --bad-bg: #f7e9e6;
+  --shadow: 0 1px 2px rgba(28,43,46,.06), 0 8px 24px rgba(28,43,46,.06);
+  --serif: "Iowan Old Style","Palatino Linotype","Palatino","Georgia",serif;
+  --sans: "Helvetica Neue","Segoe UI",Arial,sans-serif;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 18px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 880px; margin: 0 auto; padding: 0 40px 120px; }
+
+/* ---- Masthead ---- */
+header.masthead { padding: 64px 0 28px; border-bottom: 3px solid var(--ink); margin-bottom: 8px; }
+.kicker { font-family: var(--sans); font-weight: 600; letter-spacing: .22em; text-transform: uppercase; font-size: 13px; color: var(--teal); margin: 0 0 14px; }
+h1.title { font-family: var(--sans); font-weight: 700; font-size: clamp(30px, 5vw, 46px); line-height: 1.05; letter-spacing: -.01em; margin: 0 0 18px; color: var(--ink); }
+.byline { font-style: italic; font-size: 17px; color: var(--ink-soft); margin: 0; }
+.byline strong { font-style: normal; font-weight: 600; color: var(--teal); }
+
+/* ---- Sections ---- */
+section.block { margin: 40px 0 0; }
+h2.section { font-family: var(--sans); font-weight: 700; font-size: 27px; letter-spacing: -.01em; color: var(--teal); margin: 0 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.part-tag { display: inline-block; font-family: var(--sans); font-weight: 600; font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--paper-card); background: var(--teal); padding: 5px 12px; border-radius: 4px; margin-bottom: 16px; }
+ul { margin: 10px 0 16px; padding-left: 0; list-style: none; }
+ul li { position: relative; padding-left: 26px; margin: 9px 0; }
+ul li::before { content: ""; position: absolute; left: 6px; top: .68em; width: 7px; height: 7px; border-radius: 50%; background: var(--rust); }
+p { margin: 12px 0; }
+h4 { font-family: var(--sans); font-weight: 600; font-size: 19px; color: var(--ink); margin: 22px 0 6px; }
+
+/* ---- Vignette cards ---- */
+.vignette { background: linear-gradient(180deg, var(--paper-card), #fbf7ee); border: 1px solid var(--line); border-left: 5px solid var(--teal); border-radius: 10px; padding: 22px 26px; box-shadow: var(--shadow); margin: 18px 0 8px; }
+.vignette.crisis { border-left-color: var(--crisis); background: linear-gradient(180deg, #fffaf8, var(--crisis-bg)); }
+.vignette .vh { font-family: var(--sans); font-weight: 600; letter-spacing: .03em; font-size: 14px; text-transform: uppercase; color: var(--teal); margin: 0 0 10px; }
+.vignette.crisis .vh { color: var(--crisis); }
+.vignette p { margin: 8px 0; }
+
+/* ---- Questions / collapsible answers ---- */
+section.qa { margin: 30px 0; }
+h3.q { font-family: var(--sans); font-weight: 600; font-size: 21px; line-height: 1.3; color: var(--ink); margin: 0 0 0; padding: 0; }
+.qnum { display: block; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--rust-deep); font-weight: 700; margin-bottom: 5px; }
+details.answer { margin: 12px 0 0; border: 1px solid var(--line-soft); border-radius: 10px; background: var(--paper-card); overflow: hidden; box-shadow: var(--shadow); }
+details.answer > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 13px 18px; font-family: var(--sans); font-weight: 600; color: var(--teal); background: linear-gradient(180deg, #fffefb, #f3ede1); user-select: none; transition: background .2s ease; }
+details.answer > summary::-webkit-details-marker { display: none; }
+details.answer > summary:hover { background: #efe8da; }
+.reveal { font-size: 16px; letter-spacing: .02em; }
+.reveal::before { content: "\25B6"; display: inline-block; margin-right: 10px; font-size: 11px; color: var(--rust); transition: transform .25s ease; transform: translateY(-1px); }
+details.answer[open] .reveal::before { transform: rotate(90deg) translateX(-1px); }
+.hint { margin-left: auto; font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 13px; color: var(--ink-soft); opacity: .8; }
+.answer-body { padding: 6px 22px 20px; animation: fade .35s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+/* ---- Tables ---- */
+figure.tbl { margin: 18px 0; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 15.5px; line-height: 1.5; background: var(--paper-card); border: 1px solid var(--line); }
+thead th { background: var(--teal); color: #f3efe6; font-family: var(--sans); font-weight: 600; font-size: 14px; text-align: left; padding: 10px 13px; letter-spacing: .01em; border-right: 1px solid rgba(255,255,255,.12); }
+tbody td { padding: 10px 13px; border-top: 1px solid var(--line-soft); border-right: 1px solid var(--line-soft); vertical-align: top; }
+tbody tr:nth-child(even) { background: #faf6ec; }
+figure.tbl figcaption { font-style: italic; font-size: 14px; color: var(--ink-soft); margin-top: 8px; }
+
+/* ---- Figures ---- */
+figure.img { margin: 22px 0; text-align: center; }
+.figtitle { font-family: var(--sans); font-weight: 600; font-size: 16px; color: var(--ink); margin-bottom: 10px; }
+.figdesc { font-style: italic; font-size: 14.5px; color: var(--ink-soft); margin-top: 10px; text-align: left; }
+.attr { font-size: 12.5px; color: var(--ink-soft); opacity: .85; margin-top: 6px; }
+.attr a, .ref-list a { color: var(--teal-bright); }
+
+/* ---- Embedded interactive 3D figure ---- */
+.figframe { position: relative; width: 100%; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; box-shadow: var(--shadow); background: var(--paper-card); }
+.figframe iframe { display: block; width: 100%; height: 700px; border: 0; }
+.figframe .fs { position: absolute; top: 12px; right: 12px; z-index: 3; font-family: var(--sans); font-size: 12px; font-weight: 600; background: var(--teal); color: #fff; padding: 7px 13px; border-radius: 7px; text-decoration: none; box-shadow: var(--shadow); }
+.figframe .fs:hover { background: var(--teal-bright); }
+@media (max-width: 560px) { .figframe iframe { height: 560px; } }
+
+/* ---- Callout / pearl ---- */
+.pearl { background: linear-gradient(180deg, #fff8ec, #fbeed4); border: 1px solid #e6c98c; border-left: 5px solid var(--rust); border-radius: 10px; padding: 16px 20px; margin: 20px 0; }
+.pearl-label { display: block; font-family: var(--sans); font-weight: 700; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--rust-deep); margin-bottom: 6px; }
+
+/* ---- Evidence badge ---- */
+.evgrade { display:inline-block; font-family:var(--sans); font-weight:700; font-size:11px; letter-spacing:.08em; text-transform:uppercase; padding:3px 9px; border-radius:20px; border:1px solid var(--line); color:var(--teal); background:#eef4ec; margin-left:4px; }
+
+/* ---- References ---- */
+.ref-list { list-style: none; counter-reset: r; padding-left: 0; font-size: 15px; line-height: 1.5; }
+.ref-list li { counter-increment: r; position: relative; padding-left: 34px; margin: 12px 0; }
+.ref-list li::before { content: counter(r) "."; position: absolute; left: 0; top: 0; font-family: var(--sans); font-weight: 700; color: var(--rust-deep); }
+
+footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); font-style: italic; font-size: 14px; color: var(--ink-soft); }
+
+@media print { details.answer { box-shadow: none; } details.answer[open] .answer-body { animation: none; } }
+@media (max-width: 560px) { body { font-size: 17px; } .hint { display: none; } }
+
+/* ---- MCQ review ---- */
+.mcq { border: 1px solid var(--line-soft); border-radius: 10px; background: var(--paper-card); box-shadow: var(--shadow); padding: 18px 20px; margin: 18px 0; }
+.mcq .stem { font-family: var(--sans); font-weight: 600; font-size: 16.5px; color: var(--ink); margin: 0 0 12px; }
+.mcq .stem .qn { display: block; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--rust-deep); font-weight: 700; margin-bottom: 5px; }
+.opt { display: block; width: 100%; text-align: left; font-family: var(--serif); font-size: 16px; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin: 7px 0; cursor: pointer; transition: all .15s; }
+.opt:hover { border-color: var(--teal-bright); background: #f6fbfa; }
+.opt .ol { font-family: var(--sans); font-weight: 700; color: var(--teal); margin-right: 10px; }
+.mcq.answered .opt { cursor: default; }
+.opt.correct { background: var(--good-bg); border-color: #bcdcc6; }
+.opt.wrong { background: var(--bad-bg); border-color: #e6bdb6; }
+.opt.correct .ol { color: var(--good); } .opt.wrong .ol { color: var(--bad); }
+.mcq .exp { display: none; margin-top: 12px; border-left: 4px solid var(--teal); background: #f3ede1; border-radius: 7px; padding: 10px 14px; font-size: 14.5px; line-height: 1.5; }
+.mcq.answered .exp { display: block; animation: fade .3s ease; }
+.mcq .exp b { color: var(--teal); }
+
+/* top nav */
+.topnav{position:sticky;top:0;z-index:100;background:var(--paper);border-bottom:2px solid var(--ink);font-family:var(--sans);}
+.topnav-inner{max-width:980px;margin:0 auto;padding:0 40px;display:flex;gap:0;}
+.topnav a{display:inline-block;padding:14px 20px;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--ink-soft);text-decoration:none;border-bottom:3px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s;}
+.topnav a:hover{color:var(--teal);}
+@media (max-width:560px){.topnav-inner{padding:0 12px;}.topnav a{padding:12px 14px;}}
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <div class="topnav-inner">
+    <a href="/">Home</a>
+    <a href="/#about">About</a>
+    <a href="/#resources">Resources</a>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="kicker">POCUS Learning Case Series · Perioperative Medicine</p>
+    <h1 class="title">Systematic Vascular Access: The Difficult IV in the Edematous, Critically Ill Patient</h1>
+    <p class="byline">Case developed by <strong>Raphael Lessard, MD</strong></p>
+  </header>
+
+  <section class="block">
+    <h2 class="section">Learning objectives</h2>
+    <p>By the end of this case, the learner should be able to:</p>
+    <ul>
+      <li>Recognize and risk-stratify <strong>difficult intravenous access (DIVA)</strong> in the edematous, critically ill patient, and decide when to escalate to ultrasound.</li>
+      <li>Perform a <strong>systematic, ultrasound-based survey</strong> of the arm's venous anatomy (a RaPeVA-style approach) and reliably distinguish vein from artery and nerve.</li>
+      <li>Select a peripheral target using <strong>objective criteria</strong> — vein depth, diameter, and the catheter-to-vein ratio.</li>
+      <li>Choose an appropriately long catheter and sound cannulation technique, applying the <strong>"65% rule"</strong> to maximize catheter survival.</li>
+      <li><em>(Part II)</em> Recognize and manage <strong>extravasation</strong> in this population — including vasopressor extravasation and compartment syndrome.</li>
+    </ul>
+  </section>
+
+  <section class="block">
+    <span class="part-tag">Part I &mdash; The Systematic Approach</span>
+    <div class="vignette crisis">
+      <p class="vh">Clinical scenario</p>
+      <p>A <strong>68-year-old</strong> with septic shock from urosepsis is in the OR/ICU for source control. After aggressive resuscitation they have <strong>anasarca</strong> (diffuse edema), are intubated and sedated, and remain hypotensive on a <strong>peripheral phenylephrine infusion</strong> running through the single 22-gauge IV the team managed to place blindly. That line is now positional and sluggish.</p>
+      <p>You are asked to obtain reliable access. Nursing has already made <strong>three failed blind attempts</strong>; no veins are visible or palpable through the edema.</p>
+    </div>
+  </section>
+
+  <!-- ===================== Q1 ===================== -->
+  <section class="qa">
+    <h3 class="q"><span class="qnum">Question 1</span>Before you reach for a needle, how should you approach access in this patient? How do you decide between another landmark attempt and escalating to ultrasound?</h3>
+    <details class="answer">
+      <summary><span class="reveal">Answer key</span><span class="hint">click to collapse / expand</span></summary>
+      <div class="answer-body">
+        <p>Treat vascular access as a <strong>system</strong>, not a single motor skill: <em>predict difficulty → choose the right tool and operator first → assess → select → target → secure</em>. The decisive first move here is to <strong>recognize difficult intravenous access (DIVA) and go straight to ultrasound-guided peripheral IV (USGPIV)</strong> rather than burning more blind attempts.</p>
+
+        <h4>Recognize and stratify DIVA</h4>
+        <p>This patient is textbook DIVA. The <strong>Modified A-DIVA</strong> scale uses five dichotomous predictors — a history of difficult cannulation, a difficult access anticipated by the clinician, an impalpable vein, a non-visible vein, and a target vein &lt; 3&nbsp;mm — that stratify patients into low / moderate / high risk. Essentially all five are positive here, placing the patient firmly in the high-risk group, where landmark first-attempt success is poor. Edema, fluid overload, and critical illness are themselves independent DIVA predictors.</p>
+
+        <h4>Why ultrasound first — and why not more blind attempts</h4>
+        <p>Each blind attempt destroys superficial targets, delays vasopressor delivery, and pushes the team prematurely toward central access. In difficult-access patients, a 2025 meta-analysis found ultrasound guidance produced markedly better outcomes than landmark technique:</p>
+        <figure class="tbl"><table>
+          <thead><tr><th>Outcome (USGPIV vs. landmark, DIVA patients)</th><th>Effect</th></tr></thead>
+          <tbody>
+            <tr><td>First-attempt success</td><td>OR <strong>5.31</strong> (95% CI 2.57&ndash;10.96)</td></tr>
+            <tr><td>Overall successful placement</td><td>OR <strong>4.25</strong> (2.01&ndash;8.98)</td></tr>
+            <tr><td>Number of skin punctures</td><td>&minus;0.83 attempts</td></tr>
+            <tr><td>Procedure time</td><td>&minus;~9.8 min</td></tr>
+            <tr><td>Complications</td><td>OR <strong>0.49</strong> &mdash; roughly halved</td></tr>
+          </tbody>
+        </table><figcaption>Pooled effects favoring ultrasound in difficult-access patients (Mansour et al., 2025).</figcaption></figure>
+        <p>This approach is endorsed by the <strong>2024 INS Infusion Therapy Standards of Practice</strong> and the <strong>ERPIUP/WoCoVA</strong> consensus, framed within <strong>Vessel Health &amp; Preservation</strong>: deploy ultrasound early, choose the least invasive device that meets the therapy needs, and preserve future access. Note that low-dose peripheral phenylephrine is acceptable short-term — the right first answer here is a <em>better peripheral line under ultrasound</em>, not reflexive central access.</p>
+
+        <div class="pearl"><span class="pearl-label">Teaching pearl</span>In the edematous, high-risk DIVA patient, the evidence-based reflex is to <strong>predict difficulty and reach for the probe first</strong>. The worst outcome is the fourth, fifth, and sixth blind attempt.</div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ===================== Q2 ===================== -->
+  <section class="qa">
+    <h3 class="q"><span class="qnum">Question 2</span>Describe a systematic ultrasound survey of the arm's veins. How do you tell a vein from an artery and a nerve, and what objective criteria define a good target? Use the interactive model below.</h3>
+
+    <figure class="img">
+      <p class="figtitle">Figure 1. Interactive 3D arm with live short-axis ultrasound — the RaPeVA survey</p>
+      <div class="figframe">
+        <a class="fs" href="/VascularAccess_3D_Sono.html" target="_blank" rel="noopener">Open full-screen &#8599;</a>
+        <iframe src="/VascularAccess_3D_Sono.html" title="Interactive 3D arm with live ultrasound" loading="lazy"></iframe>
+      </div>
+      <p class="figdesc">Drag the probe along the arm and watch the short-axis sonoanatomy update through each survey level. Toggle structures on the right; click any vessel — in the 3D view or the ultrasound — for detail. Use the <em>Compress</em> and <em>Color&nbsp;Doppler</em> controls to practice telling veins from the artery. Best viewed full-screen.</p>
+    </figure>
+
+    <details class="answer">
+      <summary><span class="reveal">Answer key</span><span class="hint">click to collapse / expand</span></summary>
+      <div class="answer-body">
+        <p>Replace "look and feel, then stab" with a <strong>standardized, pre-procedural ultrasound survey</strong> — the peripheral analog of the RaPeVA (Rapid Peripheral Vein Assessment) protocol — followed by deliberate selection against objective criteria.</p>
+
+        <h4>Step 1 — Map (systematic survey)</h4>
+        <p>With a high-frequency linear probe in <strong>transverse / short-axis</strong>, survey the candidate territory in order: cephalic at the antecubital fossa, the deep brachial veins and artery, the basilic in the bicipital groove, the neurovascular bundle, the cephalic over the biceps, and the axillary proximally. Map the whole arm <em>before</em> committing a needle.</p>
+
+        <h4>Step 2 — Distinguish vein vs. artery vs. nerve</h4>
+        <figure class="tbl"><table>
+          <thead><tr><th>Structure</th><th>Ultrasound signature</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Vein</strong></td><td>Compressible, non-pulsatile; collapses with gentle probe pressure; fills steadily with Doppler. <em>Compressibility is the key sign in edema.</em></td></tr>
+            <tr><td><strong>Artery</strong></td><td>Pulsatile, non-compressible, thicker wall; pulsatile flow on color Doppler. <strong>Identify it first and stay clear.</strong></td></tr>
+            <tr><td><strong>Nerve</strong></td><td>Hyperechoic "honeycomb" of fascicles, non-compressible. Pain/paraesthesia on advancing = stop.</td></tr>
+          </tbody>
+        </table></figure>
+
+        <h4>Step 3 — Select against objective criteria</h4>
+        <ul>
+          <li><strong>Depth ≤ ~1.5&nbsp;cm</strong> from the skin (deeper predicts failure and early loss).</li>
+          <li><strong>Diameter ≥ ~0.3&nbsp;cm</strong> — pick the largest available vein; &lt; 3&nbsp;mm is itself a DIVA predictor.</li>
+          <li><strong>Catheter-to-vein ratio ≤ 45%</strong> (vein ≥ ~2&ndash;3× catheter diameter) to limit thrombosis.</li>
+          <li>A <strong>straight, non-tortuous</strong> target segment, away from artery and nerve. The <strong>basilic</strong> in the bicipital groove is frequently the best target — good calibre and a safe neighbourhood.</li>
+        </ul>
+
+        <div class="pearl"><span class="pearl-label">Edema pitfall</span>Edematous tissue compresses easily, so heavy probe pressure <strong>flattens the target vein and exaggerates its apparent depth</strong>. Use light pressure, let the vein refill, and re-measure before you choose your catheter.</div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ===================== Q3 ===================== -->
+  <section class="qa">
+    <h3 class="q"><span class="qnum">Question 3</span>Your best target is the deep basilic vein at <strong>1.3&nbsp;cm</strong> depth. Which catheter and technique give the best chance of a durable line?</h3>
+    <details class="answer">
+      <summary><span class="reveal">Answer key</span><span class="hint">click to collapse / expand</span></summary>
+      <div class="answer-body">
+        <p>Choose a <strong>longer catheter</strong> and place it with deliberate needle-tip tracking so that enough of the catheter ends up <em>inside</em> the vein. This is governed by the <strong>"65% rule."</strong></p>
+
+        <h4>The 65% rule</h4>
+        <figure class="tbl"><table>
+          <thead><tr><th>Catheter length intraluminal</th><th>Failure rate</th></tr></thead>
+          <tbody>
+            <tr><td>&lt; 30%</td><td>~<strong>100%</strong> fail</td></tr>
+            <tr><td>30&ndash;64%</td><td>~32% fail</td></tr>
+            <tr><td>&ge; <strong>65%</strong> (≥ ~2.75&nbsp;cm in vein)</td><td>~<strong>0%</strong> fail</td></tr>
+          </tbody>
+        </table><figcaption>Catheter-in-vein length drives survival (Bahl et al.; reflected in the 2021/2024 INS Standards).</figcaption></figure>
+        <p>A standard <strong>2.5&nbsp;cm</strong> cannula cannot satisfy this in a 1.3&nbsp;cm-deep vein — too little catheter remains in the lumen, so it dislodges or infiltrates early. <strong>Edema inflates the apparent depth</strong>, compounding the problem. Default to a <strong>longer catheter (≈ 4.8&ndash;6.4&nbsp;cm)</strong>; a deep vein also needs a <strong>steep-enough approach to reach it</strong> (a too-flat angle wastes catheter in the tissue tract), but length does the heavy lifting.</p>
+
+        <h4>Technique</h4>
+        <ul>
+          <li><strong>Short-axis (out-of-plane)</strong> is easier to learn, faster to locate the vein, and is what most operators use in difficult access; its hazard is mistaking the needle <em>shaft</em> for the <em>tip</em>. <strong>Long-axis (in-plane)</strong> shows the entire needle but is less forgiving of probe wobble. A common hybrid is to find and align in short-axis, then rotate to long-axis to confirm the tip is intraluminal.</li>
+          <li><strong>Dynamic needle-tip positioning:</strong> in short axis, advance the probe slightly ahead, re-find the bright tip, then advance the needle to it — "leapfrogging" so the true tip is always tracked. This prevents mistaking the shaft for the tip and puncturing the posterior wall.</li>
+          <li>After flash, <strong>drop the angle and advance ~0.5&nbsp;cm</strong> so the <em>catheter</em> (not just the needle) is intraluminal before threading.</li>
+          <li><strong>Confirm</strong> intraluminal placement with a real-time saline flush under ultrasound; consider a micropuncture / modified-Seldinger kit for deep veins.</li>
+        </ul>
+
+        <div class="pearl"><span class="pearl-label">Bottom line</span>Pick a vein <strong>≥ 0.3&nbsp;cm wide and ≤ 1.5&nbsp;cm deep</strong>, then choose a catheter long enough that <strong>≥ 65% sits intraluminally</strong>. In the edematous arm, when in doubt, go longer.</div>
+      </div>
+    </details>
+  </section>
+
+  <div class="pearl" style="margin:30px 0;"><span class="pearl-label">Exit ramp</span><strong>Know when peripheral is the wrong answer.</strong> A systematic approach also defines its own limits. If no peripheral target meets the criteria above, if therapy will run beyond ~6 days, or if the patient needs agents unsuitable for a short peripheral catheter (continuous or higher-dose vasopressors, pH/osmolarity extremes), escalate <em>deliberately</em> rather than re-attempting a doomed peripheral: <strong>extended-dwell peripheral &rarr; midline (20&ndash;25&nbsp;cm, 3&ndash;5&nbsp;Fr) &rarr; PICC/central.</strong> Vessel Health &amp; Preservation means matching the device to the therapy. For this patient, low-dose peripheral phenylephrine is acceptable short-term &mdash; but if the pressor requirement climbs or persists, <strong>plan the next device early</strong> instead of chasing failing peripherals.</div>
+
+  <section class="block">
+    <span class="part-tag">Part II &mdash; The Complication</span>
+    <div class="vignette crisis">
+      <p class="vh">Clinical scenario (continued)</p>
+      <p>The new ultrasound-guided line is placed and the <strong>phenylephrine infusion is transferred to it</strong>. Forty minutes later the bedside nurse notes the infusion is running sluggishly and the pump <strong>pressure alarm has triggered twice</strong>. The patient is sedated and cannot report symptoms; the arm is already edematous, so obvious swelling is hard to appreciate.</p>
+    </div>
+  </section>
+
+  <!-- ===================== Q4 ===================== -->
+  <section class="qa">
+    <h3 class="q"><span class="qnum">Question 4</span>What is happening, and how do you recognize it in a sedated, edematous patient who cannot tell you anything is wrong?</h3>
+    <details class="answer">
+      <summary><span class="reveal">Answer key</span><span class="hint">click to collapse / expand</span></summary>
+      <div class="answer-body">
+        <p>This is <strong>extravasation</strong> — leakage of a vesicant (here, a vasopressor) into the surrounding tissue — the dominant peripheral-line failure mode. The trap in this patient is that it is <strong>occult</strong>: the sedated patient feels no pain, and pre-existing <strong>edema masks the swelling</strong>, so it presents late and large.</p>
+
+        <h4>Don't rely on the patient — rely on objective clues</h4>
+        <ul>
+          <li><strong>Pump occlusion / pressure alarms</strong> and a sluggish infusion.</li>
+          <li><strong>Loss of blood return</strong>; a cool, firm, or blanched site.</li>
+          <li>Maintain a high index of suspicion whenever a vesicant runs through a peripheral line.</li>
+        </ul>
+
+        <h4>Use the probe you already have</h4>
+        <p>Point-of-care ultrasound confirms it: a <strong>perivascular anechoic fluid collection</strong> and a catheter tip lying <strong>outside the lumen</strong>. This closes the loop with Part&nbsp;I — insufficient intraluminal catheter length (the <strong>65% rule</strong> failure) is a leading mechanism of the dislodgement that caused this.</p>
+
+        <div class="pearl"><span class="pearl-label">Teaching pearl</span>In the anesthetized, edematous patient the classic warning signs are silenced. <strong>Pump pressure and loss of blood return are your early alarms</strong>; ultrasound is your confirmation.</div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ===================== Q5 ===================== -->
+  <section class="qa">
+    <h3 class="q"><span class="qnum">Question 5</span>Why is <em>phenylephrine</em> extravasation particularly concerning? Which perioperative agents are most dangerous interstitially, and which are relatively benign?</h3>
+    <details class="answer">
+      <summary><span class="reveal">Answer key</span><span class="hint">click to collapse / expand</span></summary>
+      <div class="answer-body">
+        <p>Classify by the <strong>mechanism of tissue injury</strong>, because mechanism dictates the antidote and the urgency. Phenylephrine is a <strong>vasoconstrictor</strong> — it causes <strong>ischemic necrosis</strong> by α-mediated vasospasm.</p>
+        <figure class="tbl"><table>
+          <thead><tr><th>Class (mechanism)</th><th>Examples</th><th>Concern</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Vasoconstrictors</strong> (ischemic)</td><td>phenylephrine, norepinephrine, epinephrine, dopamine, vasopressin</td><td>High &mdash; ischemic necrosis</td></tr>
+            <tr><td><strong>Hyperosmolar / pH-extreme</strong> (osmotic-chemical)</td><td>calcium chloride/gluconate (notorious), 3% saline, sodium bicarbonate, concentrated dextrose, mannitol, contrast, TPN</td><td>High &mdash; osmotic/chemical injury</td></tr>
+            <tr><td><strong>Absorption-refractory / cytotoxic</strong></td><td>propofol &amp; lipids, promethazine (severe), phenytoin (purple glove)</td><td>High &mdash; persistent necrosis</td></tr>
+            <tr><td><strong>Non-vesicant irritants / neutral</strong></td><td>isotonic crystalloids, most antibiotics at proper dilution</td><td>Lower &mdash; supportive care (volume still matters)</td></tr>
+          </tbody>
+        </table></figure>
+        <div class="pearl"><span class="pearl-label">Teaching pearl</span>Don't memorize a drug list — <strong>reason from mechanism</strong>: <em>ischemic</em> (vasopressors) vs. <em>osmotic/chemical</em> (calcium, hypertonics) vs. <em>cytotoxic</em>. That single distinction tells you which antidote to reach for.</div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ===================== Q6 ===================== -->
+  <section class="qa">
+    <h3 class="q"><span class="qnum">Question 6</span>How do you manage this phenylephrine extravasation — and what is the worst-case progression you must not miss?</h3>
+    <details class="answer">
+      <summary><span class="reveal">Answer key</span><span class="hint">click to collapse / expand</span></summary>
+      <div class="answer-body">
+        <h4>Immediate steps (any extravasation)</h4>
+        <p><strong>Stop the infusion → aspirate residual drug through the catheter → remove the catheter → elevate the limb → mark/photograph the area → notify.</strong></p>
+
+        <h4>Antidote — match it to the mechanism</h4>
+        <ul>
+          <li><strong>Vasopressor (ischemic) → phentolamine</strong>, the only FDA-approved antidote: a non-selective α-blocker, <strong>5&ndash;10&nbsp;mg in 10&ndash;15&nbsp;mL normal saline</strong>, infiltrated subcutaneously around the site, ideally <strong>within ~12&nbsp;h</strong>; blanching reverses within minutes. Pair with a <strong>warm</strong> compress (vasodilation). Alternatives during phentolamine shortage: <strong>topical nitroglycerin 2% ointment</strong> or <strong>subcutaneous terbutaline</strong>.</li>
+          <li><strong>Hyperosmolar / pH-extreme</strong> (calcium, hypertonics) → <strong>hyaluronidase</strong> ("dilute and disperse") + warmth — <em>not</em> phentolamine.</li>
+        </ul>
+        <p>Using the <strong>wrong antidote for the wrong mechanism</strong> is the classic error: phentolamine does nothing for a calcium extravasation, and hyaluronidase is not the answer for a vasopressor.</p>
+
+        <h4>The catastrophic endpoint — compartment syndrome</h4>
+        <p>A large-volume or progressive extravasation into a confined fascial compartment threatens perfusion. In the <strong>sedated, edematous</strong> patient it is <strong>occult and presents late and large</strong> — there is no pain to report and swelling is masked.</p>
+        <ul>
+          <li>Stop the infusion, remove the catheter, elevate, and assess perfusion.</li>
+          <li><strong>Measure compartment pressures:</strong> a <strong>delta pressure (diastolic BP &minus; compartment pressure) &lt; 30&nbsp;mmHg</strong> signals impending compartment syndrome and the need for <strong>emergent surgical consultation / fasciotomy</strong>.</li>
+          <li>Early, large extravasations may be treated with <strong>saline washout / liposuction (Gault technique)</strong> plus hyaluronidase before tissue loss.</li>
+        </ul>
+
+        <div class="pearl"><span class="pearl-label">Bottom line</span><em>Ischemic</em> vesicants → <strong>phentolamine + warmth</strong>; <em>osmotic/chemical</em> → <strong>hyaluronidase + warmth</strong>; <em>any</em> large or progressive case → think <strong>compartment syndrome</strong>, measure pressures, call surgery. Remember the anesthetized, edematous patient hides every warning sign — which is exactly why the systematic, ultrasound-guided approach in Part&nbsp;I mattered.</div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ===================== MCQ REVIEW ===================== -->
+  <section class="block">
+    <h2 class="section">End-of-case review</h2>
+    <p>Six questions spanning both parts. Select an answer to reveal the correct choice and a brief explanation.</p>
+
+    <div class="mcq" data-correct="b">
+      <p class="stem"><span class="qn">Review 1 &middot; Approach</span>Your edematous, critically ill patient has had three failed blind IV attempts. The best next step is to:</p>
+      <button class="opt" data-k="a"><span class="ol">A</span>Make one or two more blind attempts at the hand before escalating</button>
+      <button class="opt" data-k="b"><span class="ol">B</span>Recognize difficult access (DIVA), and move directly to ultrasound-guided peripheral IV</button>
+      <button class="opt" data-k="c"><span class="ol">C</span>Proceed straight to a central line because of the vasopressor</button>
+      <button class="opt" data-k="d"><span class="ol">D</span>Apply a tourniquet and warm pack, then attempt blindly</button>
+      <div class="exp"><b>B.</b> All five Modified A-DIVA predictors are positive — go to ultrasound first. In DIVA patients, USGPIV roughly quintuples first-attempt success and halves complications. Low-dose peripheral phenylephrine is acceptable short-term, so central access is not the required first answer.</div>
+    </div>
+
+    <div class="mcq" data-correct="c">
+      <p class="stem"><span class="qn">Review 2 &middot; Survey</span>On short-axis ultrasound you see three round structures. Which feature best identifies your <em>venous</em> target?</p>
+      <button class="opt" data-k="a"><span class="ol">A</span>Pulsatility</button>
+      <button class="opt" data-k="b"><span class="ol">B</span>A hyperechoic honeycomb appearance</button>
+      <button class="opt" data-k="c"><span class="ol">C</span>Compressibility with gentle probe pressure</button>
+      <button class="opt" data-k="d"><span class="ol">D</span>Non-compressibility and a thick wall</button>
+      <div class="exp"><b>C.</b> Veins are compressible and non-pulsatile; arteries are pulsatile, thick-walled and non-compressible; nerves are a non-compressible honeycomb. In edema, compressibility is the key confirmatory sign — but use light pressure so you don't flatten the vein and overestimate its depth.</div>
+    </div>
+
+    <div class="mcq" data-correct="b">
+      <p class="stem"><span class="qn">Review 3 &middot; Catheter choice</span>Your target basilic vein is 1.3&nbsp;cm deep. Which choice maximizes catheter survival?</p>
+      <button class="opt" data-k="a"><span class="ol">A</span>A standard 2.5&nbsp;cm cannula, advanced as soon as flash appears</button>
+      <button class="opt" data-k="b"><span class="ol">B</span>A longer catheter placed so that &ge; 65% sits intraluminally, confirmed before threading</button>
+      <button class="opt" data-k="c"><span class="ol">C</span>The shortest catheter available to minimize the puncture</button>
+      <button class="opt" data-k="d"><span class="ol">D</span>Any length — depth does not affect survival</button>
+      <div class="exp"><b>B.</b> The 65% rule: ~100% failure when &lt;30% of catheter is intraluminal, ~0% at &ge;65% (&ge;~2.75&nbsp;cm in vein). A 2.5&nbsp;cm cannula cannot achieve this in a deep, edematous vein — choose a longer (≈4.8&ndash;6.4&nbsp;cm) catheter.</div>
+    </div>
+
+    <div class="mcq" data-correct="d">
+      <p class="stem"><span class="qn">Review 4 &middot; Recognition</span>A vasopressor runs through a new peripheral line in a sedated, edematous patient. The earliest reliable sign of extravasation is most likely:</p>
+      <button class="opt" data-k="a"><span class="ol">A</span>The patient reporting burning pain</button>
+      <button class="opt" data-k="b"><span class="ol">B</span>Obvious limb swelling</button>
+      <button class="opt" data-k="c"><span class="ol">C</span>Fever</button>
+      <button class="opt" data-k="d"><span class="ol">D</span>Pump pressure alarms and loss of blood return (confirmed with ultrasound)</button>
+      <div class="exp"><b>D.</b> The sedated patient can't report pain and edema masks swelling, so extravasation is occult. Pump occlusion/pressure alarms and loss of blood return are the early objective clues; ultrasound shows perivascular fluid and a tip outside the lumen.</div>
+    </div>
+
+    <div class="mcq" data-correct="a">
+      <p class="stem"><span class="qn">Review 5 &middot; Risk</span>Which extravasated agent carries the <em>lowest</em> tissue risk?</p>
+      <button class="opt" data-k="a"><span class="ol">A</span>Isotonic (0.9%) saline</button>
+      <button class="opt" data-k="b"><span class="ol">B</span>Calcium chloride</button>
+      <button class="opt" data-k="c"><span class="ol">C</span>Norepinephrine</button>
+      <button class="opt" data-k="d"><span class="ol">D</span>Promethazine</button>
+      <div class="exp"><b>A.</b> Isotonic crystalloid is a non-vesicant — supportive care (though large <em>volumes</em> still risk compartment syndrome). Calcium and vasopressors and promethazine are high-concern vesicants by osmotic, ischemic, and cytotoxic mechanisms respectively.</div>
+    </div>
+
+    <div class="mcq" data-correct="b">
+      <p class="stem"><span class="qn">Review 6 &middot; Management</span>For this <em>phenylephrine</em> extravasation, the correct antidote and a key pitfall are:</p>
+      <button class="opt" data-k="a"><span class="ol">A</span>Hyaluronidase — it is the antidote for all extravasations</button>
+      <button class="opt" data-k="b"><span class="ol">B</span>Phentolamine (5&ndash;10&nbsp;mg in saline, subcutaneous) + warmth; hyaluronidase would be wrong here</button>
+      <button class="opt" data-k="c"><span class="ol">C</span>Keep infusing through the line and apply ice</button>
+      <button class="opt" data-k="d"><span class="ol">D</span>Phentolamine works for any extravasated drug</button>
+      <div class="exp"><b>B.</b> Vasopressor (ischemic) extravasation → phentolamine, an α-blocker, infiltrated subcutaneously within ~12&nbsp;h, plus a warm compress. Hyaluronidase is for osmotic agents (calcium, hypertonics), not vasopressors — matching antidote to mechanism is the whole game. And always reassess for compartment syndrome (delta pressure &lt; 30&nbsp;mmHg → fasciotomy).</div>
+    </div>
+  </section>
+
+  <!-- ===================== REFERENCES ===================== -->
+  <section class="block">
+    <h2 class="section">Key references</h2>
+    <ol class="ref-list">
+      <li>Brescia F, Pittiruti M, Spencer TR, Dawson RB. <span class="ref-title">The SIP protocol update: eight strategies incorporating RaPeVA.</span> <em>J Vasc Access.</em> 2022.</li>
+      <li>Mansour et al. <span class="ref-title">Outcomes of POCUS-guided peripheral IV access in difficult venous access patients: a systematic review and meta-analysis.</span> <em>J Clin Ultrasound.</em> 2025.</li>
+      <li>Anderssen LM, et al. <span class="ref-title">Efficacy of ultrasound-guided peripheral IV cannulation vs. landmark in ED patients with difficult access: a systematic review &amp; meta-analysis.</span> <em>J Vasc Access.</em> 2026.</li>
+      <li>van Loon FHJ, et al. <span class="ref-title">The Modified A-DIVA Scale… a multicenter validation study.</span> <em>Anesth Analg.</em> 2019.</li>
+      <li>Paterson RS, et al. <span class="ref-title">PIVC insertion in adults with difficult IV access: a systematic review of assessment instruments, guidelines and escalation pathways.</span> <em>Emerg Med Australas.</em> 2022.</li>
+      <li><span class="ref-title">Defining difficult intravenous access (DIVA): a systematic review.</span> 2021.</li>
+      <li>Bahl A, et al. <span class="ref-title">Catheter length in-vein impacts ultrasound-guided peripheral IV catheter survival (the "65% rule").</span> <em>J Emerg Nurs.</em> 2021.</li>
+      <li><span class="ref-title">Infusion Therapy Standards of Practice (INS), 2024</span>; Pittiruti M, et al. <span class="ref-title">ERPIUP consensus (WoCoVA).</span> <em>J Vasc Access.</em> 2021/2023.</li>
+      <li><span class="ref-title">Ultrasound-guided peripheral venous cannulation in critically ill patients: a practical guideline.</span> <em>The Ultrasound Journal.</em> 2019.</li>
+      <li>StatPearls. <span class="ref-title">Ultrasound-Guided Intravenous Access.</span> NCBI Bookshelf.</li>
+      <li><span class="ref-title">Recommendations for Management of Noncytotoxic Vesicant Extravasations.</span> <em>J Infus Nurs.</em> 2020; and <span class="ref-title">Optimal approach to infiltration and extravasation of nonchemotherapy medications.</span> <em>Cleve Clin J Med.</em> 2023.</li>
+    </ol>
+  </section>
+
+  <footer>
+    POCUS Learning Case Series &middot; Systematic Vascular Access. Evidence current to 2025&ndash;2026. The interactive 3D model is an original teaching schematic and is not a substitute for hands-on, supervised ultrasound training. Educational use only; not a substitute for clinical judgment or institutional protocols.
+  </footer>
+
+  <script>
+  document.querySelectorAll('.mcq').forEach(function(m){
+    var correct=m.getAttribute('data-correct');
+    m.querySelectorAll('.opt').forEach(function(o){
+      o.addEventListener('click',function(){
+        if(m.classList.contains('answered'))return;
+        m.classList.add('answered');
+        m.querySelectorAll('.opt').forEach(function(x){ if(x.getAttribute('data-k')===correct) x.classList.add('correct'); });
+        if(o.getAttribute('data-k')!==correct) o.classList.add('wrong');
+      });
+    });
+  });
+  </script>
+
+</div>
+</body>
+</html>
