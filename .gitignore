@@ -3,3 +3,6 @@
 VascularAccess_*
 AnswerKey_Accuracy_Review.md
 .claude/
+
+# Local backups — never deploy
+_backups/
