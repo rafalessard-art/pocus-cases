@@ -3,12 +3,14 @@
     { "source": "/cases/glp1-gastric", "destination": "/GLP1_Gastric_Ultrasound_Learning_Case.html" },
     { "source": "/cases/diaphragm-first-rib", "destination": "/POCUS_Learning_Case_Diaphragm_FirstRibResection.html" },
     { "source": "/cases/onsd-pdph", "destination": "/POCUS_Learning_Case_ONSD_PDPH.html" },
-    { "source": "/cases/vascular-access", "destination": "/POCUS_Learning_Case_VascularAccess.html" }
+    { "source": "/cases/vascular-access", "destination": "/POCUS_Learning_Case_VascularAccess.html" },
+    { "source": "/tools", "destination": "/tools.html" }
   ],
   "redirects": [
     { "source": "/GLP1_Gastric_Ultrasound_Learning_Case.html", "destination": "/cases/glp1-gastric", "permanent": false },
     { "source": "/POCUS_Learning_Case_Diaphragm_FirstRibResection.html", "destination": "/cases/diaphragm-first-rib", "permanent": false },
     { "source": "/POCUS_Learning_Case_ONSD_PDPH.html", "destination": "/cases/onsd-pdph", "permanent": false },
-    { "source": "/POCUS_Learning_Case_VascularAccess.html", "destination": "/cases/vascular-access", "permanent": false }
+    { "source": "/POCUS_Learning_Case_VascularAccess.html", "destination": "/cases/vascular-access", "permanent": false },
+    { "source": "/tools.html", "destination": "/tools", "permanent": false }
   ]
 }

@@ -120,9 +120,10 @@
 
 <nav class="topnav">
   <div class="topnav-inner">
-    <a href="#home" class="active">Home</a>
-    <a href="#about">About</a>
-    <a href="#resources">Resources</a>
+    <a href="#home" class="nav-sec active" data-sec="home">Home</a>
+    <a href="/tools">Tools</a>
+    <a href="#about" class="nav-sec" data-sec="about">About</a>
+    <a href="#resources" class="nav-sec" data-sec="resources">Resources</a>
   </div>
 </nav>
 
@@ -135,6 +136,7 @@
     <div class="stats">
       <span><b>4</b> cases available</span>
       <span><b>1</b> in development</span>
+      <span><b>2</b> interactive 3D tools</span>
     </div>
   </header>
 
@@ -262,8 +264,8 @@
 
 </div>
 <script>
-  const sections = ['home','about','resources'].map(id => document.getElementById(id));
-  const links = document.querySelectorAll('.topnav a');
+  const links = Array.from(document.querySelectorAll('.topnav a.nav-sec'));
+  const sections = links.map(l => document.getElementById(l.dataset.sec));
   function updateActive() {
     const scrollY = window.scrollY + 70;
     let current = 0;

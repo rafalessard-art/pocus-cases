@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive 3D Heart + Live Echo — The Standard TTE Views</title>
+<style>
+:root{
+  --ink:#1c2b2e;--ink-soft:#3d5256;--teal:#14595c;--teal-bright:#1f7d80;
+  --rust:#b45309;--rust-deep:#9a4708;--paper:#f6f1e7;--paper-card:#fffdf8;
+  --line:#d8cfbe;--line-soft:#e7dfce;--shadow:0 1px 2px rgba(28,43,46,.06),0 8px 24px rgba(28,43,46,.06);
+  --serif:"Iowan Old Style","Palatino Linotype","Palatino","Georgia",serif;
+  --sans:"Helvetica Neue","Segoe UI",Arial,sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;height:100%;}
+body{background:var(--paper);color:var(--ink);font-family:var(--serif);-webkit-font-smoothing:antialiased;}
+.head{padding:18px 24px 10px;}
+.kicker{font-family:var(--sans);font-weight:600;letter-spacing:.2em;text-transform:uppercase;font-size:11px;color:var(--teal);margin:0 0 6px;}
+h1{font-family:var(--sans);font-weight:700;font-size:clamp(19px,2.6vw,26px);line-height:1.1;margin:0;}
+.qlink{display:inline-block;font-family:var(--sans);font-weight:600;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--paper-card);background:var(--rust);padding:4px 10px;border-radius:4px;margin-top:7px;}
+
+.stage{display:flex;height:calc(100vh - 92px);min-height:560px;border-top:1px solid var(--line);}
+@media(max-width:920px){.stage{flex-direction:column;height:auto;}}
+.viewport{position:relative;flex:1 1 auto;min-height:460px;background:radial-gradient(125% 125% at 50% 20%,#363b41,#1f2429 52%,#0c0e11);}
+#scene{display:block;width:100%;height:100%;cursor:grab;}
+#scene:active{cursor:grabbing;}
+.vhint{position:absolute;left:12px;bottom:10px;font-family:var(--sans);font-size:11px;color:var(--ink-soft);background:rgba(255,253,248,.82);border:1px solid var(--line);border-radius:7px;padding:5px 9px;max-width:62%;}
+.viewbadge{position:absolute;left:12px;top:12px;font-family:var(--sans);font-size:11px;font-weight:600;color:#fff;background:rgba(20,89,92,.0);border-radius:8px;padding:0;transition:all .2s;pointer-events:none;}
+.viewbadge.show{padding:6px 11px;background:rgba(20,89,92,.92);box-shadow:var(--shadow);}
+.loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--sans);color:#cdd4d8;}
+
+.panel{flex:0 0 376px;max-width:376px;border-left:1px solid var(--line);background:var(--paper-card);overflow-y:auto;padding:14px 14px 30px;}
+@media(max-width:920px){.panel{flex:1 1 auto;max-width:none;border-left:none;border-top:1px solid var(--line);}}
+.panel h2{font-family:var(--sans);font-weight:700;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--teal);margin:12px 0 7px;}
+
+/* echo */
+.usbox{position:relative;border:1px solid #20242a;border-radius:9px;overflow:hidden;background:#000;box-shadow:var(--shadow);}
+#us{display:block;width:100%;height:auto;background:#04070a;cursor:crosshair;}
+.uslevel{font-family:var(--sans);font-size:12px;color:var(--ink);font-weight:600;margin:8px 0 4px;display:flex;justify-content:space-between;align-items:baseline;}
+.uslevel small{color:var(--ink-soft);font-weight:400;}
+.usctrls{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 2px;}
+.tbtn{flex:1 1 auto;font-family:var(--sans);font-size:11.5px;font-weight:600;border:1px solid var(--line);background:#fff;color:var(--ink-soft);padding:7px 6px;border-radius:7px;cursor:pointer;transition:all .12s;}
+.tbtn.on{background:var(--teal);color:#fff;border-color:var(--teal);}
+
+/* view selector */
+.views{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.vbtn{position:relative;text-align:left;font-family:var(--sans);border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 10px 9px 30px;cursor:pointer;transition:all .14s;}
+.vbtn:hover{border-color:var(--teal-bright);background:#fbfaf5;}
+.vbtn.on{border-color:var(--teal);background:#eef4ec;box-shadow:inset 0 0 0 1px var(--teal);}
+.vbtn .vk{display:block;font-weight:700;font-size:12.5px;color:var(--ink);}
+.vbtn .vd{display:block;font-size:10.5px;color:var(--ink-soft);margin-top:1px;line-height:1.25;}
+.vbtn .dot{position:absolute;left:11px;top:11px;width:12px;height:12px;border-radius:4px;border:1px solid rgba(0,0,0,.2);}
+.vbtn.on .dot{box-shadow:0 0 0 3px rgba(20,89,92,.18);}
+
+.grp{margin:2px 0 8px;}
+.grp .gh{font-family:var(--sans);font-weight:700;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--rust-deep);margin:9px 0 4px;border-bottom:1px solid var(--line-soft);padding-bottom:3px;}
+.row{display:flex;align-items:center;gap:8px;padding:4px 5px;border-radius:6px;cursor:pointer;}
+.row:hover{background:#f3ede1;}
+.row input{accent-color:var(--teal);width:14px;height:14px;}
+.sw{width:13px;height:13px;border-radius:4px;border:1px solid rgba(0,0,0,.18);flex:0 0 auto;}
+.row .nm{font-family:var(--sans);font-size:13px;}
+.opts{border:1px solid var(--line-soft);border-radius:8px;padding:6px 9px;background:#fffefb;margin:4px 0 8px;}
+.opts .row{padding:3px 2px;}
+.btnrow{display:flex;gap:7px;margin-top:6px;}
+.btn{flex:1;font-family:var(--sans);font-size:11.5px;font-weight:600;border:1px solid var(--teal);background:#fff;color:var(--teal);padding:7px;border-radius:7px;cursor:pointer;}
+.btn:hover{background:#eef4ec;}
+
+.info{border:1px solid var(--line-soft);border-left:4px solid var(--teal);border-radius:9px;background:#fff;padding:11px 13px;min-height:120px;}
+.info .tag{display:inline-block;font-family:var(--sans);font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:12px;margin-bottom:7px;color:#fff;}
+.info h3{font-family:var(--sans);font-size:15px;margin:0 0 3px;}
+.info .step{font-family:var(--sans);font-size:11px;font-weight:600;color:var(--rust-deep);margin:0 0 7px;}
+.info p{font-size:13px;line-height:1.48;margin:6px 0;}
+.info .acc{background:#f3ede1;border-radius:7px;padding:7px 9px;font-size:12.5px;margin-top:7px;}
+.info .acc b{color:var(--teal);}
+.info.empty{border-left-color:var(--line);color:var(--ink-soft);}
+.info.empty p{font-style:italic;}
+.foot{font-family:var(--sans);font-size:10.5px;color:var(--ink-soft);margin-top:14px;line-height:1.5;border-top:1px solid var(--line-soft);padding-top:9px;}
+.arow{display:flex;align-items:center;gap:8px;margin:5px 0;font-family:var(--sans);font-size:11px;color:var(--ink-soft);}
+.arow span{flex:0 0 102px;}
+.arow input[type=range]{flex:1;accent-color:var(--rust);}
+.arow b{flex:0 0 36px;text-align:right;color:var(--ink);font-weight:600;}
+</style>
+</head>
+<body>
+<div class="head">
+  <p class="kicker">POCUS Learning Case · Transthoracic Echocardiography</p>
+  <h1>Interactive 3D Heart — the Standard TTE Windows</h1>
+  <span class="qlink">Parasternal · Apical · Subcostal</span>
+</div>
+
+<div class="stage">
+  <div class="viewport">
+    <canvas id="scene"></canvas>
+    <div class="viewbadge" id="viewbadge"></div>
+    <div class="vhint">Drag to rotate · scroll to zoom · pick a TTE window at right to drop its scan plane into the heart · click any structure for detail</div>
+    <div class="loading" id="loading">Loading heart model…</div>
+  </div>
+
+  <aside class="panel">
+    <h2>Live echo · selected window</h2>
+    <div class="usbox"><canvas id="us" width="372" height="330"></canvas><video id="usvid" loop muted playsinline preload="auto" style="display:none;width:100%;height:auto;background:#04070a;"></video></div>
+    <div class="uslevel"><span id="levelName">Parasternal long axis</span><small id="levelDepth">PLAX</small></div>
+    <div class="usctrls">
+      <button class="tbtn" id="beat">Beating</button>
+      <button class="tbtn on" id="uslabels">Labels</button>
+      <button class="tbtn" id="freeze">Freeze</button>
+    </div>
+
+    <h2>Transthoracic windows</h2>
+    <div class="views" id="views"></div>
+
+    <h2>Cardiac structures</h2>
+    <div id="toggles"></div>
+
+    <div class="opts">
+      <label class="row"><input type="checkbox" id="flow"><span class="nm">Flow coloring (red = oxygenated / blue = deoxygenated)</span></label>
+      <label class="row"><input type="checkbox" id="xray"><span class="nm">Translucent myocardium</span></label>
+      <label class="row"><input type="checkbox" id="orientcb" checked><span class="nm">Orientation labels</span></label>
+      <label class="row"><input type="checkbox" id="autorot"><span class="nm">Auto-rotate</span></label>
+      <div class="btnrow"><button class="btn" id="reset">Reset view</button><button class="btn" id="clear">Clear selection</button></div>
+    </div>
+
+    <h2>Detail</h2>
+    <div class="info empty" id="info"><p>Pick a transthoracic window to see its scan plane cut through the heart and the matching live echo. Click any chamber, valve, or vessel — in the 3D view or on the echo — for its role and sonographic appearance.</p></div>
+
+    <div class="foot">Schematic teaching model — proportions and positions are stylized for clarity, not a substitute for patient imaging. Echo panels are procedurally rendered approximations of each standard view.</div>
+  </aside>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="vh_heart_data.js"></script>
+<script src="echo_clips.js"></script>
+<script>
+(function(){
+"use strict";
+var loadingEl=document.getElementById('loading');
+if(typeof THREE==="undefined"){loadingEl.textContent="Could not load the 3D library (offline?).";return;}
+
+/* ============================================================
+   PALETTE
+============================================================ */
+var COL={
+  lv:0xb23a33, rv:0xc0584f, la:0xb8443c, ra:0xc55f55,         // myocardium (flow-on tints below)
+  myo:0xaf4038,
+  ao:0xd06b54, pa:0x3f72c4, svc:0x3d7fbe, ivc:0x3d7fbe, pv:0xc24a44,
+  valve:0xe9e0cc, sept:0x9a352f, coro:0xc23a2a,
+  // flow-coloring overrides
+  oxy:0xc23b34, deoxy:0x3566b0
+};
+function hex(c){return '#'+('000000'+c.toString(16)).slice(-6);}
+function lerpHex(a,b,t){var ar=(a>>16)&255,ag=(a>>8)&255,ab=a&255,br=(b>>16)&255,bg=(b>>8)&255,bb=b&255;
+  return ((Math.round(ar+(br-ar)*t)<<16)|(Math.round(ag+(bg-ag)*t)<<8)|Math.round(ab+(bb-ab)*t));}
+
+/* ============================================================
+   STRUCTURE META  (shared by 3D, toggles, info, echo labels)
+   side: 'R' deoxygenated / 'L' oxygenated / 'n' neutral
+============================================================ */
+var STR={
+  lv:{name:"Left ventricle",group:"Chambers",color:COL.lv,side:'L',
+    info:{tag:"Chamber · systemic pump",step:"The dominant chamber on echo",
+      role:"Thick-walled, bullet-shaped systemic pump. Its <b>long axis</b> runs base→apex and defines the parasternal long-axis and apical views. Normal wall ~6–10 mm.",
+      acc:"Assessed for size, wall thickness, and ejection fraction (eyeball or Simpson's). The apex sits closest to the probe in apical views."}},
+  rv:{name:"Right ventricle",group:"Chambers",color:COL.rv,side:'R',
+    info:{tag:"Chamber · venous pump",step:"Crescent that wraps the LV",
+      role:"Thin-walled (~3–5 mm), <b>crescentic</b> chamber draping the antero-right surface of the LV. Coarse trabeculation and a <b>moderator band</b> near its apex.",
+      acc:"RV:LV size ratio &gt;0.6 (apical 4-chamber) flags RV strain — a key PE / pressure-overload sign."}},
+  la:{name:"Left atrium",group:"Chambers",color:COL.la,side:'L',
+    info:{tag:"Chamber · receiving",step:"Most posterior chamber",
+      role:"Receives the four pulmonary veins; the <b>most posterior</b> chamber, sitting just anterior to the descending aorta and oesophagus.",
+      acc:"LA enlargement reflects chronic LV diastolic dysfunction or mitral disease. Seen behind the aortic root in PLAX."}},
+  ra:{name:"Right atrium",group:"Chambers",color:COL.ra,side:'R',
+    info:{tag:"Chamber · receiving",step:"Caval confluence",
+      role:"Receives the <b>SVC</b>, <b>IVC</b>, and coronary sinus. Forms the right heart border on a chest film.",
+      acc:"RA pressure is estimated from IVC diameter and collapse in the subcostal view."}},
+  ivs:{name:"Interventricular septum",group:"Walls & septa",color:COL.sept,side:'n',
+    info:{tag:"Wall · shared",step:"Between the ventricles",
+      role:"Muscular wall shared by both ventricles, normally bowing toward the lower-pressure RV. Continuous with the anterior LV wall and the aortic root (septal–aortic continuity).",
+      acc:"Flattening / 'D-shaping' of the septum in PSAX indicates RV pressure or volume overload."}},
+  ias:{name:"Interatrial septum",group:"Walls & septa",color:COL.sept,side:'n',
+    info:{tag:"Wall · shared",step:"Between the atria",
+      role:"Thin wall between the atria; the <b>fossa ovalis</b> is its embryologic thin spot and the site of a patent foramen ovale.",
+      acc:"Best interrogated in the subcostal view, where the beam strikes it perpendicularly (less drop-out)."}},
+  mv:{name:"Mitral valve",group:"Valves",color:COL.valve,side:'L',
+    info:{tag:"Valve · LA → LV",step:"Bileaflet inflow valve",
+      role:"<b>Anterior</b> and <b>posterior</b> leaflets between LA and LV, tethered by chordae to two papillary muscles. Opens in diastole, closes in systole.",
+      acc:"The 'fish-mouth' orifice in PSAX; leaflet tips swing toward the septum in PLAX. Regurgitant jets fill the LA on Doppler."}},
+  tv:{name:"Tricuspid valve",group:"Valves",color:COL.valve,side:'R',
+    info:{tag:"Valve · RA → RV",step:"Trileaflet inflow valve",
+      role:"Three leaflets between RA and RV. Its annulus sits slightly <b>more apical</b> than the mitral — the offset that identifies the morphologic RV.",
+      acc:"TR jet velocity gives an estimate of systolic pulmonary artery pressure (RVSP)."}},
+  av:{name:"Aortic valve",group:"Valves",color:COL.valve,side:'L',
+    info:{tag:"Valve · LV → aorta",step:"Trileaflet outflow valve",
+      role:"Three semilunar cusps (right, left, non-coronary) at the LV outflow. Closed cusps form the <b>'Mercedes-Benz'</b> sign in PSAX at the base.",
+      acc:"Opens in systole; cusp separation and a calcified, restricted opening suggest aortic stenosis."}},
+  pv:{name:"Pulmonary valve",group:"Valves",color:COL.valve,side:'R',
+    info:{tag:"Valve · RV → PA",step:"Trileaflet outflow valve",
+      role:"Three semilunar cusps at the top of the RV outflow tract, the <b>most anterior and superior</b> valve.",
+      acc:"Seen in the PSAX great-vessel view and the RV outflow view."}},
+  aorta:{name:"Aorta",group:"Great vessels",color:COL.ao,side:'L',
+    info:{tag:"Great vessel · systemic",step:"Root → ascending → arch",
+      role:"Springs from the LV at the aortic valve; the <b>sinuses of Valsalva</b> bulge at the root and give rise to the coronary arteries, then it ascends and arches over the pulmonary trunk.",
+      acc:"Root and ascending aorta are measured in PLAX; dilatation &gt;4 cm warrants follow-up."}},
+  pa:{name:"Pulmonary trunk",group:"Great vessels",color:COL.pa,side:'R',
+    info:{tag:"Great vessel · pulmonary",step:"RV outflow",
+      role:"Carries deoxygenated blood from the RV; passes <b>anterior</b> to the aorta and bifurcates into right and left pulmonary arteries under the arch.",
+      acc:"Seen wrapping over the aorta in the PSAX great-vessel view."}},
+  svc:{name:"Superior vena cava",group:"Great vessels",color:COL.svc,side:'R',
+    info:{tag:"Great vein · systemic return",step:"Into the RA from above",
+      role:"Returns blood from the head, neck, and arms to the superior RA.",
+      acc:"Its junction with the RA is a landmark; SVC collapse reflects volume status."}},
+  ivc:{name:"Inferior vena cava",group:"Great vessels",color:COL.ivc,side:'R',
+    info:{tag:"Great vein · systemic return",step:"Into the RA from below",
+      role:"Returns blood from the abdomen, pelvis, and legs to the inferior RA, passing through the diaphragm.",
+      acc:"<b>Subcostal IVC</b>: diameter and inspiratory collapse estimate RA pressure / volume status."}},
+  pveins:{name:"Pulmonary veins",group:"Great vessels",color:COL.pv,side:'L',
+    info:{tag:"Great veins · pulmonary return",step:"Into the LA (×4)",
+      role:"Four veins returning oxygenated blood from the lungs to the LA — the only veins carrying oxygenated blood.",
+      acc:"Pulmonary-vein Doppler complements mitral inflow in diastolic-function assessment."}},
+  coronaries:{name:"Coronary arteries",group:"Great vessels",color:COL.coro,side:'L',
+    info:{tag:"Arteries · myocardial supply",step:"In the surface grooves",
+      role:"The <b>LAD</b> runs the anterior interventricular groove, the <b>RCA</b> the right AV groove, and the <b>circumflex</b> the left AV groove — tracing the seams between the chambers.",
+      acc:"Wall-motion abnormalities on echo map to these coronary territories."}},
+  papillary:{name:"Papillary muscles",group:"Walls & septa",color:0xd06a3a,side:'n',
+    info:{tag:"Subvalvular · muscle",step:"Anchor the AV valves",
+      role:"Cone-shaped muscles of the ventricular walls whose chordae tendineae tether the mitral and tricuspid leaflets, preventing prolapse during systole.",
+      acc:"Seen inside the LV cavity in the PSAX mid-papillary level and the apical views; papillary/chordal rupture causes acute severe valvular regurgitation."}}
+};
+var ORDER=["Chambers","Walls & septa","Valves","Great vessels"];
+var visible={}; var offByDefault={papillary:1};
+Object.keys(STR).forEach(function(k){visible[k]=!offByDefault[k];});
+
+/* ============================================================
+   THREE — SCENE / LIGHTS / IBL / CONTROLS
+============================================================ */
+var canvas=document.getElementById('scene'), viewport=canvas.parentElement;
+var renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.outputEncoding=THREE.sRGBEncoding;
+renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.08;
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+var scene=new THREE.Scene();
+var camera=new THREE.PerspectiveCamera(40,1,0.1,260); camera.position.set(3.2,1.1,15);
+
+var orbit=new THREE.OrbitControls(camera,renderer.domElement);
+orbit.enableDamping=true; orbit.dampingFactor=0.085; orbit.target.set(0,0.5,0.15);
+orbit.minDistance=7; orbit.maxDistance=38; orbit.maxPolarAngle=Math.PI*0.97;
+
+scene.add(new THREE.HemisphereLight(0xeef2ff,0x3a3631,0.3));
+var key=new THREE.DirectionalLight(0xfff3e6,1.55); key.position.set(6,11,8); key.castShadow=true;
+key.shadow.mapSize.set(2048,2048); key.shadow.camera.near=1; key.shadow.camera.far=46;
+key.shadow.camera.left=-11;key.shadow.camera.right=11;key.shadow.camera.top=12;key.shadow.camera.bottom=-12;
+key.shadow.bias=-0.0004; key.shadow.radius=4; scene.add(key);
+var fill=new THREE.DirectionalLight(0xb6ccff,0.26); fill.position.set(-8,2,5); scene.add(fill);
+var rim=new THREE.DirectionalLight(0xfff3e0,0.8); rim.position.set(-5,5,-8); scene.add(rim);
+var ground=new THREE.Mesh(new THREE.PlaneGeometry(80,80),new THREE.ShadowMaterial({opacity:0.17}));
+ground.rotation.x=-Math.PI/2; ground.position.y=-5.6; ground.receiveShadow=true; scene.add(ground);
+
+var pmrem=new THREE.PMREMGenerator(renderer);
+(function(){var c=document.createElement('canvas');c.width=16;c.height=128;var g=c.getContext('2d');
+  var grd=g.createLinearGradient(0,0,0,128);grd.addColorStop(0,"#dfe2e6");grd.addColorStop(.16,"#9aa0a6");grd.addColorStop(.5,"#41454a");grd.addColorStop(1,"#141619");
+  g.fillStyle=grd;g.fillRect(0,0,16,128);
+  var tex=new THREE.CanvasTexture(c);tex.mapping=THREE.EquirectangularReflectionMapping;
+  scene.environment=pmrem.fromEquirectangular(tex).texture;tex.dispose();})();
+
+// root group carries the anatomical tilt; heart group holds all anatomy in a clean local frame
+// local frame:  +X = patient LEFT, +Y = superior (LV long axis ~ base->apex along -Y), +Z = anterior
+var root=new THREE.Group(); scene.add(root);
+var heart=new THREE.Group(); root.add(heart);
+root.rotation.z=-0.22;   // tip apex toward patient's left
+root.rotation.x=0.10;    // tip apex anterior/down
+
+/* ============================================================
+   GEOMETRY HELPERS
+============================================================ */
+function smooth(t){return t*t*(3-2*t);}
+// prolate / ellipsoidal lathe from a profile of [radius,y] (apex first)
+function latheGeom(profile,seg,zsquash){
+  var pts=profile.map(function(p){return new THREE.Vector2(Math.max(0.0001,p[0]),p[1]);});
+  var g=new THREE.LatheGeometry(pts,seg||56);
+  if(zsquash&&zsquash!==1){var pos=g.attributes.position;for(var i=0;i<pos.count;i++){pos.setZ(i,pos.getZ(i)*zsquash);}g.computeVertexNormals();}
+  return g;
+}
+function ellipsoid(rx,ry,rz,seg){var g=new THREE.SphereGeometry(1,seg||44,Math.round((seg||44)*0.75));
+  var pos=g.attributes.position;for(var i=0;i<pos.count;i++){pos.setXYZ(i,pos.getX(i)*rx,pos.getY(i)*ry,pos.getZ(i)*rz);}g.computeVertexNormals();return g;}
+function tubeGeom(pts,rad,radii,seg,rad2){var curve=new THREE.CatmullRomCurve3(pts.map(function(p){return new THREE.Vector3(p[0],p[1],p[2]);}),false,'catmullrom',0.5);
+  if(!radii)return new THREE.TubeGeometry(curve,seg||Math.max(40,pts.length*14),rad,20,false);
+  var s=seg||Math.max(48,pts.length*18),K=22,fr=curve.computeFrenetFrames(s,false),cp=curve.getSpacedPoints(s),P=[],idx=[];
+  for(var i=0;i<=s;i++){var u=i/s,f=u*(radii.length-1),ii=Math.floor(f),tt=f-ii,r=(ii>=radii.length-1)?radii[radii.length-1]:radii[ii]+(radii[ii+1]-radii[ii])*tt;
+    var N=fr.normals[i],B=fr.binormals[i],p=cp[i];for(var k=0;k<K;k++){var a=k/K*6.2832;P.push(p.x+r*(Math.cos(a)*N.x+Math.sin(a)*B.x),p.y+r*(Math.cos(a)*N.y+Math.sin(a)*B.y),p.z+r*(Math.cos(a)*N.z+Math.sin(a)*B.z));}}
+  for(var i2=0;i2<s;i2++)for(var k2=0;k2<K;k2++){var a1=i2*K+k2,a2=i2*K+(k2+1)%K,b1=(i2+1)*K+k2,b2=(i2+1)*K+(k2+1)%K;idx.push(a1,b1,a2,a2,b1,b2);}
+  var bg=new THREE.BufferGeometry();bg.setAttribute('position',new THREE.Float32BufferAttribute(P,3));bg.setIndex(idx);bg.computeVertexNormals();return bg;}
+
+// LV long-axis radius profile (apex at y=-3.0, base near y=+1.7)
+var LV_BASE=1.75, LV_APEXY=-3.05, LV_BASEY=1.75;
+function lvProfile(){return [[0.02,LV_APEXY],[0.42,-2.62],[0.78,-2.05],[1.08,-1.4],[1.34,-0.6],[1.55,0.2],[1.62,0.85],[1.5,1.32],[1.12,1.62],[0.6,1.74],[0.02,LV_BASEY]];}
+function lvRadiusAt(y){var pr=lvProfile();for(var i=0;i<pr.length-1;i++){var a=pr[i],b=pr[i+1];if(y>=a[1]&&y<=b[1]){var t=(y-a[1])/(b[1]-a[1]);return a[0]+(b[0]-a[0])*t;}}return 0.02;}
+
+/* ============================================================
+   PROCEDURAL NOISE + DISPLACEMENT
+============================================================ */
+function clamp255(v){return v<0?0:v>255?255:v;}
+function hash2(x,y){var n=Math.sin(x*127.1+y*311.7)*43758.5453;return n-Math.floor(n);}
+function hash2p(x,y,P){x=((x%P)+P)%P;y=((y%P)+P)%P;return hash2(x,y);}
+function pnoise(x,y,P){var ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,ux=fx*fx*(3-2*fx),uy=fy*fy*(3-2*fy);
+  var a=hash2p(ix,iy,P),b=hash2p(ix+1,iy,P),c=hash2p(ix,iy+1,P),d=hash2p(ix+1,iy+1,P);
+  return a*(1-ux)*(1-uy)+b*ux*(1-uy)+c*(1-ux)*uy+d*ux*uy;}
+function pfbm(x,y,P,oct){var s=0,a=0.5,f=1,n=0;for(var i=0;i<(oct||5);i++){s+=a*pnoise(x*f,y*f,P*f);n+=a;f*=2;a*=0.5;}return s/n;}
+function hash3(x,y,z){var n=Math.sin(x*127.1+y*311.7+z*74.7)*43758.5453;return n-Math.floor(n);}
+function vnoise3(x,y,z){var ix=Math.floor(x),iy=Math.floor(y),iz=Math.floor(z),fx=x-ix,fy=y-iy,fz=z-iz;
+  var ux=fx*fx*(3-2*fx),uy=fy*fy*(3-2*fy),uz=fz*fz*(3-2*fz);
+  function H(a,b,c){return hash3(ix+a,iy+b,iz+c);}
+  var x00=H(0,0,0)*(1-ux)+H(1,0,0)*ux, x10=H(0,1,0)*(1-ux)+H(1,1,0)*ux,
+      x01=H(0,0,1)*(1-ux)+H(1,0,1)*ux, x11=H(0,1,1)*(1-ux)+H(1,1,1)*ux;
+  var y0=x00*(1-uy)+x10*uy, y1=x01*(1-uy)+x11*uy; return y0*(1-uz)+y1*uz;}
+function fbm3(x,y,z,oct){var s=0,a=0.5,f=1,n=0;for(var i=0;i<(oct||4);i++){s+=a*vnoise3(x*f,y*f,z*f);n+=a;f*=2;a*=0.5;}return s/n;}
+// displace verts along their normals with low- + high-frequency 3D noise (seamless, no UV seams)
+function displace(geom,low,lowF,hi,hiF,seed){geom.computeVertexNormals();var pos=geom.attributes.position,nor=geom.attributes.normal;seed=seed||0;
+  for(var i=0;i<pos.count;i++){var x=pos.getX(i),y=pos.getY(i),z=pos.getZ(i);
+    var d=low*(fbm3((x+seed)*lowF,(y+seed*1.3)*lowF,(z+seed*0.7)*lowF,3)-0.5)
+         + hi*(fbm3((x+seed)*hiF+9,(y+seed)*hiF,(z+seed)*hiF,2)-0.5);
+    pos.setXYZ(i,x+nor.getX(i)*d,y+nor.getY(i)*d,z+nor.getZ(i)*d);}
+  pos.needsUpdate=true;geom.computeVertexNormals();return geom;}
+function ensureUV(geom){if(geom.attributes.uv)return geom;var pos=geom.attributes.position;
+  var b=new THREE.Box3().setFromBufferAttribute(pos),c=b.getCenter(new THREE.Vector3()),uv=[];
+  for(var i=0;i<pos.count;i++){var x=pos.getX(i)-c.x,y=pos.getY(i)-c.y,z=pos.getZ(i)-c.z,l=Math.hypot(x,y,z)||1;
+    uv.push((Math.atan2(z,x)/6.2832)+0.5, Math.acos(Math.max(-1,Math.min(1,y/l)))/Math.PI);}
+  geom.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));return geom;}
+
+/* ============================================================
+   PROCEDURAL PBR TEXTURES (albedo / normal / roughness per tissue)
+============================================================ */
+function tex(canvas,srgb,rx,ry){var t=new THREE.CanvasTexture(canvas);t.wrapS=t.wrapT=THREE.RepeatWrapping;
+  if(rx)t.repeat.set(rx,ry||rx); if(srgb)t.encoding=THREE.sRGBEncoding; t.anisotropy=8; return t;}
+function newC(s){var c=document.createElement('canvas');c.width=c.height=s;return c;}
+function heightToNormal(hc,strength){var w=hc.width,h=hc.height;var hd=hc.getContext('2d').getImageData(0,0,w,h).data;
+  var oc=newC(w);var ox=oc.getContext('2d'),od=ox.createImageData(w,h);
+  function H(x,y){x=(x+w)%w;y=(y+h)%h;return hd[((y*w+x)<<2)]/255;}
+  for(var y=0;y<h;y++)for(var x=0;x<w;x++){var dx=(H(x-1,y)-H(x+1,y))*strength,dy=(H(x,y-1)-H(x,y+1))*strength,
+    l=Math.hypot(dx,dy,1),i=((y*w+x)<<2);od.data[i]=128+126*(dx/l);od.data[i+1]=128+126*(dy/l);od.data[i+2]=128+126*(1/l);od.data[i+3]=255;}
+  ox.putImageData(od,0,0);return oc;}
+function drawVasa(g,N,style,count,wid){g.save();g.strokeStyle=style;g.lineCap='round';g.lineJoin='round';
+  for(var k=0;k<count;k++){var x=Math.random()*N,y=Math.random()*N,a=Math.random()*6.28,len=10+Math.random()*46,w=wid*(0.5+Math.random());
+    function seg(x,y,a,len,w){g.lineWidth=w;g.beginPath();g.moveTo(x,y);for(var s=0;s<len;s++){a+=(Math.random()-0.5)*0.55;x+=Math.cos(a)*3;y+=Math.sin(a)*3;g.lineTo(x,y);}g.stroke();return [x,y,a];}
+    var e=seg(x,y,a,len,w); if(Math.random()<0.6)seg(e[0],e[1],e[2]+(Math.random()-0.5),len*0.55,w*0.6);}
+  g.restore();}
+// --- myocardium ---
+function myoAlbedo(){var S=512,c=newC(S),g=c.getContext('2d'),im=g.createImageData(S,S);
+  for(var y=0;y<S;y++)for(var x=0;x<S;x++){var u=x/S*5,v=y/S*5,m=pfbm(u,v,5,5),blot=pfbm(u*0.5+10,v*0.5,5,3),fib=pfbm(u*9,v*2.5,5,3);
+    var r=126+m*74-blot*30+fib*8, gg=24+m*30+fib*5, b=22+m*22;
+    var t=pfbm(u*2.2+5,v*0.7,5,3); if(t>0.82){var k=(t-0.82)/0.18;r+=(176-r)*k;gg+=(116-gg)*k;b+=(100-b)*k;} // sparse pale tendinous streaks
+    var i=((y*S+x)<<2);im.data[i]=clamp255(r);im.data[i+1]=clamp255(gg);im.data[i+2]=clamp255(b);im.data[i+3]=255;}
+  g.putImageData(im,0,0);
+  drawVasa(g,S,'rgba(92,18,16,0.5)',48,1.1); drawVasa(g,S,'rgba(140,46,40,0.30)',66,0.6);
+  return tex(c,true,3,3);}
+function myoNormal(){var S=512,c=newC(S),g=c.getContext('2d'),im=g.createImageData(S,S);
+  for(var y=0;y<S;y++)for(var x=0;x<S;x++){var u=x/S,v=y/S,
+    ang=0.62+0.5*pfbm(u*2,v*2,4,3),                                    // gentle directional drift (no loops)
+    p1=Math.cos(ang)*x+Math.sin(ang)*y, p2=Math.cos(ang+0.22)*x+Math.sin(ang+0.22)*y,
+    fiber=Math.sin(p1*0.72)*0.5+0.5, fiber2=Math.sin(p2*1.35)*0.5+0.5, // primary + finer parallel sheets
+    fine=pfbm(u*30,v*30,4,4),
+    hgt=0.32+0.34*fiber+0.13*fiber2+0.21*fine, i=((y*S+x)<<2),vv=clamp255(hgt*255);
+    im.data[i]=im.data[i+1]=im.data[i+2]=vv;im.data[i+3]=255;}
+  g.putImageData(im,0,0);return tex(heightToNormal(c,2.8),false,3,3);}
+function myoRough(){var S=256,c=newC(S),g=c.getContext('2d'),im=g.createImageData(S,S);
+  for(var y=0;y<S;y++)for(var x=0;x<S;x++){var u=x/S*4,v=y/S*4,f=pfbm(u*2,v*2,5,4),r=0.46+0.3*f,i=((y*S+x)<<2),vv=clamp255(r*255);
+    im.data[i]=im.data[i+1]=im.data[i+2]=vv;im.data[i+3]=255;}
+  g.putImageData(im,0,0);return tex(c,false,3,3);}
+// --- epicardial fat ---
+function fatAlbedo(){var S=256,c=newC(S),g=c.getContext('2d'),im=g.createImageData(S,S);
+  for(var y=0;y<S;y++)for(var x=0;x<S;x++){var u=x/S*6,v=y/S*6,cell=pfbm(u*2.4,v*2.4,6,4),fine=pfbm(u*9,v*9,6,3);
+    var r=222+cell*20-fine*14, gg=206+cell*22-fine*12, b=150+cell*34; var i=((y*S+x)<<2);
+    im.data[i]=clamp255(r);im.data[i+1]=clamp255(gg);im.data[i+2]=clamp255(b);im.data[i+3]=255;}
+  g.putImageData(im,0,0);return tex(c,true,2,2);}
+function fatNormal(){var S=256,c=newC(S),g=c.getContext('2d'),im=g.createImageData(S,S);
+  for(var y=0;y<S;y++)for(var x=0;x<S;x++){var u=x/S*6,v=y/S*6,cell=pfbm(u*2.4,v*2.4,6,4),hgt=0.3+0.7*cell,i=((y*S+x)<<2),vv=clamp255(hgt*255);
+    im.data[i]=im.data[i+1]=im.data[i+2]=vv;im.data[i+3]=255;}
+  g.putImageData(im,0,0);return tex(heightToNormal(c,2.0),false,2,2);}
+// --- great-vessel wall ---
+function vesselAlbedo(base){var S=256,c=newC(S),g=c.getContext('2d');g.fillStyle=base;g.fillRect(0,0,S,S);var im=g.getImageData(0,0,S,S);
+  for(var y=0;y<S;y++)for(var x=0;x<S;x++){var u=x/S*5,v=y/S*5,m=pfbm(u*3,v*0.6,5,4),i=((y*S+x)<<2);
+    var dv=(m-0.5)*26;im.data[i]=clamp255(im.data[i]+dv);im.data[i+1]=clamp255(im.data[i+1]+dv);im.data[i+2]=clamp255(im.data[i+2]+dv);}
+  g.putImageData(im,0,0);g.globalAlpha=0.5;drawVasa(g,S,'rgba(150,90,80,0.25)',26,0.6);g.globalAlpha=1;return tex(c,true,2,3);}
+function vesselNormal(){var S=256,c=newC(S),g=c.getContext('2d'),im=g.createImageData(S,S);
+  for(var y=0;y<S;y++)for(var x=0;x<S;x++){var u=x/S,v=y/S,streak=Math.sin(v*S*0.22)*0.12,fine=pfbm(u*14,v*5,4,3),hgt=0.5+streak+0.2*(fine-0.5),i=((y*S+x)<<2),vv=clamp255(hgt*255);
+    im.data[i]=im.data[i+1]=im.data[i+2]=vv;im.data[i+3]=255;}
+  g.putImageData(im,0,0);return tex(heightToNormal(c,1.4),false,2,3);}
+
+var TX={}; // (procedural textures no longer used — real model is loaded)
+
+/* ---------- MATERIALS ---------- */
+function myoMat(tint){return new THREE.MeshPhysicalMaterial({color:tint||0xffffff,map:TX.myoAlb,normalMap:TX.myoNrm,roughnessMap:TX.myoRgh,
+  normalScale:new THREE.Vector2(1.05,1.05),roughness:1.0,metalness:0.0,clearcoat:0.3,clearcoatRoughness:0.5,
+  envMapIntensity:0.42,emissive:new THREE.Color(0x2a0a07),emissiveIntensity:0.07});}
+function fatMat(){return new THREE.MeshPhysicalMaterial({color:0xe6d8aa,map:TX.fatAlb,normalMap:TX.fatNrm,
+  normalScale:new THREE.Vector2(0.8,0.8),roughness:0.55,metalness:0.0,clearcoat:0.35,clearcoatRoughness:0.5,envMapIntensity:0.42});}
+function vesselMat(c,rough){return new THREE.MeshPhysicalMaterial({color:c,map:vesselAlbedo(hex(c)),normalMap:TX.vesNrm,
+  normalScale:new THREE.Vector2(0.45,0.45),roughness:rough||0.45,metalness:0.0,clearcoat:0.45,clearcoatRoughness:0.34,envMapIntensity:0.5});}
+function valveMat(){return new THREE.MeshPhysicalMaterial({color:COL.valve,roughness:0.5,metalness:0.0,clearcoat:0.6,clearcoatRoughness:0.36,envMapIntensity:0.7,side:THREE.DoubleSide,transparent:true,opacity:0.97});}
+
+/* ============================================================
+   BUILD STRUCTURES — each registered with id for picking + highlight
+============================================================ */
+var meshes=[]; // pickable
+function reg(mesh,id){mesh.userData.id=id;mesh.castShadow=true;mesh.receiveShadow=true;meshes.push(mesh);return mesh;}
+function group(id){var g=new THREE.Group();STR[id].grp3=g;g.visible=visible[id];heart.add(g);return g;}
+
+/* ============================================================
+   REAL HEART MODEL — NIH Visible-Human GLB (loaded, oriented, materialed)
+   chambers / septum / valves / papillary muscles are real named meshes
+============================================================ */
+function b64ToBuf(b64){var bin=atob(b64),len=bin.length,bytes=new Uint8Array(len);for(var i=0;i<len;i++)bytes[i]=bin.charCodeAt(i);return bytes.buffer;}
+function myoMatFor(id){
+  if(/^(mv|tv|av|pv)$/.test(id)) return new THREE.MeshPhysicalMaterial({color:0xe7dabf,roughness:0.5,metalness:0.0,clearcoat:0.5,clearcoatRoughness:0.4,envMapIntensity:0.6,side:THREE.DoubleSide});
+  if(id==='papillary') return new THREE.MeshPhysicalMaterial({color:0xae3a2f,roughness:0.55,metalness:0.0,clearcoat:0.3,clearcoatRoughness:0.5,envMapIntensity:0.45,side:THREE.DoubleSide});
+  return new THREE.MeshPhysicalMaterial({color:0x9a2a23,roughness:0.52,metalness:0.0,clearcoat:0.34,clearcoatRoughness:0.45,envMapIntensity:0.5,emissive:new THREE.Color(0x280806),emissiveIntensity:0.08,side:THREE.DoubleSide});
+}
+var PRESENT=['lv','rv','la','ra','ivs','papillary','mv','tv','av','pv','aorta','pa','svc','ivc','pveins','coronaries'];
+var myoMats=[],matById={};
+PRESENT.forEach(function(id){ if(STR[id]) group(id); });
+var valveLeaflets=[]; // model valves are static meshes
+var animVent=null,animAtria=null,apexPivot=new THREE.Vector3(0.3,-2.7,0),atriaPivot=new THREE.Vector3(0,2.3,-0.2);
+var ANIM={contract:6,avDescent:100,afill:3,akick:3,sysFrac:39,bpm:70,scrub:0,atriaW:79};
+var VALVE={amp:0.42}; // how far leaflets retract when open (0=off, fraction of valve size)
+var VPARTS={}, VXF={
+  aorta:{ox:0.01,oy:0.09,oz:-0.23,ry:-11*Math.PI/180,sc:1.21},
+  pa:{oy:0.35,sc:0.95},
+  svc:{ox:-0.25,oy:-0.88,oz:-1.0,ry:60*Math.PI/180,rx:6*Math.PI/180,rz:-4*Math.PI/180,sc:1.26},
+  pv1:{ox:0.64,oy:-0.52,oz:1.35,ry:-37*Math.PI/180,rx:180*Math.PI/180,rz:-127*Math.PI/180,sc:1.22},
+  pv2:{ox:0.29,oy:0.52,oz:0.37,ry:-56*Math.PI/180,rx:176*Math.PI/180,rz:44*Math.PI/180,sc:1.0},
+  pv3:{ox:0.03,oy:0.21,oz:0.25,ry:20*Math.PI/180,rx:-27*Math.PI/180,rz:-1*Math.PI/180,sc:1.07},
+  pv4:{ox:-0.27,oy:1.17,oz:0.21,ry:30*Math.PI/180,rx:-4*Math.PI/180,rz:180*Math.PI/180,sc:1.5},
+  lad:{oz:0.33},
+  cx:{ox:-0.15,oy:-0.17,oz:0.66,rx:23*Math.PI/180,rz:4*Math.PI/180},
+  rca:{ox:0.66,oy:-0.17,oz:0.13,ry:30*Math.PI/180,rx:68*Math.PI/180,rz:-53*Math.PI/180,sc:0.84}
+};
+var ARCH={h:-0.08,s:-0.01}, aortaTube=null;
+function aortaRoute(){var h=ARCH.h,s=ARCH.s;return [[0.1,0.85,0.3],[0.08,1.25,0.38],[0.18,2.05,0.16],[0.35,2.65,-0.05],[0.55,3.05+h,-0.3],[0.95+s,3.05+h,-0.55],[1.15+s,2.3,-0.72],[1.12+s,1.2,-0.76],[1.05+s,0.1,-0.78]];}
+function applyWrap(part){var P=VPARTS[part];if(!P)return;P.wrap.matrix.multiplyMatrices(P.wf,P.uf);P.wrap.matrixWorldNeedsUpdate=true;}
+function buildUF(part){var P=VPARTS[part];if(!P)return;var x=VXF[part]||{},pv=P.pivot;
+  var m=new THREE.Matrix4().makeTranslation((x.ox||0)+pv.x,(x.oy||0)+pv.y,(x.oz||0)+pv.z);
+  m.multiply(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(x.rx||0,x.ry||0,x.rz||0,'XYZ')));
+  m.multiply(new THREE.Matrix4().makeScale(x.sc||1,x.sc||1,x.sc||1));
+  m.multiply(new THREE.Matrix4().makeTranslation(-pv.x,-pv.y,-pv.z));
+  P.uf.copy(m);applyWrap(part);}
+function rebuildAorta(){var P=VPARTS.aorta;if(!P)return;
+  if(aortaTube){P.wrap.remove(aortaTube);var ix=meshes.indexOf(aortaTube);if(ix>=0)meshes.splice(ix,1);if(aortaTube.geometry)aortaTube.geometry.dispose();}
+  aortaTube=reg(new THREE.Mesh(tubeGeom(aortaRoute(),null,[0.42,0.4,0.36,0.34,0.35,0.36,0.34,0.32,0.3],150),matById.aorta),'aorta');P.wrap.add(aortaTube);}
+function sysAmt(p){var sf=ANIM.sysFrac/100; return (p<sf)?(1-Math.cos(p/sf*Math.PI))/2 : (1+Math.cos((p-sf)/(1-sf)*Math.PI))/2;}
+function atrialAmt(p){var sf=ANIM.sysFrac/100;
+  var fill=(p<sf)?Math.sin(p/sf*Math.PI*0.5):Math.cos((p-sf)/Math.max(0.05,0.85-sf)*Math.PI*0.5); if(p>0.85)fill=0;
+  var kick=(p>0.80)?Math.sin((p-0.80)/0.20*Math.PI):0;
+  return {fill:Math.max(0,fill),kick:Math.max(0,kick)};}
+function setAtriaWidth(w){['la','ra'].forEach(function(id){var S=STR[id];if(!S||!S.grp3||!S.cen)return;S.grp3.scale.set(w,1,w);S.grp3.position.set(S.cen.x*(1-w),0,S.cen.z*(1-w));});
+  Object.keys(VPARTS).forEach(function(part){var P=VPARTS[part];if(P.atrial&&P.cenKey&&STR[P.cenKey]&&STR[P.cenKey].cen){var C=STR[P.cenKey].cen;P.wf.identity().multiply(new THREE.Matrix4().makeTranslation(C.x,C.y,C.z)).multiply(new THREE.Matrix4().makeScale(w,1,w)).multiply(new THREE.Matrix4().makeTranslation(-C.x,-C.y,-C.z));}else{P.wf.identity();}applyWrap(part);});}
+function idForName(nm){nm=nm||'';
+  if(/left_ventricle/.test(nm))return 'lv'; if(/right_ventricle/.test(nm))return 'rv';
+  if(/left_cardiac_atrium/.test(nm))return 'la'; if(/right_cardiac_atrium/.test(nm))return 'ra';
+  if(/interventricular_septum/.test(nm))return 'ivs';
+  if(/mitral_valve/.test(nm))return 'mv'; if(/tricuspid_valve/.test(nm))return 'tv';
+  if(/aortic_valve/.test(nm))return 'av'; if(/pulmonary_valve/.test(nm))return 'pv';
+  if(/papillary/.test(nm))return 'papillary'; return null;}
+function orientModel(scene){
+  scene.updateMatrixWorld(true);
+  var parts={},tmp=new THREE.Vector3();
+  scene.traverse(function(o){ if(o.isMesh){var id=idForName(o.name);if(!id)return;o.userData.id=id;
+    var pos=o.geometry.attributes.position,c=new THREE.Vector3();
+    for(var i=0;i<pos.count;i++){tmp.fromBufferAttribute(pos,i).applyMatrix4(o.matrixWorld);c.add(tmp);}
+    if(!parts[id])parts[id]={c:new THREE.Vector3(),n:0}; parts[id].c.add(c); parts[id].n+=pos.count; }});
+  Object.keys(parts).forEach(function(k){parts[k].c.multiplyScalar(1/parts[k].n);});
+  var LV=parts.lv.c,RV=parts.rv.c,LA=parts.la.c,RA=parts.ra.c;
+  var vm=new THREE.Vector3();['mv','tv','av','pv'].forEach(function(v){if(parts[v])vm.add(parts[v].c);});vm.multiplyScalar(0.25);
+  var apex=null,apexD=-1;
+  scene.traverse(function(o){ if(o.isMesh&&o.userData.id==='lv'){var pos=o.geometry.attributes.position;
+    for(var i=0;i<pos.count;i++){tmp.fromBufferAttribute(pos,i).applyMatrix4(o.matrixWorld);var d=tmp.distanceTo(vm);if(d>apexD){apexD=d;apex=tmp.clone();}}}});
+  var superior=vm.clone().sub(apex).normalize();
+  var left=LA.clone().sub(RA);left.addScaledVector(superior,-left.dot(superior)).normalize();
+  var anterior=new THREE.Vector3().crossVectors(left,superior).normalize();
+  if(anterior.dot(RV.clone().sub(LV))<0)anterior.multiplyScalar(-1);
+  left.crossVectors(superior,anterior).normalize();
+  var R=new THREE.Matrix4().makeBasis(left,superior,anterior).transpose();
+  scene.applyMatrix4(R);scene.updateMatrixWorld(true);
+  var bb=new THREE.Box3().setFromObject(scene),ctr=bb.getCenter(new THREE.Vector3()),sz=bb.getSize(new THREE.Vector3());
+  var sc=6.2/sz.y,wrap=new THREE.Group();wrap.add(scene);wrap.scale.setScalar(sc);wrap.position.set(-ctr.x*sc,-ctr.y*sc,-ctr.z*sc);
+  return wrap;
+}
+var VESSEL_COL={aorta:0xd9ac90,pa:0x9fb4d6,svc:0x9cb6d8,ivc:0xa6bcda,pveins:0xcb938b,coronaries:0xc23a2a};
+function vesselMatP(c){return new THREE.MeshPhysicalMaterial({color:c,roughness:0.45,metalness:0.0,clearcoat:0.4,clearcoatRoughness:0.34,envMapIntensity:0.55,side:THREE.DoubleSide});}
+var VESSELS=[
+ {id:'aorta',part:'aorta',rad:[0.42,0.4,0.36,0.34,0.35,0.36,0.34,0.32,0.3],pts:[[0.1,0.85,0.3],[0.08,1.2,0.38],[0.15,2.0,0.18],[0.28,2.75,-0.05],[0.5,3.25,-0.35],[0.95,3.1,-0.6],[1.05,2.2,-0.72],[0.98,1.2,-0.75],[0.9,0.2,-0.78]]},
+ {id:'pa',part:'pa',rad:[0.46,0.42,0.4,0.38,0.36],pts:[[0.18,0.25,0.7],[0.15,0.6,0.9],[0.0,1.3,0.78],[-0.18,2.0,0.32],[-0.34,2.3,-0.08]]},
+ {id:'pa',part:'pa',rad:[0.24,0.23,0.21],pts:[[-0.34,2.3,-0.08],[0.45,2.15,-0.42],[1.0,1.9,-0.62]]},
+ {id:'pa',part:'pa',rad:[0.23,0.22,0.2],pts:[[-0.34,2.3,-0.08],[-0.95,2.1,-0.42],[-1.55,1.9,-0.52]]},
+ {id:'svc',part:'svc',rad:[0.36,0.32,0.3,0.3],pts:[[-0.6,1.55,-0.23],[-0.42,2.0,-0.22],[-0.44,2.6,-0.2],[-0.45,3.2,-0.2]]},
+ {id:'ivc',part:'ivc',rad:[0.38,0.34,0.33,0.33],pts:[[-1.05,0.35,-1.0],[-1.31,-0.07,-1.37],[-1.2,-0.7,-1.45],[-1.1,-1.5,-1.5]]},
+ {id:'pveins',part:'pv1',rad:[0.16,0.14,0.12],pts:[[0.52,1.57,-0.75],[0.42,1.82,-1.15],[0.45,1.95,-1.55]]},
+ {id:'pveins',part:'pv2',rad:[0.16,0.14,0.12],pts:[[0.96,0.58,-0.83],[1.1,0.3,-1.3],[1.18,0.22,-1.7]]},
+ {id:'pveins',part:'pv3',rad:[0.15,0.13,0.11],pts:[[0.03,1.73,-0.64],[-0.4,2.05,-1.0],[-0.48,2.18,-1.4]]},
+ {id:'pveins',part:'pv4',rad:[0.15,0.13,0.11],pts:[[0.48,0.62,-0.87],[0.35,0.3,-1.35],[0.36,0.24,-1.75]]},
+ {id:'coronaries',part:'lad',rad:[0.08,0.07,0.06,0.045,0.03],pts:[[-0.05,0.65,0.9],[0.0,-0.2,1.0],[0.1,-1.1,0.78],[0.2,-2.0,0.42],[0.28,-2.5,0.12]]},
+ {id:'coronaries',part:'rca',rad:[0.08,0.07,0.055,0.04],pts:[[-1.0,0.95,0.4],[-1.45,0.4,0.2],[-1.5,-0.3,-0.15],[-1.3,-1.0,-0.4]]},
+ {id:'coronaries',part:'cx',rad:[0.07,0.06,0.045],pts:[[0.85,0.85,0.25],[1.3,0.5,-0.18],[1.45,-0.1,-0.6]]}
+];
+function buildVessels(){
+  VESSELS.forEach(function(v){ if(!STR[v.id])return; if(!matById[v.id])matById[v.id]=vesselMatP(VESSEL_COL[v.id]);
+    var part=v.part||v.id;
+    if(!VPARTS[part]){var wrap=new THREE.Group();wrap.matrixAutoUpdate=false;if(STR[v.id].grp3)STR[v.id].grp3.add(wrap);
+      VPARTS[part]={wrap:wrap,pivot:new THREE.Vector3(v.pts[0][0],v.pts[0][1],v.pts[0][2]),atrial:/^(svc|ivc|pv\d)/.test(part),cenKey:(part==='svc'||part==='ivc')?'ra':(/^pv\d/.test(part)?'la':null),wf:new THREE.Matrix4(),uf:new THREE.Matrix4()};}
+    var pts=(part==='aorta')?aortaRoute():v.pts; var mh=reg(new THREE.Mesh(tubeGeom(pts,null,v.rad,Math.max(44,pts.length*16)),matById[v.id]),v.id); if(part==='aorta')aortaTube=mh; VPARTS[part].wrap.add(mh); });
+  if(VPARTS.aorta){var aw=VPARTS.aorta.wrap;
+    for(var i=0;i<3;i++){var a=i/3*6.2832+0.4; var s=reg(new THREE.Mesh(ellipsoid(0.22,0.22,0.22,18),matById.aorta),'aorta'); s.position.set(0.08+Math.cos(a)*0.24,1.04,0.36+Math.sin(a)*0.24); aw.add(s);}
+    [[0.55,3.12,-0.35],[0.72,3.08,-0.45],[0.88,2.98,-0.55]].forEach(function(b){var br=reg(new THREE.Mesh(tubeGeom([[b[0],b[1],b[2]],[b[0]+0.04,b[1]+0.85,b[2]-0.06]],0.1,null,16),matById.aorta),'aorta'); aw.add(br);}); }
+  Object.keys(VPARTS).forEach(buildUF);
+}
+function processGLB(scene){
+  var wrap=orientModel(scene);heart.add(wrap);heart.updateMatrixWorld(true);
+  var inv=new THREE.Matrix4().copy(heart.matrixWorld).invert(),toMove=[];
+  scene.traverse(function(o){ if(o.isMesh){var id=o.userData.id||idForName(o.name);
+    if(!id||!STR[id]){o.visible=false;return;}
+    o.geometry.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv,o.matrixWorld));
+    if(!matById[id]){matById[id]=myoMatFor(id);if(/^(lv|rv|la|ra|ivs|papillary)$/.test(id))myoMats.push(matById[id]);}
+    o.material=matById[id];o.castShadow=true;o.receiveShadow=true;o.userData.id=id;meshes.push(o);toMove.push(o);}});
+  toMove.forEach(function(o){o.position.set(0,0,0);o.quaternion.identity();o.scale.set(1,1,1);o.matrixAutoUpdate=true;
+    var id=o.userData.id;if(STR[id]&&STR[id].grp3)STR[id].grp3.add(o);});
+  heart.remove(wrap);
+  buildVessels();
+  // ----- cardiac-cycle animation groups (separate meshes let us contract the chambers) -----
+  animVent=new THREE.Group(); animAtria=new THREE.Group(); heart.add(animVent); heart.add(animAtria);
+  ['lv','rv','ivs','papillary','coronaries','mv','tv','av','pv','aorta','pa'].forEach(function(id){if(STR[id]&&STR[id].grp3)animVent.add(STR[id].grp3);});
+  ['la','ra','svc','ivc','pveins'].forEach(function(id){if(STR[id]&&STR[id].grp3)animAtria.add(STR[id].grp3);});
+  (function(){var lo=1e9,hi=-1e9,v=new THREE.Vector3();meshes.forEach(function(o){var p=o.geometry.attributes.position;
+    if(o.userData.id==='lv'){for(var i=0;i<p.count;i++){v.fromBufferAttribute(p,i);if(v.y<lo){lo=v.y;apexPivot.copy(v);}}}
+    if(o.userData.id==='la'||o.userData.id==='ra'){for(var j=0;j<p.count;j++){v.fromBufferAttribute(p,j);if(v.y>hi){hi=v.y;atriaPivot.copy(v);}}}});})();
+  ['la','ra'].forEach(function(id){var c=new THREE.Vector3(),n=0,v=new THREE.Vector3();meshes.forEach(function(o){if(o.userData.id===id){var p=o.geometry.attributes.position;for(var i=0;i<p.count;i++){v.fromBufferAttribute(p,i);c.add(v);}n+=p.count;}});if(n){c.multiplyScalar(1/n);STR[id].cen=c;}});
+  // valve centroids (heart-local) so leaflets can open/close about their own centre
+  ['mv','tv','av','pv'].forEach(function(id){var S=STR[id];if(!S||!S.grp3)return;var c=new THREE.Vector3(),n=0,v=new THREE.Vector3();meshes.forEach(function(o){if(o.userData.id===id){var p=o.geometry.attributes.position;for(var i=0;i<p.count;i++){v.fromBufferAttribute(p,i);c.add(v);}n+=p.count;}});if(n){c.multiplyScalar(1/n);S.valveCen=c;S.valveBase=S.grp3.position.clone();}});
+  setAtriaWidth(ANIM.atriaW/100);
+  applyFlow();updateXray();
+  if(typeof activeView!=='undefined'&&activeView)softHighlightView(activeView);
+  loadingEl.style.display='none';
+}
+(function(){
+  if(typeof window.__HEART_GLB_B64==='undefined'){loadingEl.textContent='Heart model data not found (vh_heart_data.js missing).';return;}
+  try{ var loader=new THREE.GLTFLoader();
+    loader.parse(b64ToBuf(window.__HEART_GLB_B64),'',function(gltf){ try{processGLB(gltf.scene);}catch(e){console.error(e);loadingEl.textContent='Model processing error: '+e.message;} },
+      function(err){console.error(err);loadingEl.textContent='Could not parse heart model.';});
+  }catch(e){console.error(e);loadingEl.textContent='Loader error: '+e.message;}
+})();
+
+/* ============================================================
+   ORIENTATION LABELS
+============================================================ */
+var orient=new THREE.Group(); scene.add(orient); // in WORLD frame (body axes)
+function roundRect(x,a,b,w,h,r){x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath();}
+function label(text,bg,sx){var c=document.createElement('canvas');c.width=256;c.height=96;var x=c.getContext('2d');
+  x.fillStyle=bg;roundRect(x,6,12,244,66,16);x.fill();x.fillStyle="#fff";x.font="bold 38px Helvetica,Arial";x.textAlign="center";x.textBaseline="middle";x.fillText(text,128,47);
+  var t=new THREE.CanvasTexture(c);t.anisotropy=4;var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,transparent:true}));sp.scale.set(sx,sx*0.375,1);return sp;}
+[["SUPERIOR","#14595c",1.8,[0.2,6.0,-0.4]],["LEFT","#b45309",1.4,[6.0,0.0,0.3]],
+ ["RIGHT","#3d5256",1.5,[-6.2,0.2,0.3]],["ANTERIOR","#3d5256",1.8,[0.4,-0.6,5.6]]].forEach(function(L){
+  var s=label(L[0],L[1],L[2]);s.position.set(L[3][0],L[3][1],L[3][2]);orient.add(s);});
+
+/* ============================================================
+   TTE WINDOWS — scan planes + probe glyphs (children of heart group)
+============================================================ */
+var VIEWS={
+  plax:{name:"Parasternal long axis",abbr:"PLAX",color:0x36b3c0,
+    normal:new THREE.Vector3(1,0,0), planeC:new THREE.Vector3(0.3,-0.4,-0.05), planeSize:[5.6,5.6],
+    probe:new THREE.Vector3(0.0,1.0,2.6), probeLook:new THREE.Vector3(0.15,-0.5,-1),
+    shows:["rv","ivs","lv","mv","av","aorta","la"],
+    blurb:"Left parasternal, 3rd–4th interspace, marker to the right shoulder. Cuts the LV long axis with RVOT anterior, aorta and LA at the base."},
+  psax:{name:"Parasternal short axis",abbr:"PSAX",color:0xe0a13a,
+    normal:new THREE.Vector3(0,1,0), planeC:new THREE.Vector3(0.0,-0.7,-0.05), planeSize:[5.0,5.0],
+    probe:new THREE.Vector3(0.0,-0.5,2.1), probeLook:new THREE.Vector3(0.0,-0.25,-1.0),
+    shows:["lv","rv","ivs","mv"],
+    blurb:"Rotate ~90° from PLAX, marker to the left shoulder. The LV becomes a 'donut' with the RV crescent draped over it; papillary muscles at the mid level."},
+  a4c:{name:"Apical 4-chamber",abbr:"A4C",color:0x59b36a,
+    normal:new THREE.Vector3(0,0,1), planeC:new THREE.Vector3(-0.2,-0.5,-0.05), planeSize:[5.8,6.0],
+    probe:new THREE.Vector3(0.5,-3.3,0.9), probeLook:new THREE.Vector3(-0.2,1.0,-0.35),
+    shows:["lv","rv","la","ra","mv","tv","ivs","ias"],
+    blurb:"Probe at the apex (point of maximal impulse), marker to the patient's left. All four chambers and both AV valves; the apex sits in the near field."},
+  subcostal:{name:"Subcostal 4-chamber",abbr:"SUBC",color:0xc27ad0,
+    normal:new THREE.Vector3(0,0.5,1), planeC:new THREE.Vector3(-0.3,-0.5,0.0), planeSize:[6.2,5.8],
+    probe:new THREE.Vector3(-0.8,-3.5,1.7), probeLook:new THREE.Vector3(0.45,1.0,-0.45),
+    shows:["lv","rv","la","ra","tv","mv","ias"],
+    blurb:"Subxiphoid, probe nearly flat aiming up to the left shoulder, with the liver as an acoustic window. The classic pericardial-effusion / tamponade view."}
+};
+var planeMeshes={}, probeGlyphs={};
+function buildView(key){
+  var V=VIEWS[key];
+  var grp=new THREE.Group(); grp.visible=false; heart.add(grp);
+  // scan plane quad
+  var pm=new THREE.MeshBasicMaterial({color:V.color,transparent:true,opacity:0.13,side:THREE.DoubleSide,depthWrite:false});
+  var quad=new THREE.Mesh(new THREE.PlaneGeometry(V.planeSize[0],V.planeSize[1]),pm);
+  var q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1),V.normal.clone().normalize());
+  quad.quaternion.copy(q); quad.position.copy(V.planeC); grp.add(quad);
+  // plane border
+  var eg=new THREE.EdgesGeometry(new THREE.PlaneGeometry(V.planeSize[0],V.planeSize[1]));
+  var border=new THREE.LineSegments(eg,new THREE.LineBasicMaterial({color:V.color,transparent:true,opacity:0.6}));
+  border.quaternion.copy(q);border.position.copy(V.planeC);grp.add(border);
+  // probe transducer glyph + sector fan
+  var probe=new THREE.Group(); probe.position.copy(V.probe).addScaledVector(V.probeLook.clone().normalize(),-0.95); // stand it off the chest wall
+  var pbody=new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.19,0.5,18),new THREE.MeshStandardMaterial({color:0x2a2e33,roughness:0.5}));
+  var pface=new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.2,0.06,18),new THREE.MeshStandardMaterial({color:V.color,emissive:V.color,emissiveIntensity:0.5,roughness:0.3}));
+  pface.position.y=-0.27; probe.add(pbody); probe.add(pface);
+  // orient probe so its -Y (face) looks toward probeLook
+  var dir=V.probeLook.clone().normalize();
+  probe.quaternion.setFromUnitVectors(new THREE.Vector3(0,-1,0),dir);
+  // sector fan (wireframe) emanating from the face into the heart, lying in the scan plane
+  grp.add(probe);
+  planeMeshes[key]=grp; probeGlyphs[key]=probe;
+}
+function buildFan(V){
+  // a thin triangle fan from probe along probeLook, spread within the scan plane
+  var apex=V.probe.clone();
+  var dir=V.probeLook.clone().normalize();
+  var inPlane=new THREE.Vector3().crossVectors(V.normal,dir).normalize(); // spread axis within plane
+  var depth=6.2, half=Math.tan(0.42)*depth;
+  var pos=[],N=22;
+  for(var i=0;i<=N;i++){var t=i/N-0.5;var far=apex.clone().add(dir.clone().multiplyScalar(depth)).add(inPlane.clone().multiplyScalar(half*2*t));
+    if(i>0){pos.push(apex.x,apex.y,apex.z, prev.x,prev.y,prev.z, far.x,far.y,far.z);} var prev=far;}
+  var g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  var m=new THREE.MeshBasicMaterial({color:V.color,transparent:true,opacity:0.08,side:THREE.DoubleSide,depthWrite:false});
+  return new THREE.Mesh(g,m);
+}
+Object.keys(VIEWS).forEach(buildView);
+var PVXF={
+  plax:{ox:-0.17, rx:0.0698132, ry:-0.2967060, rz:0.1221730},
+  psax:{rx:-0.2792527, ry:-0.0174533},
+  a4c:{rx:-0.0872665, ry:-0.1396263},
+  subcostal:{oz:-0.22, rx:0.1919862}
+};
+function applyPlaneXF(key){var g=planeMeshes[key];if(!g)return;var x=PVXF[key]||{},c=VIEWS[key].planeC;
+  g.matrixAutoUpdate=false;
+  var m=new THREE.Matrix4().makeTranslation((x.ox||0)+c.x,(x.oy||0)+c.y,(x.oz||0)+c.z);
+  m.multiply(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(x.rx||0,x.ry||0,x.rz||0,'XYZ')));
+  m.multiply(new THREE.Matrix4().makeTranslation(-c.x,-c.y,-c.z));
+  g.matrix.copy(m);g.matrixWorldNeedsUpdate=true;}
+Object.keys(VIEWS).forEach(applyPlaneXF);
+
+/* ============================================================
+   FLOW COLORING + TRANSLUCENCY + BEAT
+============================================================ */
+// Default = NATURAL anatomical color (textures show through, material.color = white tint).
+// Flow coloring tints only the chambers (vessels keep their natural hue).
+var flowOn=false;
+function applyFlow(){ ['lv','la','rv','ra'].forEach(function(id){var m=matById[id];if(!m)return; m.color.setHex(flowOn?((id==='lv'||id==='la')?0xc23a30:0x4f74c8):0x9a2a23);}); }
+var xrayOn=false;
+function updateXray(){myoMats.forEach(function(m){m.transparent=xrayOn;m.opacity=xrayOn?0.32:1;m.depthWrite=!xrayOn;m.needsUpdate=true;});}
+
+/* ============================================================
+   SELECTION + INFO + HIGHLIGHT
+============================================================ */
+var selId=null, hlId=null;
+function setEmissive(id,on,strong){var S=STR[id];if(!S||!S.grp3)return;
+  S.grp3.traverse(function(ch){if(ch.material&&ch.material.emissive){ch.material.emissive.setHex(on?(S.color):0x000000);ch.material.emissiveIntensity=on?(strong?0.6:0.22):0.0;}});}
+function showInfo(id){var S=STR[id],i=S.info,el=document.getElementById('info');el.className="info";
+  el.innerHTML='<span class="tag" style="background:'+hex(S.color)+'">'+i.tag+'</span><h3>'+S.name+'</h3><p class="step">'+i.step+'</p><p>'+i.role+'</p><div class="acc"><b>On echo:</b> '+i.acc+'</div>';}
+function selectStruct(id){
+  if(selId)setEmissive(selId,false);
+  selId=id; setEmissive(id,true,true); showInfo(id);
+  if(!visible[id]){visible[id]=true;var cb=document.getElementById('cb-'+id);if(cb)cb.checked=true;if(STR[id].grp3)STR[id].grp3.visible=true;}
+  echo.selId=id;
+}
+function clearSel(){if(selId)setEmissive(selId,false);selId=null;echo.selId=null;
+  var el=document.getElementById('info');el.className="info empty";
+  el.innerHTML='<p>Pick a transthoracic window to see its scan plane cut through the heart and the matching live echo. Click any chamber, valve, or vessel — in the 3D view or on the echo — for its role and sonographic appearance.</p>';}
+
+var ray=new THREE.Raycaster(),mouse=new THREE.Vector2(),downXY=null;
+function pick(e){var r=canvas.getBoundingClientRect();mouse.x=((e.clientX-r.left)/r.width)*2-1;mouse.y=-((e.clientY-r.top)/r.height)*2+1;ray.setFromCamera(mouse,camera);
+  var hO=ray.intersectObjects(meshes.filter(function(m){return m.parent&&m.parent.visible&&m.visible;}),false);
+  if(hO.length)selectStruct(hO[0].object.userData.id);}
+canvas.addEventListener('pointerdown',function(e){downXY=[e.clientX,e.clientY];});
+canvas.addEventListener('pointerup',function(e){if(downXY&&Math.hypot(e.clientX-downXY[0],e.clientY-downXY[1])<5)pick(e);});
+
+/* ============================================================
+   PANEL — view selector + structure toggles + options
+============================================================ */
+var activeView=null;
+var viewsEl=document.getElementById('views');
+Object.keys(VIEWS).forEach(function(key){var V=VIEWS[key];
+  var b=document.createElement('button');b.className='vbtn';b.id='vb-'+key;
+  b.innerHTML='<span class="dot" style="background:'+hex(V.color)+'"></span><span class="vk">'+V.abbr+'</span><span class="vd">'+V.name+'</span>';
+  b.addEventListener('click',function(){toggleView(key);});
+  viewsEl.appendChild(b);});
+
+function setActiveView(key){
+  activeView=key;
+  Object.keys(VIEWS).forEach(function(k){document.getElementById('vb-'+k).classList.toggle('on',planeMeshes[k].visible);});
+  var badge=document.getElementById('viewbadge');
+  if(key){var V=VIEWS[key];
+    document.getElementById('levelName').textContent=V.name;
+    document.getElementById('levelDepth').textContent=V.abbr;
+    badge.textContent=V.abbr+' · '+V.name; badge.classList.add('show');
+    echo.view=key;
+    // soft-highlight structures shown in this view
+    softHighlightView(key);
+  } else { badge.classList.remove('show'); echo.view=null; clearViewHighlight(); }
+  updateEchoMedia();
+}
+var viewHL=[];
+function clearViewHighlight(){viewHL.forEach(function(id){if(id!==selId)setEmissive(id,false);});viewHL=[];}
+function softHighlightView(key){clearViewHighlight();VIEWS[key].shows.forEach(function(id){if(visible[id]&&id!==selId){setEmissive(id,true,false);viewHL.push(id);}});}
+
+function toggleView(key){
+  var on=!planeMeshes[key].visible;
+  // exclusive — only one transthoracic window active at a time
+  Object.keys(VIEWS).forEach(function(k){planeMeshes[k].visible=false;});
+  planeMeshes[key].visible=on;
+  setActiveView(on?key:null);
+}
+
+var tog=document.getElementById('toggles');
+ORDER.forEach(function(gn){var ids=Object.keys(STR).filter(function(k){return STR[k].group===gn&&PRESENT.indexOf(k)>=0;});if(!ids.length)return;
+  var gd=document.createElement('div');gd.className='grp';var h=document.createElement('div');h.className='gh';h.textContent=gn;gd.appendChild(h);
+  ids.forEach(function(id){var S=STR[id];var row=document.createElement('label');row.className='row';
+    row.innerHTML='<input type="checkbox" id="cb-'+id+'" '+(visible[id]?'checked':'')+'><span class="sw" style="background:'+hex(S.color)+'"></span><span class="nm">'+S.name+'</span>';
+    var cb=row.querySelector('input');
+    cb.addEventListener('change',function(){visible[id]=cb.checked;if(S.grp3)S.grp3.visible=cb.checked;if(!cb.checked&&selId===id)clearSel();});
+    row.querySelector('.nm').addEventListener('click',function(ev){ev.preventDefault();if(cb.checked)selectStruct(id);});
+    gd.appendChild(row);});
+  tog.appendChild(gd);});
+
+document.getElementById('flow').addEventListener('change',function(){flowOn=this.checked;applyFlow();});
+document.getElementById('xray').addEventListener('change',function(){xrayOn=this.checked;updateXray();});
+document.getElementById('orientcb').addEventListener('change',function(){orient.visible=this.checked;});
+document.getElementById('autorot').addEventListener('change',function(){orbit.autoRotate=this.checked;orbit.autoRotateSpeed=0.9;});
+document.getElementById('reset').addEventListener('click',function(){orbit.reset();});
+document.getElementById('clear').addEventListener('click',clearSel);
+function tbtn(id,key,cb){var b=document.getElementById(id);b.addEventListener('click',function(){echo[key]=!echo[key];b.classList.toggle('on',echo[key]);if(cb)cb();});}
+tbtn('uslabels','labels');tbtn('freeze','freeze',updateEchoMedia);
+tbtn('beat','beat',function(){});
+
+/* ============================================================
+   LIVE ECHO PANEL (2D canvas, sector format, per-view)
+============================================================ */
+var usCanvas=document.getElementById('us'), uctx=usCanvas.getContext('2d');
+var usVid=document.getElementById('usvid');
+function updateEchoMedia(){ if(!usVid)return; var clip=(window.__ECHO&&echo&&window.__ECHO[echo.view])?window.__ECHO[echo.view]:null;
+  if(clip){ if(usVid.getAttribute('data-v')!==echo.view){usVid.src=clip;usVid.setAttribute('data-v',echo.view);}
+    usVid.style.display='block'; usCanvas.style.display='none';
+    if(echo.freeze){usVid.pause();}else{var p=usVid.play();if(p&&p.catch)p.catch(function(){});} }
+  else { usVid.style.display='none'; usCanvas.style.display='block'; } }
+var UW=usCanvas.width, UH=usCanvas.height;
+var echo={view:'plax',doppler:false,labels:true,freeze:false,beat:true,t:0,phase:0,selId:null,hot:[]};
+// sector geometry
+var APX={x:UW/2,y:20}, SECT_HALF=0.60, SECT_R=UH-34;
+function sectorPath(g){g.beginPath();g.moveTo(APX.x,APX.y);
+  g.arc(APX.x,APX.y,SECT_R,Math.PI/2-SECT_HALF,Math.PI/2+SECT_HALF);g.closePath();}
+// speckle texture
+var speckle=document.createElement('canvas');speckle.width=UW;speckle.height=UH;
+(function(){var s=speckle.getContext('2d');var img=s.createImageData(UW,UH);
+  for(var i=0;i<img.data.length;i+=4){var n=28+Math.random()*120;var v=Math.max(0,Math.min(168,n));img.data[i]=v;img.data[i+1]=v*0.92;img.data[i+2]=v*0.8;img.data[i+3]=255;}
+  s.putImageData(img,0,0);})();
+
+function tissue(g){ // myocardial speckle fill for a path already set
+  g.save();g.clip();
+  var grd=g.createLinearGradient(0,APX.y,0,APX.y+SECT_R);
+  grd.addColorStop(0,"#423b32");grd.addColorStop(.5,"#2d2823");grd.addColorStop(1,"#14110d");
+  g.fillStyle=grd;g.fillRect(0,0,UW,UH);
+  g.globalAlpha=0.55;g.drawImage(speckle,0,0,UW,UH);g.globalAlpha=1;g.restore();}
+function chamber(g,cx,cy,rx,ry,rot,enh){ // anechoic blood pool
+  g.save();g.translate(cx,cy);g.rotate(rot||0);
+  g.fillStyle="#03070a";g.beginPath();g.ellipse(0,0,rx,ry,0,0,7);g.fill();
+  // faint speckle inside (blood low-level echoes)
+  g.globalAlpha=0.07;g.beginPath();g.ellipse(0,0,rx,ry,0,0,7);g.clip();g.drawImage(speckle,-cx,-cy,UW,UH);g.globalAlpha=1;
+  g.restore();
+  // endocardial border (brighter than blood)
+  g.save();g.translate(cx,cy);g.rotate(rot||0);g.strokeStyle="rgba(228,208,172,.45)";g.lineWidth=2;g.beginPath();g.ellipse(0,0,rx,ry,0,0,7);g.stroke();g.restore();
+  if(enh){g.save();g.fillStyle="rgba(130,158,168,.08)";g.beginPath();g.ellipse(cx,cy+ry*1.35,rx*0.9,ry*0.7,0,0,7);g.fill();g.restore();}
+}
+function wall(g,pts,w,col){g.save();g.lineJoin="round";g.lineCap="round";g.strokeStyle=col||"rgba(214,170,138,.78)";g.lineWidth=w;
+  g.beginPath();g.moveTo(pts[0][0],pts[0][1]);for(var i=1;i<pts.length;i++)g.lineTo(pts[i][0],pts[i][1]);g.stroke();g.restore();}
+function leaflet(g,x,y,len,ang,th){g.save();g.translate(x,y);g.rotate(ang);g.strokeStyle="rgba(235,228,205,.95)";g.lineWidth=th||3;g.lineCap="round";
+  g.beginPath();g.moveTo(0,0);g.lineTo(len,0);g.stroke();g.restore();}
+function lab(g,txt,x,y,c){if(!echo.labels)return;g.font="600 11px Helvetica,Arial";g.textAlign="center";
+  g.fillStyle="rgba(0,0,0,.55)";g.fillText(txt,x+0.6,y+0.6);g.fillStyle=c||"rgba(255,255,255,.94)";g.fillText(txt,x,y);}
+function dopJet(g,x,y,dx,dy,toward){g.save();var grd=g.createLinearGradient(x,y,x+dx,y+dy);
+  if(toward){grd.addColorStop(0,"rgba(220,40,30,.0)");grd.addColorStop(.5,"rgba(225,60,40,.5)");grd.addColorStop(1,"rgba(255,180,60,.35)");}
+  else{grd.addColorStop(0,"rgba(40,90,210,.0)");grd.addColorStop(.5,"rgba(40,110,220,.5)");grd.addColorStop(1,"rgba(120,170,255,.35)");}
+  g.strokeStyle=grd;g.lineWidth=10;g.lineCap="round";g.beginPath();g.moveTo(x,y);g.lineTo(x+dx,y+dy);g.stroke();g.restore();}
+
+function drawEcho(){
+  echo.t+=0.045;
+  var sys = echo.phase<0.42;                  // systole portion
+  var open=echo.beat? (sys?0:1) : 0.6;        // AV-valve open fraction (diastole=1)
+  var avopen=echo.beat? (sys?1:0):0.5;
+  // ease
+  var di=smoothPulse(echo.phase);             // 0..1 diastolic openness
+  uctx.clearRect(0,0,UW,UH);
+  // black bg
+  uctx.fillStyle="#03060a";uctx.fillRect(0,0,UW,UH);
+  // sector tissue
+  uctx.save();sectorPath(uctx);tissue(uctx);uctx.restore();
+  // near-field dim + far-field grain already in speckle
+  echo.hot=[];
+  var V=echo.view;
+  uctx.save();sectorPath(uctx);uctx.clip();
+  if(V==='plax')drawPLAX(uctx,di);
+  else if(V==='psax')drawPSAX(uctx,di);
+  else if(V==='a4c')drawA4C(uctx,di);
+  else if(V==='subcostal')drawSUBC(uctx,di);
+  uctx.restore();
+  // sector border + depth ticks
+  uctx.save();sectorPath(uctx);uctx.strokeStyle="rgba(120,150,160,.35)";uctx.lineWidth=1.2;uctx.stroke();uctx.restore();
+  uctx.fillStyle="rgba(220,235,240,.5)";uctx.font="9px Helvetica";uctx.textAlign="left";
+  for(var d=1;d<=4;d++){var ry=APX.y+SECT_R*(d/4.4);uctx.fillRect(UW-7,ry-0.5,5,1);}
+  // selection ring on echo
+  if(echo.selId){for(var i=0;i<echo.hot.length;i++){if(echo.hot[i].id===echo.selId){var h=echo.hot[i];
+    uctx.strokeStyle="#ffd24a";uctx.lineWidth=2;uctx.setLineDash([4,3]);uctx.beginPath();uctx.ellipse(h.x,h.y,h.r+4,h.r+4,0,0,7);uctx.stroke();uctx.setLineDash([]);}}}
+  // freeze tag
+  if(echo.freeze){uctx.fillStyle="rgba(255,210,74,.95)";uctx.font="700 11px Helvetica";uctx.textAlign="left";uctx.fillText("FROZEN",10,UH-10);}
+}
+function smoothPulse(p){ // diastolic openness 0..1 over cycle (open in diastole)
+  if(p<0.42){return 0;} var q=(p-0.42)/0.58; return Math.sin(q*Math.PI)*0.5+0.5< 0?0:Math.min(1,Math.sin(q*Math.PI*0.9)*1.2);}
+function hot(id,x,y,r){echo.hot.push({id:id,x:x,y:y,r:r});}
+
+/* ---- PLAX ---- apex top=near(RV), base/aorta to the right ---- */
+function drawPLAX(g,di){
+  var cx=UW/2;
+  // RV (near field, anterior) — small triangle near apex
+  chamber(g,cx-6,108,46,30,-0.15); hot('rv',cx-6,108,38);
+  lab(g,"RV",cx-10,90,"rgba(255,255,255,.9)");
+  // IVS wall
+  wall(g,[[cx-58,132],[cx-20,150],[cx+30,168]],6,"rgba(200,150,120,.6)");
+  // LV cavity (large, center-left, long)
+  chamber(g,cx-28,205,58,86,0.05,true); hot('lv',cx-28,205,70);
+  lab(g,"LV",cx-28,205,"rgba(255,255,255,.95)");
+  // posterior wall
+  wall(g,[[cx-86,205],[cx-72,258],[cx-30,292]],7,"rgba(196,150,120,.6)");
+  // LA (base, lower-right, posterior)
+  chamber(g,cx+70,250,48,52,0,true); hot('la',cx+70,250,46);
+  lab(g,"LA",cx+72,252,"rgba(255,255,255,.95)");
+  // Aortic root / ascending aorta (upper-right, two parallel walls)
+  g.save();g.strokeStyle="rgba(214,156,124,.78)";g.lineWidth=5;g.lineCap="round";
+  g.beginPath();g.moveTo(cx+34,150);g.lineTo(cx+104,112);g.stroke();
+  g.beginPath();g.moveTo(cx+52,194);g.lineTo(cx+114,150);g.stroke();g.restore();
+  chamber(g,cx+78,150,28,19,-0.5); hot('aorta',cx+78,150,24);
+  lab(g,"Ao",cx+82,142,"rgba(255,255,255,.92)");
+  // Aortic valve cusps at root origin
+  var avo=echo.beat?(echo.phase<0.42?1:0.05):0.5;
+  g.save();g.strokeStyle="rgba(235,228,205,.95)";g.lineWidth=2.4;g.lineCap="round";
+  g.beginPath();g.moveTo(cx+42,158);g.lineTo(cx+50+avo*8,150-avo*6);g.stroke();
+  g.beginPath();g.moveTo(cx+52,188);g.lineTo(cx+58+avo*8,178+avo*4);g.stroke();g.restore();
+  hot('av',cx+50,172,14);
+  // Mitral valve leaflets between LV and LA (open in diastole -> di)
+  var mvA=0.5+di*0.7;
+  leaflet(g,cx+18,182,30,-0.5+ (1-di)*0.4,3.2);       // anterior leaflet toward septum
+  leaflet(g,cx+18,182,26, 1.7 - di*0.5,3.0);          // posterior leaflet
+  hot('mv',cx+22,196,18);
+  lab(g,"MV",cx+8,214,"rgba(255,255,255,.9)");
+  lab(g,"RVOT",cx-10,76,"rgba(255,255,255,.8)");
+  // Doppler: diastolic mitral inflow toward apex (red, toward probe)
+  if(echo.doppler&&di>0.2){dopJet(g,cx+20,188,-34,8,true);}
+  if(echo.doppler&&avo>0.5){dopJet(g,cx+52,168,52,-26,false);} // systolic aortic outflow away
+}
+
+/* ---- PSAX ---- LV donut + RV crescent + papillary muscles ---- */
+function drawPSAX(g,di){
+  var cx=UW/2, cy=190, R=78;
+  // LV ring (myocardium) with anechoic center
+  g.save();
+  g.fillStyle="rgba(150,95,80,.5)";g.beginPath();g.arc(cx,cy,R,0,7);g.fill();
+  g.globalAlpha=0.5;g.beginPath();g.arc(cx,cy,R,0,7);g.clip();g.drawImage(speckle,0,0,UW,UH);g.globalAlpha=1;g.restore();
+  chamber(g,cx,cy,R-22,R-22); hot('lv',cx,cy,R-22);
+  lab(g,"LV",cx,cy,"rgba(255,255,255,.95)");
+  // wall ring stroke
+  g.strokeStyle="rgba(200,150,120,.5)";g.lineWidth=2;g.beginPath();g.arc(cx,cy,R,0,7);g.stroke();
+  g.strokeStyle="rgba(200,150,120,.35)";g.beginPath();g.arc(cx,cy,R-22,0,7);g.stroke();
+  // papillary muscles (anterolateral ~4 o'clock, posteromedial ~8 o'clock)
+  g.fillStyle="rgba(150,100,84,.85)";
+  g.beginPath();g.ellipse(cx+ (R-30)*Math.cos(0.9), cy+(R-30)*Math.sin(0.9),11,8,0.9,0,7);g.fill();
+  g.beginPath();g.ellipse(cx+ (R-30)*Math.cos(2.25),cy+(R-30)*Math.sin(2.25),11,8,2.25,0,7);g.fill();
+  lab(g,"pap.",cx+ (R-30)*Math.cos(0.9), cy+(R-30)*Math.sin(0.9)+2,"rgba(255,255,255,.7)");
+  // RV crescent draped over upper-left
+  g.save();g.fillStyle="rgba(60,90,120,.0)";
+  g.beginPath();g.arc(cx,cy,R+30,Math.PI*1.05,Math.PI*1.72);g.arc(cx,cy,R+4,Math.PI*1.72,Math.PI*1.05,true);g.closePath();
+  g.fillStyle="#04090d";g.fill();
+  g.globalAlpha=0.12;g.clip();g.drawImage(speckle,0,0,UW,UH);g.globalAlpha=1;g.restore();
+  var rmx=cx+(R+16)*Math.cos(Math.PI*1.38), rmy=cy+(R+16)*Math.sin(Math.PI*1.38);
+  hot('rv',rmx,rmy,26); lab(g,"RV",rmx,rmy,"rgba(255,255,255,.92)");
+  // IVS = the arc between them
+  hot('ivs',cx+R*Math.cos(Math.PI*1.4),cy+R*Math.sin(Math.PI*1.4),16);
+  lab(g,"IVS",cx-6,cy-R+16,"rgba(255,255,255,.8)");
+}
+
+/* ---- A4C ---- apex top; LV/RV near, LA/RA far; septa vertical ---- */
+function drawA4C(g,di){
+  var cx=UW/2, midx=cx+6;
+  // vertical septum line (IVS + IAS), TV slightly more apical than MV
+  wall(g,[[midx,70],[midx-2,150],[midx,232],[midx+2,300]],4,"rgba(200,150,120,.5)");
+  hot('ivs',midx,150,12); hot('ias',midx,250,12);
+  // LV (left of septum, near field large)
+  chamber(g,cx-58,150,52,80,0.06,true); hot('lv',cx-58,150,64);
+  lab(g,"LV",cx-58,150,"rgba(255,255,255,.95)");
+  // RV (right of septum, near field, smaller, with moderator band)
+  chamber(g,cx+62,158,44,74,-0.05,true); hot('rv',cx+62,158,56);
+  lab(g,"RV",cx+62,158,"rgba(255,255,255,.95)");
+  g.save();g.strokeStyle="rgba(150,100,84,.8)";g.lineWidth=4;g.beginPath();g.moveTo(cx+44,210);g.lineTo(cx+78,196);g.stroke();g.restore(); // moderator band
+  // LA (far field left)
+  chamber(g,cx-46,262,44,46,0,true); hot('la',cx-46,262,44);
+  lab(g,"LA",cx-46,262,"rgba(255,255,255,.95)");
+  // RA (far field right)
+  chamber(g,cx+54,266,42,44,0,true); hot('ra',cx+54,266,42);
+  lab(g,"RA",cx+54,266,"rgba(255,255,255,.95)");
+  // MV leaflets (left, at ~y=214) and TV leaflets (right, ~y=222 more apical => slightly higher number)
+  var o=di;
+  leaflet(g,cx-30,214,26,-0.2-(1-o)*0.5,3); leaflet(g,cx-30,214,22,2.9+(1-o)*0.5,3); hot('mv',cx-30,214,16);
+  leaflet(g,cx+30,210,24,3.34+(1-o)*0.5,3); leaflet(g,cx+30,210,20,0.2-(1-o)*0.5,3); hot('tv',cx+30,210,16);
+  lab(g,"MV",cx-22,232,"rgba(255,255,255,.85)"); lab(g,"TV",cx+22,228,"rgba(255,255,255,.85)");
+  // Doppler inflow (toward probe/apex = red) in diastole
+  if(echo.doppler&&di>0.2){dopJet(g,cx-32,210,-6,-44,true);dopJet(g,cx+32,206,4,-44,true);}
+}
+
+/* ---- SUBCOSTAL ---- liver near field; 4 chambers oblique ---- */
+function drawSUBC(g,di){
+  var cx=UW/2;
+  // liver band in near field (acoustic window)
+  g.save();g.beginPath();g.moveTo(APX.x,APX.y);g.arc(APX.x,APX.y,110,Math.PI/2-SECT_HALF,Math.PI/2+SECT_HALF);g.closePath();g.clip();
+  g.fillStyle="#4a3a30";g.fillRect(0,0,UW,UH);g.globalAlpha=0.5;g.drawImage(speckle,0,0,UW,UH);g.globalAlpha=1;
+  g.strokeStyle="rgba(18,14,12,.5)";g.lineWidth=3;g.beginPath();g.moveTo(cx-44,72);g.quadraticCurveTo(cx-8,96,cx+34,90);g.stroke();g.restore();
+  lab(g,"liver",cx-58,64,"rgba(255,255,255,.8)");
+  // diaphragm / pericardial bright line beneath the liver
+  g.save();g.strokeStyle="rgba(238,228,205,.85)";g.lineWidth=2.6;g.beginPath();g.arc(APX.x,APX.y,113,Math.PI/2-0.52,Math.PI/2+0.56);g.stroke();g.restore();
+  // oblique septum
+  wall(g,[[cx-44,118],[cx+6,196],[cx+54,276]],4,"rgba(200,150,120,.5)");
+  hot('ias',cx+30,236,12);
+  // RA/RV nearer (upper-right), LA/LV deeper (lower-left)  — oblique
+  chamber(g,cx+34,150,40,40,0.3); hot('ra',cx+34,150,40); lab(g,"RA",cx+34,150,"rgba(255,255,255,.92)");
+  chamber(g,cx-30,150,42,42,0.3); hot('rv',cx-30,150,42); lab(g,"RV",cx-30,150,"rgba(255,255,255,.92)");
+  chamber(g,cx+58,250,44,44,0.2); hot('la',cx+58,250,44); lab(g,"LA",cx+58,250,"rgba(255,255,255,.92)");
+  chamber(g,cx-50,256,48,50,0.15); hot('lv',cx-50,256,50); lab(g,"LV",cx-50,256,"rgba(255,255,255,.92)");
+  // AV valves
+  var o=di;
+  leaflet(g,cx+2,196,24,0.3-(1-o)*0.5,3); leaflet(g,cx+2,196,22,3.4+(1-o)*0.5,3); hot('tv',cx+2,196,14);
+  leaflet(g,cx-10,210,24,0.5-(1-o)*0.4,3); hot('mv',cx-12,214,14);
+  lab(g,"TV",cx+12,182,"rgba(255,255,255,.85)"); lab(g,"MV",cx-22,224,"rgba(255,255,255,.85)");
+}
+
+usCanvas.addEventListener('pointerdown',function(e){var r=usCanvas.getBoundingClientRect();
+  var mx=(e.clientX-r.left)*(UW/r.width),my=(e.clientY-r.top)*(UH/r.height);
+  for(var i=0;i<echo.hot.length;i++){var h=echo.hot[i];if(Math.hypot(mx-h.x,my-h.y)<h.r+4){selectStruct(h.id);return;}}});
+
+/* ============================================================
+   BEAT (subtle 3D) + RUN
+============================================================ */
+function applyBeat(p){
+  if(!animVent)return;
+  var sys=sysAmt(p);                                                    // works whether playing or scrubbed-paused
+  var s=1-(ANIM.contract/100)*sys; animVent.scale.setScalar(s); animVent.position.copy(apexPivot).multiplyScalar(1-s);
+  var descent=(1-s)*(1.0-apexPivot.y);                                  // how far the valve plane moved toward the apex
+  var aa=atrialAmt(p);
+  var asc=1+(ANIM.afill/100)*aa.fill-(ANIM.akick/100)*aa.kick;          // fill in systole, squeeze (kick) at end-diastole
+  animAtria.scale.setScalar(asc);
+  var ap=atriaPivot.clone().multiplyScalar(1-asc);
+  ap.y-=(ANIM.avDescent/100)*descent;                                  // atria follow the AV plane so the junction stays closed
+  animAtria.position.copy(ap);
+  // valve leaflets: AV valves open in diastole, semilunars open in systole
+  var avO=Math.max(0,1-sys), slO=Math.max(0,sys);
+  ['mv','tv','av','pv'].forEach(function(id){var S=STR[id];if(!S||!S.valveCen)return;
+    var k=1-VALVE.amp*((id==='mv'||id==='tv')?avO:slO);
+    S.grp3.scale.setScalar(k);
+    S.grp3.position.copy(S.valveBase).add(S.valveCen.clone().multiplyScalar(1-k));});
+}
+
+function resize(){var w=viewport.clientWidth,h=viewport.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+window.addEventListener('resize',resize);resize();
+
+applyFlow(); updateXray(); orbit.saveState();
+setActiveView('plax'); planeMeshes.plax.visible=true; document.getElementById('vb-plax').classList.add('on');
+document.getElementById('beat').classList.add('on');
+
+var lastEcho=0,lastT=0;
+(function loop(t){requestAnimationFrame(loop);orbit.update();
+  var dt=lastT?Math.min(0.12,(t-lastT)/1000):0; lastT=t;
+  echo.phase=echo.beat?((echo.phase+(ANIM.bpm/60)*dt)%1):(ANIM.scrub/100);
+  applyBeat(echo.phase);
+  // probe face pulse
+  renderer.render(scene,camera);
+  if(!echo.freeze && t-lastEcho>33 && !(window.__ECHO&&window.__ECHO[echo.view])){lastEcho=t;drawEcho();}
+})(0);
+
+})();
+</script>
+</body>
+</html>

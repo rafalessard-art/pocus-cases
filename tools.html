@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive 3D Tools — POCUS Learning Case Series</title>
+<meta name="description" content="Standalone interactive 3D POCUS tools: an interactive 3D heart with the four standard transthoracic echo windows and live echo loops, and a 3D arm with live ultrasound for systematic vascular access.">
+<meta name="author" content="Raphael Lessard, MD">
+<meta name="theme-color" content="#114e4b">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="POCUS Learning Case Series">
+<meta property="og:title" content="Interactive 3D Tools — POCUS Learning Case Series">
+<meta property="og:description" content="Standalone interactive 3D tools to explore cardiac and vascular anatomy alongside live ultrasound.">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%23114e4b'/%3E%3Cpath d='M32 14 L14 48 A36 36 0 0 0 50 48 Z' fill='none' stroke='%23f7f4ec' stroke-width='4' stroke-linejoin='round'/%3E%3Cpath d='M32 26 a14 14 0 0 1 0 14' fill='none' stroke='%23f7f4ec' stroke-width='3'/%3E%3Cpath d='M32 20 a22 22 0 0 1 0 26' fill='none' stroke='%23f7f4ec' stroke-width='3' opacity='.6'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --paper:#f7f4ec; --paper2:#fffdf8; --ink:#1c2125; --ink-soft:#404a51;
+    --rule:#d9d2c4; --petrol:#114e4b; --petrol-2:#16615d;
+    --clay:#bb4d1c; --clay-soft:#f3e2d6;
+    --moss:#557a3a; --moss-soft:#e7eedd;
+    --sky:#2f6c8f; --sky-soft:#dce8ef; --gold:#b07d12;
+    --shadow:0 1px 0 rgba(0,0,0,.04), 0 16px 38px -20px rgba(17,78,75,.42);
+    --serif:"Iowan Old Style","Palatino Linotype","Palatino","Georgia",serif;
+    --sans:"Helvetica Neue","Segoe UI",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--serif);
+    font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:980px;margin:0 auto;padding:60px 40px 80px;}
+
+  /* masthead */
+  .masthead{border-bottom:3px solid var(--ink);padding-bottom:26px;}
+  .kicker{font-family:var(--sans);font-size:12px;letter-spacing:.32em;text-transform:uppercase;
+    color:var(--petrol);font-weight:700;margin:0 0 14px;}
+  h1{font-size:44px;line-height:1.06;margin:0 0 12px;letter-spacing:-.015em;font-weight:600;}
+  .subtitle{font-size:20px;color:var(--ink-soft);font-style:italic;margin:0;}
+  .stats{font-family:var(--sans);font-size:12.5px;letter-spacing:.05em;color:var(--ink-soft);
+    margin-top:20px;display:flex;flex-wrap:wrap;gap:8px 24px;text-transform:uppercase;}
+  .stats b{color:var(--petrol);font-weight:700;}
+
+  .intro{font-size:18px;margin:30px 0 6px;max-width:72ch;}
+
+  /* section label */
+  .seclabel{font-family:var(--sans);font-size:12px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--petrol);font-weight:700;margin:46px 0 4px;}
+  .seclabel .pd-rule{height:2px;background:linear-gradient(90deg,var(--petrol),transparent);
+    margin-top:10px;}
+
+  /* card grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:24px;margin-top:26px;}
+  a.card{display:flex;flex-direction:column;text-decoration:none;color:inherit;
+    background:var(--paper2);border:1px solid var(--rule);border-radius:11px;overflow:hidden;
+    box-shadow:var(--shadow);transition:transform .16s ease, box-shadow .16s ease;
+    border-top:5px solid var(--accent,var(--petrol));}
+  a.card:hover{transform:translateY(-4px);box-shadow:0 1px 0 rgba(0,0,0,.04),0 26px 50px -22px rgba(17,78,75,.5);}
+
+  /* tool preview band */
+  .media{height:128px;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(120% 130% at 50% 18%, #20323a 0%, #16242b 55%, #101b21 100%);
+    border-bottom:1px solid var(--rule);}
+  .media svg{width:100%;height:100%;display:block;}
+
+  .card-body{padding:22px 24px 8px;flex:1;}
+  .badge-row{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+  .num{flex:0 0 auto;height:30px;padding:0 11px;border-radius:15px;display:flex;align-items:center;
+    justify-content:center;font-family:var(--sans);font-weight:800;font-size:12px;letter-spacing:.06em;color:#fff;
+    background:var(--accent,var(--petrol));}
+  .topic{font-family:var(--sans);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    font-weight:700;color:var(--accent,var(--petrol));}
+  .card h2{font-size:23px;line-height:1.18;margin:0 0 10px;font-weight:600;letter-spacing:-.01em;}
+  .card p{font-size:15.5px;color:var(--ink-soft);margin:0 0 16px;line-height:1.5;}
+  .card-foot{font-family:var(--sans);border-top:1px solid var(--rule);margin:0 24px;padding:14px 0 18px;
+    display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .tags{font-size:11.5px;color:var(--ink-soft);letter-spacing:.03em;}
+  .open{font-size:13px;font-weight:700;color:var(--accent,var(--petrol));white-space:nowrap;}
+  a.card:hover .open{text-decoration:underline;}
+
+  /* note box */
+  .note{margin-top:50px;background:var(--paper2);border:1px solid var(--rule);
+    border-left:5px solid var(--gold);border-radius:6px;padding:20px 26px;box-shadow:var(--shadow);}
+  .note h3{font-family:var(--sans);font-size:12.5px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--gold);margin:0 0 10px;}
+  .note p{margin:0;font-size:15.5px;}
+
+  footer{margin-top:40px;border-top:1px solid var(--rule);padding-top:20px;
+    font-family:var(--sans);font-size:12.5px;color:var(--ink-soft);line-height:1.6;}
+  footer b{color:var(--ink);}
+
+  /* top nav */
+  .topnav{position:sticky;top:0;z-index:100;background:var(--paper);border-bottom:2px solid var(--ink);
+    font-family:var(--sans);}
+  .topnav-inner{max-width:980px;margin:0 auto;padding:0 40px;display:flex;gap:0;}
+  .topnav a{display:inline-block;padding:14px 20px;font-size:12.5px;letter-spacing:.14em;
+    text-transform:uppercase;font-weight:700;color:var(--ink-soft);text-decoration:none;
+    border-bottom:3px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s;}
+  .topnav a:hover{color:var(--petrol);}
+  .topnav a.active{color:var(--petrol);border-bottom-color:var(--petrol);}
+
+  @media (max-width:620px){
+    .wrap{padding:38px 20px 60px;} h1{font-size:32px;} .grid{grid-template-columns:1fr;}
+    .topnav-inner{padding:0 12px;} .topnav a{padding:12px 14px;}
+  }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <a href="/#home">Home</a>
+    <a href="/tools" class="active">Tools</a>
+    <a href="/#about">About</a>
+    <a href="/#resources">Resources</a>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="kicker">Interactive 3D · WebGL · Point-of-Care Ultrasound</p>
+    <h1>Interactive 3D Tools</h1>
+    <p class="subtitle">Explore the anatomy alongside the ultrasound, at your own pace</p>
+    <div class="stats">
+      <span><b>2</b> tools available</span>
+      <span>Orbit · zoom · click to explore</span>
+    </div>
+  </header>
+
+  <p class="intro">Standalone, self-contained 3D explorables that pair a rotatable anatomical model with the live
+  ultrasound it produces. Drop in a scan plane, click a structure to learn its role and sonographic appearance, and
+  watch the beating model line up with the image. Best experienced on a desktop browser with a mouse or trackpad.</p>
+
+  <p class="seclabel">The tools<span class="pd-rule"></span></p>
+
+  <div class="grid">
+
+    <!-- TOOL 1 — Echocardiography 3D heart -->
+    <a class="card" style="--accent:var(--clay)" href="/Echocardiography_3D_Sono.html">
+      <div class="media" aria-hidden="true">
+        <svg viewBox="0 0 320 128" xmlns="http://www.w3.org/2000/svg" role="img">
+          <path d="M120 30 C108 16 84 18 80 40 C77 58 96 74 120 96 C144 74 163 58 160 40 C156 18 132 16 120 30 Z"
+            fill="#c9584a" stroke="#e98579" stroke-width="2.5" opacity="0.95"/>
+          <path d="M120 44 C114 36 102 37 100 48 C99 57 108 65 120 76 C132 65 141 57 140 48 C138 37 126 36 120 44 Z"
+            fill="none" stroke="#f3d4cd" stroke-width="2" opacity="0.7"/>
+          <line x1="186" y1="20" x2="186" y2="108" stroke="#7fc9d4" stroke-width="2" opacity="0.5"/>
+          <path d="M210 24 L300 24 L278 104 L232 104 Z" fill="#13242b" stroke="#2f5862" stroke-width="1.5"/>
+          <path d="M210 24 L300 24 L278 104 L232 104 Z" fill="url(#echoSweep)" opacity="0.5"/>
+          <ellipse cx="252" cy="62" rx="13" ry="18" fill="none" stroke="#bfe0e6" stroke-width="2" opacity="0.8"/>
+          <ellipse cx="250" cy="86" rx="20" ry="9" fill="none" stroke="#9fcdd6" stroke-width="1.6" opacity="0.6"/>
+          <defs><linearGradient id="echoSweep" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#7fc9d4" stop-opacity="0.55"/><stop offset="1" stop-color="#7fc9d4" stop-opacity="0"/>
+          </linearGradient></defs>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="badge-row">
+          <span class="num">3D</span>
+          <span class="topic">Echocardiography · TTE</span>
+        </div>
+        <h2>Interactive 3D Heart &amp; Live Echo</h2>
+        <p>Orbit a real anatomical heart and click any chamber, valve, or vessel. Toggle the four standard transthoracic
+        windows — PLAX, PSAX, apical-4, and subcostal — to drop each scan plane into the heart beside the matching live
+        ultrasound loop, with a beating-heart animation and flow coloring.</p>
+      </div>
+      <div class="card-foot">
+        <span class="tags">Interactive 3D · live echo</span>
+        <span class="open">Open tool →</span>
+      </div>
+    </a>
+
+    <!-- TOOL 2 — Vascular access 3D arm -->
+    <a class="card" style="--accent:var(--sky)" href="/VascularAccess_3D_Sono.html">
+      <div class="media" aria-hidden="true">
+        <svg viewBox="0 0 320 128" xmlns="http://www.w3.org/2000/svg" role="img">
+          <path d="M44 96 C70 78 96 70 150 66 C176 64 196 60 214 52" fill="none" stroke="#e7c3a6" stroke-width="26"
+            stroke-linecap="round" opacity="0.9"/>
+          <path d="M52 92 C78 76 104 68 152 64 C176 62 196 58 212 51" fill="none" stroke="#2f6c8f" stroke-width="3.2"
+            stroke-linecap="round" opacity="0.85"/>
+          <path d="M50 99 C78 82 106 75 150 71" fill="none" stroke="#9a3f4a" stroke-width="2.4" stroke-linecap="round" opacity="0.7"/>
+          <path d="M214 22 L300 22 L280 100 L234 100 Z" fill="#13242b" stroke="#2f5862" stroke-width="1.5"/>
+          <path d="M214 22 L300 22 L280 100 L234 100 Z" fill="url(#usSweep)" opacity="0.5"/>
+          <circle cx="255" cy="58" r="11" fill="#0c161b" stroke="#bfe0e6" stroke-width="2.4"/>
+          <circle cx="255" cy="58" r="4" fill="#1b2d34" stroke="#7fc9d4" stroke-width="1.4"/>
+          <defs><linearGradient id="usSweep" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#7fc9d4" stop-opacity="0.55"/><stop offset="1" stop-color="#7fc9d4" stop-opacity="0"/>
+          </linearGradient></defs>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="badge-row">
+          <span class="num">3D</span>
+          <span class="topic">Vascular Access · RaPeVA</span>
+        </div>
+        <h2>3D Arm &amp; Live Ultrasound</h2>
+        <p>Run a systematic RaPeVA survey of the upper-limb veins: rotate the 3D arm, slide the probe along the vessels,
+        and read the corresponding live ultrasound. Built to teach vein selection and the 65% depth rule for difficult
+        IV access.</p>
+      </div>
+      <div class="card-foot">
+        <span class="tags">Interactive 3D · live US</span>
+        <span class="open">Open tool →</span>
+      </div>
+    </a>
+
+  </div>
+
+  <div class="note">
+    <h3>Before you launch</h3>
+    <p>These tools render in 3D using WebGL and are best viewed on a desktop or laptop browser. They are schematic
+    teaching models — proportions and positions are stylized for clarity and are not a substitute for scanning real
+    patients.</p>
+  </div>
+
+  <footer>
+    <p>© Raphael Lessard, MD — POCUS Learning Case Series. For educational use. <a href="/#home" style="color:var(--petrol)">Back to the case series →</a></p>
+  </footer>
+
+</div>
+</body>
+</html>
