@@ -26,6 +26,13 @@
  .mbox{background:#fff;border-radius:10px;padding:10px;max-width:95vw;max-height:92vh;position:relative}
  .mbox img{display:block;max-width:92vw;max-height:80vh}
  #mclose{position:absolute;top:-14px;right:-14px;background:var(--panel);color:#fff;border:1px solid #5a8ac0;border-radius:50%;width:30px;height:30px;cursor:pointer}
+ .method{border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
+ .method>summary{cursor:pointer;padding:13px 18px;font-size:13.5px;font-weight:600;color:#cdd5e2;list-style:none}
+ .method>summary::-webkit-details-marker{display:none}
+ .method>summary::before{content:"▸ ";color:var(--mut)} .method[open]>summary::before{content:"▾ "}
+ .method-body{padding:4px 18px 16px;border-top:1px solid var(--line)}
+ .method-body p{font-size:13.5px;color:#c2cbd9;line-height:1.55;margin:12px 0}
+ .method-body a{color:#7fb0d8}.method-body .caveat{color:var(--mut);font-size:12.5px}
  footer{padding:14px 22px;color:var(--mut);font-size:12px;border-top:1px solid var(--line)}
 </style></head><body>
 <header>
@@ -51,6 +58,32 @@
    <div class="lbl">ECG — rhythm strip (marker walks one beat per loop)</div>
    <div class="ecgwrap"><img id="ecgimg" alt="ECG"><div id="ecgmark"></div></div>
  </div>
+
+ <details class="method">
+   <summary>Methodology &amp; validation</summary>
+   <div class="method-body">
+     <p><b>Motion is real, not hand-drawn.</b> Each loop's wall motion comes from cardiac cine-MRI
+     (the public <a href="https://www.creatis.insa-lyon.fr/Challenge/acdc/" target="_blank" rel="noopener">ACDC</a>
+     dataset, 5 diagnostic groups). Per-AHA-segment endocardial shortening is extracted from the
+     end-diastolic and end-systolic segmentations and transferred onto a regularized biventricular
+     template — real motion on clean anatomy. Atrial and PLAX geometry are resliced from whole-heart
+     MRI (MMWHS).</p>
+     <p><b>The numbers are measured, never typed in.</b> Ejection fraction is computed from the moving
+     contour by single-plane method-of-discs (Simpson); RV:LV ratio, TAPSE and the PSAX septal index
+     (D-sign) are likewise read off the deforming model. Changing a preset changes the geometry/motion;
+     the readouts follow.</p>
+     <p><b>Presets.</b> Normal; LAD/RCA/LCx infarcts (coronary→AHA territory map, with akinesis depth
+     and transmural gradient calibrated from the real ACDC infarct cohort); RV strain (D-sign + reduced
+     TAPSE); DCM and HCM are driven by individual real patients (ACDC patient017 and patient030).</p>
+     <p><b>Appearance.</b> A labeled teaching view and a procedural grayscale B-mode view (correlated
+     point-spread-function speckle, time-gain compensation, specular borders). The B-mode look is scored
+     two ways against real echo: an image-statistics fidelity metric, and a round-trip through a
+     real-echo segmentation network (CAMUS-trained nnU-Net) that recovers the LV from the rendered frame
+     — confirming it is legible <i>as echo</i>, not just plausible to the eye.</p>
+     <p class="caveat">Teaching tool — not a diagnostic reference. Appearance is procedural (photoreal
+     neural rendering is planned v2). Pathology presets await formal cardiologist sign-off.</p>
+   </div>
+ </details>
 </main>
 <div id="modal" class="modal"><div class="mbox"><button id="mclose">✕</button><img id="twelve" alt="12-lead ECG"></div></div>
 <footer>Teaching model — not a diagnostic reference. Appearance ranges from a labeled schematic to a procedural B-mode echo; photorealism (neural) is v2. Clinician sign-off pending.</footer>
