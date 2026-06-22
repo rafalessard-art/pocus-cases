@@ -1,0 +1,183 @@
+{
+  "views": [
+    "A4C",
+    "PSAX",
+    "PLAX"
+  ],
+  "styles": [
+    "teach",
+    "echo"
+  ],
+  "fps": 15,
+  "presets": {
+    "Normal": {
+      "caption": "Normal biventricular function.",
+      "metrics": {
+        "ef": 63.5,
+        "rvlv": 0.58,
+        "tapse": 21.0,
+        "dsign": 1.0
+      },
+      "clips": {
+        "A4C": {
+          "teach": "clips/Normal_A4C_teach.mp4",
+          "echo": "clips/Normal_A4C_echo.mp4"
+        },
+        "PSAX": {
+          "teach": "clips/Normal_PSAX_teach.mp4",
+          "echo": "clips/Normal_PSAX_echo.mp4"
+        },
+        "PLAX": {
+          "teach": "clips/Normal_PLAX_teach.mp4",
+          "echo": "clips/Normal_PLAX_echo.mp4"
+        }
+      },
+      "twelve_lead": "Normal_12lead.png"
+    },
+    "LAD infarct": {
+      "caption": "Anteroseptal + apical transmural infarct \u2014 septum/apex lag in A4C while remote walls contract; global EF ~47%. Territory = AHA guideline map; akinesis depth from the real ACDC MINF cohort.",
+      "metrics": {
+        "ef": 47.0,
+        "rvlv": 0.58,
+        "tapse": 21.0,
+        "dsign": 1.0
+      },
+      "clips": {
+        "A4C": {
+          "teach": "clips/LAD_infarct_A4C_teach.mp4",
+          "echo": "clips/LAD_infarct_A4C_echo.mp4"
+        },
+        "PSAX": {
+          "teach": "clips/LAD_infarct_PSAX_teach.mp4",
+          "echo": "clips/LAD_infarct_PSAX_echo.mp4"
+        },
+        "PLAX": {
+          "teach": "clips/LAD_infarct_PLAX_teach.mp4",
+          "echo": "clips/LAD_infarct_PLAX_echo.mp4"
+        }
+      },
+      "twelve_lead": "LAD_infarct_12lead.png"
+    },
+    "RCA infarct": {
+      "caption": "Proximal RCA: inferior LV + RV involvement \u2014 RV free-wall akinesis, reduced TAPSE, mild RV dilation (look at the RV in inferior STEMI).",
+      "metrics": {
+        "ef": 49.9,
+        "rvlv": 0.76,
+        "tapse": 13.0,
+        "dsign": 1.0
+      },
+      "clips": {
+        "A4C": {
+          "teach": "clips/RCA_infarct_A4C_teach.mp4",
+          "echo": "clips/RCA_infarct_A4C_echo.mp4"
+        },
+        "PSAX": {
+          "teach": "clips/RCA_infarct_PSAX_teach.mp4",
+          "echo": "clips/RCA_infarct_PSAX_echo.mp4"
+        },
+        "PLAX": {
+          "teach": "clips/RCA_infarct_PLAX_teach.mp4",
+          "echo": "clips/RCA_infarct_PLAX_echo.mp4"
+        }
+      },
+      "twelve_lead": "RCA_infarct_12lead.png"
+    },
+    "LCx infarct": {
+      "caption": "Inferolateral transmural infarct \u2014 lateral-wall akinesis, mildly reduced global EF.",
+      "metrics": {
+        "ef": 50.9,
+        "rvlv": 0.58,
+        "tapse": 21.0,
+        "dsign": 1.0
+      },
+      "clips": {
+        "A4C": {
+          "teach": "clips/LCx_infarct_A4C_teach.mp4",
+          "echo": "clips/LCx_infarct_A4C_echo.mp4"
+        },
+        "PSAX": {
+          "teach": "clips/LCx_infarct_PSAX_teach.mp4",
+          "echo": "clips/LCx_infarct_PSAX_echo.mp4"
+        },
+        "PLAX": {
+          "teach": "clips/LCx_infarct_PLAX_teach.mp4",
+          "echo": "clips/LCx_infarct_PLAX_echo.mp4"
+        }
+      },
+      "twelve_lead": "LCx_infarct_12lead.png"
+    },
+    "RV strain": {
+      "caption": "Dilated RV (high RV:LV), septal flattening \u2014 D-sign in PSAX, reduced TAPSE.",
+      "metrics": {
+        "ef": 62.3,
+        "rvlv": 0.99,
+        "tapse": 8.6,
+        "dsign": 2.32
+      },
+      "clips": {
+        "A4C": {
+          "teach": "clips/RV_strain_A4C_teach.mp4",
+          "echo": "clips/RV_strain_A4C_echo.mp4"
+        },
+        "PSAX": {
+          "teach": "clips/RV_strain_PSAX_teach.mp4",
+          "echo": "clips/RV_strain_PSAX_echo.mp4"
+        },
+        "PLAX": {
+          "teach": "clips/RV_strain_PLAX_teach.mp4",
+          "echo": "clips/RV_strain_PLAX_echo.mp4"
+        }
+      },
+      "twelve_lead": "RV_strain_12lead.png"
+    },
+    "DCM": {
+      "caption": "Dilated cardiomyopathy (real ACDC patient017): globally dilated, thin-walled, severe global hypokinesis, low EF, biventricular.",
+      "metrics": {
+        "ef": 18.2,
+        "rvlv": 0.58,
+        "tapse": 7.2,
+        "dsign": 1.0
+      },
+      "clips": {
+        "A4C": {
+          "teach": "clips/DCM_A4C_teach.mp4",
+          "echo": "clips/DCM_A4C_echo.mp4"
+        },
+        "PSAX": {
+          "teach": "clips/DCM_PSAX_teach.mp4",
+          "echo": "clips/DCM_PSAX_echo.mp4"
+        },
+        "PLAX": {
+          "teach": "clips/DCM_PLAX_teach.mp4",
+          "echo": "clips/DCM_PLAX_echo.mp4"
+        }
+      },
+      "twelve_lead": "DCM_12lead.png"
+    },
+    "HCM": {
+      "caption": "Hypertrophic cardiomyopathy (real ACDC patient030): thick LV walls, small cavity, preserved/hyperdynamic EF.",
+      "metrics": {
+        "ef": 78.5,
+        "rvlv": 0.68,
+        "tapse": 21.0,
+        "dsign": 1.0
+      },
+      "clips": {
+        "A4C": {
+          "teach": "clips/HCM_A4C_teach.mp4",
+          "echo": "clips/HCM_A4C_echo.mp4"
+        },
+        "PSAX": {
+          "teach": "clips/HCM_PSAX_teach.mp4",
+          "echo": "clips/HCM_PSAX_echo.mp4"
+        },
+        "PLAX": {
+          "teach": "clips/HCM_PLAX_teach.mp4",
+          "echo": "clips/HCM_PLAX_echo.mp4"
+        }
+      },
+      "twelve_lead": "HCM_12lead.png"
+    }
+  },
+  "ecg_strip": "ecg_strip.png"
+}
