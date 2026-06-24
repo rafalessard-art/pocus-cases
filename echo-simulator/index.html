@@ -1,4 +1,4 @@
-<!-- EchoSimulator build 289b2a8@2026-06-24T13:14:41Z -->
+<!-- EchoSimulator build b0414c2@2026-06-24T13:58:51Z -->
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -38,7 +38,7 @@
 </style></head><body>
 <header>
  <h1>EchoSimulator <span style="color:var(--mut);font-weight:400">· parametric POCUS echo</span></h1>
- <div class="sub">Real cardiac-MRI motion (ACDC) on a regularized biventricular template. EF, RV:LV, TAPSE and the PSAX septal index are <b>measured from the moving contour</b>, never typed in. Pick a preset, view and appearance.</div>
+ <div class="sub">Watch real heart motion from cardiac MRI, replayed on a clean heart model. The EF and the other numbers are <b>measured from the moving image</b> — not typed in. Pick a case, a view, and how it looks.</div>
 </header>
 <main>
  <div><div class="lbl">Pathology preset</div><div class="row" id="presets"></div></div>
@@ -53,7 +53,7 @@
      <div class="metrics">RV:LV <b id="rvlv">—</b> · TAPSE <b id="tapse">—</b> mm · PSAX septal index <b id="dsign">—</b></div>
      <div class="cap" id="cap"></div>
      <div class="cap" id="betanote" style="display:none;color:#e0b84a">⚠️ Photoreal is an experimental neural rendering (beta): it paints echo texture but is <b>not validated for pathology fidelity</b> — a disease may look milder than it is. The measurements above come from the validated model and are unaffected. Use Echo/Teaching for assessment.</div>
-     <div class="row" style="margin-top:14px"><button id="ecg12">🫀 12-lead ECG</button></div>
+     <div class="row" style="margin-top:14px"><button id="playpause">⏸ Pause</button><button id="ecg12">🫀 12-lead ECG</button></div>
    </div>
  </div>
  <div>
@@ -62,40 +62,33 @@
  </div>
 
  <details class="method">
-   <summary>Methodology &amp; validation</summary>
+   <summary>How this works</summary>
    <div class="method-body">
-     <p><b>Motion is real, not hand-drawn.</b> Each loop's wall motion comes from cardiac cine-MRI
-     (the public <a href="https://www.creatis.insa-lyon.fr/Challenge/acdc/" target="_blank" rel="noopener">ACDC</a>
-     dataset, 5 diagnostic groups). Per-AHA-segment endocardial shortening is extracted from the
-     end-diastolic and end-systolic segmentations and transferred onto a regularized biventricular
-     template — real motion on clean anatomy. Atrial and PLAX geometry are resliced from whole-heart
-     MRI (MMWHS).</p>
-     <p><b>The numbers are measured, never typed in.</b> Ejection fraction is computed from the moving
-     contour by single-plane method-of-discs (Simpson); RV:LV ratio, TAPSE and the PSAX septal index
-     (D-sign) are likewise read off the deforming model. Changing a preset changes the geometry/motion;
-     the readouts follow.</p>
-     <p><b>Presets.</b> Normal; LAD/RCA/LCx infarcts (coronary→AHA territory map, with akinesis depth
-     and transmural gradient calibrated from the real ACDC infarct cohort); RV strain (D-sign + reduced
-     TAPSE); DCM and HCM are driven by individual real patients (ACDC patient017 and patient030).</p>
-     <p><b>Appearance.</b> A labeled teaching view and a procedural grayscale B-mode view (correlated
-     point-spread-function speckle, time-gain compensation, specular borders). The B-mode look is scored
-     two ways against real echo: an image-statistics fidelity metric, and a round-trip through a
-     real-echo segmentation network (CAMUS-trained nnU-Net) that recovers the LV from the rendered frame
-     — confirming it is legible <i>as echo</i>, not just plausible to the eye.</p>
-     <p><b>Photoreal (beta).</b> A third appearance runs each echo frame through a CycleGAN trained to
-     map our render to real-echo texture (unpaired render↔echo). It is <b>experimental</b>: the texture
-     is convincing but it is <i>not</i> gated for pathology fidelity, so a disease may read milder than
-     it is — the displayed measurements still come from the validated model. Teaching/Echo remain the
-     reference appearances.</p>
-     <p class="caveat">Teaching tool — not a diagnostic reference. Pathology presets await formal
-     cardiologist sign-off; Photoreal (beta) is an unvalidated neural rendering.</p>
+     <p><b>The motion is real.</b> The way the heart walls move in each loop is taken from real cardiac
+     MRI scans (the public <a href="https://www.creatis.insa-lyon.fr/Challenge/acdc/" target="_blank" rel="noopener">ACDC</a>
+     dataset) and replayed on a clean heart model — so you're watching motion that genuinely happened in
+     patients' hearts, not an animation drawn by hand.</p>
+     <p><b>The numbers are measured, not typed in.</b> The ejection fraction (EF) and the other readings
+     — the right-vs-left ventricle size ratio, TAPSE, and the septal index — are all calculated from the
+     moving outline you see on screen. Pick a different case and the shape changes, so the numbers change
+     with it.</p>
+     <p><b>The cases.</b> Each preset is a real pattern: a normal heart; three heart attacks grouped by
+     blocked artery (LAD, RCA, LCx); right-heart strain; and two cardiomyopathies — one dilated and weak,
+     one thick-walled — both taken from individual real patients.</p>
+     <p><b>The three looks.</b> <i>Teaching</i> is a clean, labeled diagram. <i>Echo</i> mimics the grainy
+     grayscale of a real ultrasound (and is checked against real ultrasound clips so it reads like a
+     genuine scan). <i>Photoreal (beta)</i> is an experimental AI version that adds lifelike texture — it
+     can make a disease look milder than it really is, so use Teaching or Echo when you're actually sizing
+     up a case. The numbers always come from the validated model.</p>
+     <p class="caveat">A teaching tool — not for real diagnosis. The disease cases still need formal
+     cardiologist review.</p>
    </div>
  </details>
 </main>
 <div id="modal" class="modal"><div class="mbox"><button id="mclose">✕</button><img id="twelve" alt="12-lead ECG"></div></div>
 <footer>Teaching model — not a diagnostic reference. Appearance ranges from a labeled schematic to a procedural B-mode echo to an experimental neural Photoreal (beta). Clinician sign-off pending.</footer>
 <script>
-const M = {"views": ["A4C", "PSAX", "PLAX"], "styles": ["teach", "echo", "photoreal"], "fps": 15, "build": "289b2a8@2026-06-24T13:14:41Z", "presets": {"Normal": {"caption": "Normal biventricular function.", "metrics": {"ef": 63.5, "rvlv": 0.58, "tapse": 21.0, "dsign": 1.0}, "clips": {"A4C": {"teach": "clips/Normal_A4C_teach.mp4", "echo": "clips/Normal_A4C_echo.mp4", "photoreal": "clips/Normal_A4C_photoreal.mp4"}, "PSAX": {"teach": "clips/Normal_PSAX_teach.mp4", "echo": "clips/Normal_PSAX_echo.mp4", "photoreal": "clips/Normal_PSAX_photoreal.mp4"}, "PLAX": {"teach": "clips/Normal_PLAX_teach.mp4", "echo": "clips/Normal_PLAX_echo.mp4", "photoreal": "clips/Normal_PLAX_photoreal.mp4"}}, "twelve_lead": "Normal_12lead.png"}, "LAD infarct": {"caption": "Anteroseptal + apical transmural infarct \u2014 septum/apex lag in A4C while remote walls contract; global EF ~47%. Territory = AHA guideline map; akinesis depth from the real ACDC MINF cohort.", "metrics": {"ef": 47.0, "rvlv": 0.58, "tapse": 21.0, "dsign": 1.0}, "clips": {"A4C": {"teach": "clips/LAD_infarct_A4C_teach.mp4", "echo": "clips/LAD_infarct_A4C_echo.mp4", "photoreal": "clips/LAD_infarct_A4C_photoreal.mp4"}, "PSAX": {"teach": "clips/LAD_infarct_PSAX_teach.mp4", "echo": "clips/LAD_infarct_PSAX_echo.mp4", "photoreal": "clips/LAD_infarct_PSAX_photoreal.mp4"}, "PLAX": {"teach": "clips/LAD_infarct_PLAX_teach.mp4", "echo": "clips/LAD_infarct_PLAX_echo.mp4", "photoreal": "clips/LAD_infarct_PLAX_photoreal.mp4"}}, "twelve_lead": "LAD_infarct_12lead.png"}, "RCA infarct": {"caption": "Proximal RCA: inferior LV + RV involvement \u2014 RV free-wall akinesis, reduced TAPSE, mild RV dilation (look at the RV in inferior STEMI).", "metrics": {"ef": 49.9, "rvlv": 0.76, "tapse": 13.0, "dsign": 1.0}, "clips": {"A4C": {"teach": "clips/RCA_infarct_A4C_teach.mp4", "echo": "clips/RCA_infarct_A4C_echo.mp4", "photoreal": "clips/RCA_infarct_A4C_photoreal.mp4"}, "PSAX": {"teach": "clips/RCA_infarct_PSAX_teach.mp4", "echo": "clips/RCA_infarct_PSAX_echo.mp4", "photoreal": "clips/RCA_infarct_PSAX_photoreal.mp4"}, "PLAX": {"teach": "clips/RCA_infarct_PLAX_teach.mp4", "echo": "clips/RCA_infarct_PLAX_echo.mp4", "photoreal": "clips/RCA_infarct_PLAX_photoreal.mp4"}}, "twelve_lead": "RCA_infarct_12lead.png"}, "LCx infarct": {"caption": "Inferolateral transmural infarct \u2014 lateral-wall akinesis, mildly reduced global EF.", "metrics": {"ef": 50.9, "rvlv": 0.58, "tapse": 21.0, "dsign": 1.0}, "clips": {"A4C": {"teach": "clips/LCx_infarct_A4C_teach.mp4", "echo": "clips/LCx_infarct_A4C_echo.mp4", "photoreal": "clips/LCx_infarct_A4C_photoreal.mp4"}, "PSAX": {"teach": "clips/LCx_infarct_PSAX_teach.mp4", "echo": "clips/LCx_infarct_PSAX_echo.mp4", "photoreal": "clips/LCx_infarct_PSAX_photoreal.mp4"}, "PLAX": {"teach": "clips/LCx_infarct_PLAX_teach.mp4", "echo": "clips/LCx_infarct_PLAX_echo.mp4", "photoreal": "clips/LCx_infarct_PLAX_photoreal.mp4"}}, "twelve_lead": "LCx_infarct_12lead.png"}, "RV strain": {"caption": "Dilated RV (high RV:LV), septal flattening \u2014 D-sign in PSAX, reduced TAPSE.", "metrics": {"ef": 62.3, "rvlv": 0.99, "tapse": 11.5, "dsign": 2.32}, "clips": {"A4C": {"teach": "clips/RV_strain_A4C_teach.mp4", "echo": "clips/RV_strain_A4C_echo.mp4", "photoreal": "clips/RV_strain_A4C_photoreal.mp4"}, "PSAX": {"teach": "clips/RV_strain_PSAX_teach.mp4", "echo": "clips/RV_strain_PSAX_echo.mp4", "photoreal": "clips/RV_strain_PSAX_photoreal.mp4"}, "PLAX": {"teach": "clips/RV_strain_PLAX_teach.mp4", "echo": "clips/RV_strain_PLAX_echo.mp4", "photoreal": "clips/RV_strain_PLAX_photoreal.mp4"}}, "twelve_lead": "RV_strain_12lead.png"}, "DCM": {"caption": "Dilated cardiomyopathy (real ACDC patient017): globally dilated, thin-walled, severe global hypokinesis, low EF, biventricular.", "metrics": {"ef": 18.2, "rvlv": 0.58, "tapse": 7.2, "dsign": 1.0}, "clips": {"A4C": {"teach": "clips/DCM_A4C_teach.mp4", "echo": "clips/DCM_A4C_echo.mp4", "photoreal": "clips/DCM_A4C_photoreal.mp4"}, "PSAX": {"teach": "clips/DCM_PSAX_teach.mp4", "echo": "clips/DCM_PSAX_echo.mp4", "photoreal": "clips/DCM_PSAX_photoreal.mp4"}, "PLAX": {"teach": "clips/DCM_PLAX_teach.mp4", "echo": "clips/DCM_PLAX_echo.mp4", "photoreal": "clips/DCM_PLAX_photoreal.mp4"}}, "twelve_lead": "DCM_12lead.png"}, "HCM": {"caption": "Hypertrophic cardiomyopathy (real ACDC patient030): thick LV walls, small cavity, preserved/hyperdynamic EF.", "metrics": {"ef": 78.5, "rvlv": 0.68, "tapse": 21.0, "dsign": 1.0}, "clips": {"A4C": {"teach": "clips/HCM_A4C_teach.mp4", "echo": "clips/HCM_A4C_echo.mp4", "photoreal": "clips/HCM_A4C_photoreal.mp4"}, "PSAX": {"teach": "clips/HCM_PSAX_teach.mp4", "echo": "clips/HCM_PSAX_echo.mp4", "photoreal": "clips/HCM_PSAX_photoreal.mp4"}, "PLAX": {"teach": "clips/HCM_PLAX_teach.mp4", "echo": "clips/HCM_PLAX_echo.mp4", "photoreal": "clips/HCM_PLAX_photoreal.mp4"}}, "twelve_lead": "HCM_12lead.png"}}, "ecg_strip": "ecg_strip.png"};
+const M = {"views": ["A4C", "PSAX", "PLAX"], "styles": ["teach", "echo", "photoreal"], "fps": 15, "build": "b0414c2@2026-06-24T13:58:51Z", "presets": {"Normal": {"caption": "Normal biventricular function.", "metrics": {"ef": 63.5, "rvlv": 0.58, "tapse": 21.0, "dsign": 1.0}, "clips": {"A4C": {"teach": "clips/Normal_A4C_teach.mp4", "echo": "clips/Normal_A4C_echo.mp4", "photoreal": "clips/Normal_A4C_photoreal.mp4"}, "PSAX": {"teach": "clips/Normal_PSAX_teach.mp4", "echo": "clips/Normal_PSAX_echo.mp4", "photoreal": "clips/Normal_PSAX_photoreal.mp4"}, "PLAX": {"teach": "clips/Normal_PLAX_teach.mp4", "echo": "clips/Normal_PLAX_echo.mp4", "photoreal": "clips/Normal_PLAX_photoreal.mp4"}}, "twelve_lead": "Normal_12lead.png"}, "LAD infarct": {"caption": "Anteroseptal + apical transmural infarct \u2014 septum/apex lag in A4C while remote walls contract; global EF ~47%. Territory = AHA guideline map; akinesis depth from the real ACDC MINF cohort.", "metrics": {"ef": 47.0, "rvlv": 0.58, "tapse": 21.0, "dsign": 1.0}, "clips": {"A4C": {"teach": "clips/LAD_infarct_A4C_teach.mp4", "echo": "clips/LAD_infarct_A4C_echo.mp4", "photoreal": "clips/LAD_infarct_A4C_photoreal.mp4"}, "PSAX": {"teach": "clips/LAD_infarct_PSAX_teach.mp4", "echo": "clips/LAD_infarct_PSAX_echo.mp4", "photoreal": "clips/LAD_infarct_PSAX_photoreal.mp4"}, "PLAX": {"teach": "clips/LAD_infarct_PLAX_teach.mp4", "echo": "clips/LAD_infarct_PLAX_echo.mp4", "photoreal": "clips/LAD_infarct_PLAX_photoreal.mp4"}}, "twelve_lead": "LAD_infarct_12lead.png"}, "RCA infarct": {"caption": "Proximal RCA: inferior LV + RV involvement \u2014 RV free-wall akinesis, reduced TAPSE, mild RV dilation (look at the RV in inferior STEMI).", "metrics": {"ef": 49.9, "rvlv": 0.76, "tapse": 13.0, "dsign": 1.0}, "clips": {"A4C": {"teach": "clips/RCA_infarct_A4C_teach.mp4", "echo": "clips/RCA_infarct_A4C_echo.mp4", "photoreal": "clips/RCA_infarct_A4C_photoreal.mp4"}, "PSAX": {"teach": "clips/RCA_infarct_PSAX_teach.mp4", "echo": "clips/RCA_infarct_PSAX_echo.mp4", "photoreal": "clips/RCA_infarct_PSAX_photoreal.mp4"}, "PLAX": {"teach": "clips/RCA_infarct_PLAX_teach.mp4", "echo": "clips/RCA_infarct_PLAX_echo.mp4", "photoreal": "clips/RCA_infarct_PLAX_photoreal.mp4"}}, "twelve_lead": "RCA_infarct_12lead.png"}, "LCx infarct": {"caption": "Inferolateral transmural infarct \u2014 lateral-wall akinesis, mildly reduced global EF.", "metrics": {"ef": 50.9, "rvlv": 0.58, "tapse": 21.0, "dsign": 1.0}, "clips": {"A4C": {"teach": "clips/LCx_infarct_A4C_teach.mp4", "echo": "clips/LCx_infarct_A4C_echo.mp4", "photoreal": "clips/LCx_infarct_A4C_photoreal.mp4"}, "PSAX": {"teach": "clips/LCx_infarct_PSAX_teach.mp4", "echo": "clips/LCx_infarct_PSAX_echo.mp4", "photoreal": "clips/LCx_infarct_PSAX_photoreal.mp4"}, "PLAX": {"teach": "clips/LCx_infarct_PLAX_teach.mp4", "echo": "clips/LCx_infarct_PLAX_echo.mp4", "photoreal": "clips/LCx_infarct_PLAX_photoreal.mp4"}}, "twelve_lead": "LCx_infarct_12lead.png"}, "RV strain": {"caption": "Dilated RV (high RV:LV), septal flattening \u2014 D-sign in PSAX, reduced TAPSE.", "metrics": {"ef": 62.3, "rvlv": 0.99, "tapse": 11.5, "dsign": 2.32}, "clips": {"A4C": {"teach": "clips/RV_strain_A4C_teach.mp4", "echo": "clips/RV_strain_A4C_echo.mp4", "photoreal": "clips/RV_strain_A4C_photoreal.mp4"}, "PSAX": {"teach": "clips/RV_strain_PSAX_teach.mp4", "echo": "clips/RV_strain_PSAX_echo.mp4", "photoreal": "clips/RV_strain_PSAX_photoreal.mp4"}, "PLAX": {"teach": "clips/RV_strain_PLAX_teach.mp4", "echo": "clips/RV_strain_PLAX_echo.mp4", "photoreal": "clips/RV_strain_PLAX_photoreal.mp4"}}, "twelve_lead": "RV_strain_12lead.png"}, "DCM": {"caption": "Dilated cardiomyopathy (real ACDC patient017): globally dilated, thin-walled, severe global hypokinesis, low EF, biventricular.", "metrics": {"ef": 18.2, "rvlv": 0.58, "tapse": 7.2, "dsign": 1.0}, "clips": {"A4C": {"teach": "clips/DCM_A4C_teach.mp4", "echo": "clips/DCM_A4C_echo.mp4", "photoreal": "clips/DCM_A4C_photoreal.mp4"}, "PSAX": {"teach": "clips/DCM_PSAX_teach.mp4", "echo": "clips/DCM_PSAX_echo.mp4", "photoreal": "clips/DCM_PSAX_photoreal.mp4"}, "PLAX": {"teach": "clips/DCM_PLAX_teach.mp4", "echo": "clips/DCM_PLAX_echo.mp4", "photoreal": "clips/DCM_PLAX_photoreal.mp4"}}, "twelve_lead": "DCM_12lead.png"}, "HCM": {"caption": "Hypertrophic cardiomyopathy (real ACDC patient030): thick LV walls, small cavity, preserved/hyperdynamic EF.", "metrics": {"ef": 78.5, "rvlv": 0.68, "tapse": 21.0, "dsign": 1.0}, "clips": {"A4C": {"teach": "clips/HCM_A4C_teach.mp4", "echo": "clips/HCM_A4C_echo.mp4", "photoreal": "clips/HCM_A4C_photoreal.mp4"}, "PSAX": {"teach": "clips/HCM_PSAX_teach.mp4", "echo": "clips/HCM_PSAX_echo.mp4", "photoreal": "clips/HCM_PSAX_photoreal.mp4"}, "PLAX": {"teach": "clips/HCM_PLAX_teach.mp4", "echo": "clips/HCM_PLAX_echo.mp4", "photoreal": "clips/HCM_PLAX_photoreal.mp4"}}, "twelve_lead": "HCM_12lead.png"}}, "ecg_strip": "ecg_strip.png"};
 const BASE = "library/";                 // relative to this page
 const V = M.build ? ("?v=" + encodeURIComponent(M.build)) : "";   // cache-bust: refetch on each deploy
 const asset = p => BASE + p + V;         // clips/images keep stable names, so version them by query
@@ -124,8 +117,23 @@ function render(){
   $("tapse").textContent = m.tapse; $("dsign").textContent = m.dsign; $("cap").textContent = P.caption;
   $("betanote").style.display = (style === "photoreal") ? "block" : "none";
   const src = asset(P.clips[view][style]);
-  if(!vid.src.endsWith(src)){ vid.src = src; vid.play().catch(()=>{}); }
+  if(!vid.src.endsWith(src)){
+    const t = vid.currentTime;                 // keep the same frame when switching while paused
+    vid.src = src;
+    vid.addEventListener("loadeddata", ()=>{
+      if(userPaused){ try{ vid.currentTime = t; }catch(e){} }   // stay on the frame (compare looks)
+      else { vid.play().catch(()=>{}); }
+    }, {once:true});
+  }
 }
+let userPaused = false;
+function syncPlayBtn(){ $("playpause").textContent = vid.paused ? "▶ Play" : "⏸ Pause"; }
+$("playpause").onclick = ()=>{
+  if(vid.paused){ userPaused = false; vid.play().catch(()=>{}); }
+  else { userPaused = true; vid.pause(); }
+};
+vid.addEventListener("play", syncPlayBtn);
+vid.addEventListener("pause", syncPlayBtn);
 vid.addEventListener("timeupdate", ()=>{
   const d = vid.duration || 1; const f = vid.currentTime / d;
   $("ecgmark").style.left = (((beat + f) / N_CYCLES) * 100) + "%";
