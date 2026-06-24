@@ -9,6 +9,7 @@
     "echo"
   ],
   "fps": 15,
+  "build": "e98cf80@2026-06-24T12:02:58Z",
   "presets": {
     "Normal": {
       "caption": "Normal biventricular function.",
