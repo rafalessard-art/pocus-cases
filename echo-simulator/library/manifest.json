@@ -10,7 +10,7 @@
     "photoreal"
   ],
   "fps": 15,
-  "build": "44f258a@2026-06-24T12:34:07Z",
+  "build": "289b2a8@2026-06-24T13:14:41Z",
   "presets": {
     "Normal": {
       "caption": "Normal biventricular function.",
@@ -125,7 +125,7 @@
       "metrics": {
         "ef": 62.3,
         "rvlv": 0.99,
-        "tapse": 8.6,
+        "tapse": 11.5,
         "dsign": 2.32
       },
       "clips": {
