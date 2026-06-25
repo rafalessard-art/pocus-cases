@@ -14,7 +14,7 @@
 }
 a.pds-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04), 0 26px 50px -22px rgba(17, 78, 75, 0.5);
+  box-shadow: var(--shadow-hover);
 }
 
 .pds-card-body {
@@ -62,19 +62,25 @@ a.pds-card:hover .pds-open {
 
 /* "Coming soon" placeholder */
 .pds-card--soon {
-  background: repeating-linear-gradient(45deg, #fbf9f3, #fbf9f3 12px, #f7f4ec 12px, #f7f4ec 24px);
-  border: 1px dashed #c7bfae;
-  border-top: 5px dashed #c7bfae;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--soon-stripe-a),
+    var(--soon-stripe-a) 12px,
+    var(--soon-stripe-b) 12px,
+    var(--soon-stripe-b) 24px
+  );
+  border: 1px dashed var(--soon-border);
+  border-top: 5px dashed var(--soon-border);
   cursor: default;
   box-shadow: none;
 }
 .pds-card--soon .pds-num {
-  background: #b9b0a0;
+  background: var(--soon-badge);
 }
 .pds-card--soon .pds-tag--topic,
 .pds-card--soon .pds-open {
-  color: #8a8170;
+  color: var(--soon-muted);
 }
 .pds-card--soon h2 {
-  color: #6f675a;
+  color: var(--soon-title);
 }

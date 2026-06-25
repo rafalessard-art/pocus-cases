@@ -1,6 +1,7 @@
-// Global styles: tokens + document base. Importing the package pulls these in.
+// Global styles: tokens + document base + dark theme. Importing the package pulls these in.
 import './styles/tokens.css';
 import './styles/base.css';
+import './styles/dark.css';
 
 // Shell / layout
 export * from './components/PageWrap';

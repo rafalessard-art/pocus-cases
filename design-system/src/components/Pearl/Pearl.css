@@ -1,6 +1,6 @@
 .pds-pearl {
-  background: linear-gradient(180deg, #fff8ec, #fbeed4);
-  border: 1px solid #e6c98c;
+  background: linear-gradient(180deg, var(--pearl-from), var(--pearl-to));
+  border: 1px solid var(--pearl-border);
   border-left: 5px solid var(--clay);
   border-radius: 10px;
   padding: 16px 20px;

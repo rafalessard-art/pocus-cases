@@ -33,8 +33,28 @@
   --crisis: #8c2f2a;
   --crisis-bg: #f7e9e6;
 
+  /* Component surfaces & gradients (light values == the originals these replaced) */
+  --surface-sunk: #faf6ec;          /* DataTable zebra rows */
+  --summary-from: #fffefb;          /* AnswerKey summary gradient */
+  --summary-to: #f3ede1;
+  --summary-hover: #efe8da;
+  --pearl-from: #fff8ec;            /* Pearl */
+  --pearl-to: #fbeed4;
+  --pearl-border: #e6c98c;
+  --vignette-to: #fbf7ee;           /* Vignette gradient end */
+  --vignette-crisis-from: #fffaf8;  /* Vignette crisis gradient start */
+  --evgrade-bg: #eef4ec;            /* EvidenceGrade chip */
+  --th-ink: #f3efe6;                /* DataTable header text */
+  --soon-stripe-a: #fbf9f3;         /* CaseCard "soon" placeholder */
+  --soon-stripe-b: #f7f4ec;
+  --soon-border: #c7bfae;
+  --soon-badge: #b9b0a0;
+  --soon-muted: #8a8170;
+  --soon-title: #6f675a;
+
   /* Effects */
   --shadow: 0 1px 0 rgba(0, 0, 0, 0.04), 0 16px 38px -20px rgba(17, 78, 75, 0.42);
+  --shadow-hover: 0 1px 0 rgba(0, 0, 0, 0.04), 0 26px 50px -22px rgba(17, 78, 75, 0.5);
 
   /* Type */
   --serif: "Iowan Old Style", "Palatino Linotype", "Palatino", "Georgia", serif;

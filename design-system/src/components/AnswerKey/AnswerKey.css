@@ -16,7 +16,7 @@
   font-family: var(--sans);
   font-weight: 600;
   color: var(--petrol);
-  background: linear-gradient(180deg, #fffefb, #f3ede1);
+  background: linear-gradient(180deg, var(--summary-from), var(--summary-to));
   user-select: none;
   transition: background 0.2s ease;
 }
@@ -24,7 +24,7 @@
   display: none;
 }
 .pds-answer > summary:hover {
-  background: #efe8da;
+  background: var(--summary-hover);
 }
 .pds-reveal {
   font-size: 16px;

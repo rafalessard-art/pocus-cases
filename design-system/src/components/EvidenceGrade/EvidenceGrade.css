@@ -9,6 +9,6 @@
   border-radius: 20px;
   border: 1px solid var(--rule);
   color: var(--petrol);
-  background: #eef4ec;
+  background: var(--evgrade-bg);
   margin-left: 4px;
 }

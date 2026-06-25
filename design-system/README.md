@@ -15,6 +15,18 @@ import { Masthead, CaseCard, AnswerKey } from '@pocus/design-system';
 
 Components read their colors from CSS variables defined on `:root` by `styles.css`, so the stylesheet must be loaded for them to look right.
 
+### Dark theme
+
+The system ships a dark theme as a scope class. Put **`pds-dark`** on any container (or the root element) and every component inside restyles — surfaces flip to a clinical-instrument dark palette and the brand accents brighten for contrast. Light is the default; nothing is needed for it.
+
+```tsx
+<div className="pds-dark">
+  <CaseCard accent="clay" number={1} title="…" href="…" />
+</div>
+```
+
+It works by overriding the same CSS variables the components already read (in `src/styles/dark.css`), so it themes the whole subtree at once. Scope it narrowly (one container) or globally (on `<body>`/`<html>`).
+
 ### The accent mechanism
 
 Accent-aware components (`CaseCard`, `NumBadge`, `Tag`, `Panel`, `PartTag`) take an `accent` prop — one of `petrol | clay | moss | sky | gold`. It sets the `--accent` CSS variable on the element, which the component CSS reads via `var(--accent, var(--petrol))`. Children inherit it: a `CaseCard accent="clay"` themes its badge, topic, and action link automatically.

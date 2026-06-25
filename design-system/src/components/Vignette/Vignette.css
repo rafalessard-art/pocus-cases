@@ -1,5 +1,5 @@
 .pds-vignette {
-  background: linear-gradient(180deg, var(--paper2), #fbf7ee);
+  background: linear-gradient(180deg, var(--paper2), var(--vignette-to));
   border: 1px solid var(--rule);
   border-left: 5px solid var(--petrol);
   border-radius: 10px;
@@ -10,7 +10,7 @@
 }
 .pds-vignette--crisis {
   border-left-color: var(--crisis);
-  background: linear-gradient(180deg, #fffaf8, var(--crisis-bg));
+  background: linear-gradient(180deg, var(--vignette-crisis-from), var(--crisis-bg));
 }
 .pds-vignette .pds-vh {
   font-family: var(--sans);

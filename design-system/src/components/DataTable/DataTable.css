@@ -13,7 +13,7 @@
 }
 .pds-tbl thead th {
   background: var(--petrol);
-  color: #f3efe6;
+  color: var(--th-ink);
   font-family: var(--sans);
   font-weight: 600;
   font-size: 14px;
@@ -29,7 +29,7 @@
   vertical-align: top;
 }
 .pds-tbl tbody tr:nth-child(even) {
-  background: #faf6ec;
+  background: var(--surface-sunk);
 }
 .pds-tbl figcaption {
   font-family: var(--serif);

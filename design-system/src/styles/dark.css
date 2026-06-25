@@ -1,0 +1,64 @@
+/*
+ * Dark theme — scope class `.pds-dark`.
+ *
+ * Put `.pds-dark` on any container (or the root) and every component inside
+ * restyles, because they all read the same `var(--*)` tokens this block
+ * overrides. Surfaces/ink derive from a clinical-instrument dark palette;
+ * accents are brightened brand colors so the brand identity carries into dark.
+ *
+ * Legacy aliases (--teal, --rust, --line, --paper-card, …) are defined in
+ * tokens.css as `var(--canonical)`, so they follow these overrides automatically.
+ */
+.pds-dark {
+  /* Surfaces & ink */
+  --paper: #0b0d12;
+  --paper2: #14171f;
+  --ink: #e9ecf2;
+  --ink-soft: #9aa3b2;
+  --rule: #262b36;
+  --rule-soft: #2f3543;
+
+  /* Accents — brightened for contrast on near-black */
+  --petrol: #2f9d96;
+  --petrol-2: #36b3ab;
+  --petrol-bright: #45c6bd;
+  --clay: #d4824a;
+  --clay-soft: #3a2a20;
+  --clay-deep: #e0985c;
+  --moss: #8bbf5f;
+  --moss-soft: #25301c;
+  --sky: #5aa0c8;
+  --sky-soft: #18242c;
+  --gold: #d6a23a;
+
+  /* Status */
+  --crisis: #e26d62;
+  --crisis-bg: #2a1614;
+
+  /* Component surfaces & gradients */
+  --surface-sunk: #1a1e27;
+  --summary-from: #1a1e27;
+  --summary-to: #14171f;
+  --summary-hover: #20252f;
+  --pearl-from: #211a12;
+  --pearl-to: #1a160f;
+  --pearl-border: #3d3320;
+  --vignette-to: #10141b;
+  --vignette-crisis-from: #20100e;
+  --evgrade-bg: #16241f;
+  --th-ink: #eaf3f0;
+  --soon-stripe-a: #0f131a;
+  --soon-stripe-b: #14171f;
+  --soon-border: #2f3543;
+  --soon-badge: #3a4250;
+  --soon-muted: #717b8c;
+  --soon-title: #8b94a3;
+
+  /* Effects — drop the colored glow; plain depth reads better on dark */
+  --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 16px 38px -20px rgba(0, 0, 0, 0.6);
+  --shadow-hover: 0 1px 0 rgba(0, 0, 0, 0.3), 0 26px 50px -22px rgba(0, 0, 0, 0.7);
+
+  /* Flip the container itself */
+  background: var(--paper);
+  color: var(--ink);
+}
