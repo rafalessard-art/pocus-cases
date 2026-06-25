@@ -1,0 +1,127 @@
+/*
+ * Site-wide dark mode for the POCUS Learning Case Series.
+ *
+ * Activated by `data-theme="dark"` on <html> (set by theme.js / the inline head
+ * script — which resolves the system preference when the visitor hasn't chosen).
+ * Light is the default and is left completely untouched: every rule here is
+ * scoped under :root[data-theme="dark"].
+ *
+ * The pages use two token vocabularies (index/tools/GLP1: --petrol/--paper2/…;
+ * the case files: --teal/--paper-card/…). Both are remapped below. Values come
+ * from the @pocus/design-system dark theme.
+ */
+:root[data-theme="dark"] {
+  /* Surfaces & ink (both vocabularies) */
+  --paper: #0b0d12;
+  --paper2: #14171f;
+  --paper-card: #14171f;
+  --ink: #e9ecf2;
+  --ink-soft: #9aa3b2;
+  --rule: #262b36;
+  --rule-soft: #2f3543;
+  --line: #262b36;
+  --line-soft: #2f3543;
+
+  /* Accents — brightened brand colors for contrast on near-black */
+  --petrol: #2f9d96;
+  --petrol-2: #36b3ab;
+  --teal: #2f9d96;
+  --teal-bright: #45c6bd;
+  --clay: #d4824a;
+  --clay-soft: #3a2a20;
+  --clay-deep: #e0985c;
+  --rust: #d4824a;
+  --rust-deep: #e0985c;
+  --moss: #8bbf5f;
+  --moss-soft: #25301c;
+  --sky: #5aa0c8;
+  --sky-soft: #18242c;
+  --gold: #d6a23a;
+
+  /* Status */
+  --crisis: #e26d62;
+  --crisis-bg: #2a1614;
+  --good: #6bbf73;
+  --good-bg: #16241f;
+  --bad: #e26d62;
+  --bad-bg: #2a1614;
+
+  /* Depth */
+  --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 16px 38px -20px rgba(0, 0, 0, 0.6);
+}
+
+/* ---- Hardcoded component surfaces the tokens don't cover ---- */
+/* Answer keys (.answer in the templated cases, .ak in GLP1) */
+:root[data-theme="dark"] .answer > summary,
+:root[data-theme="dark"] .ak summary {
+  background: linear-gradient(180deg, #1a1e27, #14171f);
+}
+:root[data-theme="dark"] .answer > summary:hover,
+:root[data-theme="dark"] .ak summary:hover {
+  background: #20252f;
+}
+/* Pearls / callouts */
+:root[data-theme="dark"] .pearl {
+  background: linear-gradient(180deg, #211a12, #1a160f);
+  border-color: #3d3320;
+}
+/* Clinical vignettes */
+:root[data-theme="dark"] .vignette {
+  background: linear-gradient(180deg, var(--paper-card), #10141b);
+}
+:root[data-theme="dark"] .vignette.crisis {
+  background: linear-gradient(180deg, #20100e, var(--crisis-bg));
+}
+/* Table zebra rows + evidence chips */
+:root[data-theme="dark"] tbody tr:nth-child(even) {
+  background: #1a1e27;
+}
+:root[data-theme="dark"] .evgrade {
+  background: #16241f;
+}
+/* "Coming soon" placeholder card (index/tools) */
+:root[data-theme="dark"] .card.soon {
+  background: repeating-linear-gradient(45deg, #0f131a, #0f131a 12px, #14171f 12px, #14171f 24px);
+  border-color: #2f3543;
+}
+:root[data-theme="dark"] .card.soon .num {
+  background: #3a4250;
+}
+:root[data-theme="dark"] .card.soon .topic,
+:root[data-theme="dark"] .card.soon .open {
+  color: #717b8c;
+}
+:root[data-theme="dark"] .card.soon h2 {
+  color: #8b94a3;
+}
+
+/* ---- Figure plates ----
+ * The hand-drawn medical SVGs/images are painted for a light background, so in
+ * dark mode we keep just the artwork on a light "plate" (captions stay on the
+ * dark page). We target the media itself, never the whole <figure>, so table
+ * figures (figure.tbl) and captions are unaffected. */
+:root[data-theme="dark"] figure svg,
+:root[data-theme="dark"] figure img,
+:root[data-theme="dark"] .media,
+:root[data-theme="dark"] .media svg,
+:root[data-theme="dark"] .imgslot {
+  background: #fbfaf6;
+}
+
+/* ---- Theme toggle button (injected into the top nav by theme.js) ---- */
+.theme-toggle {
+  margin-left: auto;
+  align-self: center;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 4px;
+  color: var(--ink-soft);
+  transition: color 0.15s, transform 0.15s;
+}
+.theme-toggle:hover {
+  color: var(--petrol);
+  transform: scale(1.12);
+}
