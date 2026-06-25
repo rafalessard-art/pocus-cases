@@ -1,0 +1,34 @@
+.pds-ref-list {
+  list-style: none;
+  counter-reset: r;
+  padding-left: 0;
+  font-family: var(--serif);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.pds-ref-list li {
+  counter-increment: r;
+  position: relative;
+  padding-left: 34px;
+  margin: 12px 0;
+}
+.pds-ref-list li::before {
+  content: counter(r) ".";
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-family: var(--sans);
+  font-weight: 700;
+  color: var(--clay-deep);
+}
+.pds-ref-title {
+  font-weight: 600;
+}
+.pds-ref-detail {
+  color: var(--ink-soft);
+}
+.pds-ref-list a {
+  word-break: break-all;
+  font-size: 13px;
+  color: var(--petrol-bright);
+}

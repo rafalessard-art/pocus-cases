@@ -1,0 +1,11 @@
+.pds-wrap {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 60px 40px 80px;
+}
+
+@media (max-width: 620px) {
+  .pds-wrap {
+    padding: 38px 20px 60px;
+  }
+}

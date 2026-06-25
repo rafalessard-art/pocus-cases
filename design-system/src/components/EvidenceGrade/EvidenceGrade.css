@@ -1,0 +1,14 @@
+.pds-evgrade {
+  display: inline-block;
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 20px;
+  border: 1px solid var(--rule);
+  color: var(--petrol);
+  background: #eef4ec;
+  margin-left: 4px;
+}

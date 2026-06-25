@@ -1,0 +1,13 @@
+.pds-part-tag {
+  display: inline-block;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--paper2);
+  background: var(--accent, var(--petrol));
+  padding: 5px 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}

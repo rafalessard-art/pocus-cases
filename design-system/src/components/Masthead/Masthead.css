@@ -1,0 +1,49 @@
+.pds-masthead {
+  border-bottom: 3px solid var(--ink);
+  padding-bottom: 26px;
+}
+.pds-masthead .pds-kicker {
+  font-family: var(--sans);
+  font-size: 12px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--petrol);
+  font-weight: 700;
+  margin: 0 0 14px;
+}
+.pds-masthead h1 {
+  font-family: var(--serif);
+  font-size: 44px;
+  line-height: 1.06;
+  margin: 0 0 12px;
+  letter-spacing: -0.015em;
+  font-weight: 600;
+  color: var(--ink);
+}
+.pds-masthead .pds-subtitle {
+  font-size: 20px;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin: 0;
+}
+.pds-masthead .pds-stats {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  margin-top: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  text-transform: uppercase;
+}
+.pds-masthead .pds-stats b {
+  color: var(--petrol);
+  font-weight: 700;
+}
+
+@media (max-width: 620px) {
+  .pds-masthead h1 {
+    font-size: 32px;
+  }
+}

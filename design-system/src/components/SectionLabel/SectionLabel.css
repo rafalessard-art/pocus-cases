@@ -1,0 +1,14 @@
+.pds-seclabel {
+  font-family: var(--sans);
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--petrol);
+  font-weight: 700;
+  margin: 46px 0 4px;
+}
+.pds-seclabel .pds-rule {
+  height: 2px;
+  background: linear-gradient(90deg, var(--petrol), transparent);
+  margin-top: 10px;
+}

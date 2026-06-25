@@ -1,0 +1,22 @@
+.pds-pearl {
+  background: linear-gradient(180deg, #fff8ec, #fbeed4);
+  border: 1px solid #e6c98c;
+  border-left: 5px solid var(--clay);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin: 20px 0;
+  font-family: var(--serif);
+}
+.pds-pearl-label {
+  display: block;
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--clay-deep);
+  margin-bottom: 6px;
+}
+.pds-pearl p {
+  margin: 0;
+}

@@ -1,0 +1,45 @@
+/* Document-level defaults shared by the site. Components are otherwise self-contained. */
+* {
+  box-sizing: border-box;
+}
+
+.pds-root {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Prose list styling — small clay dot markers, lifted from the case files'
+ * document-wide `ul li::before` rule. Scoped to the prose containers so it
+ * never leaks onto a consuming app's own lists.
+ */
+.pds-answer-body ul,
+.pds-vignette ul,
+.pds-pearl ul {
+  margin: 10px 0 16px;
+  padding-left: 0;
+  list-style: none;
+}
+.pds-answer-body li,
+.pds-vignette li,
+.pds-pearl li {
+  position: relative;
+  padding-left: 26px;
+  margin: 9px 0;
+}
+.pds-answer-body li::before,
+.pds-vignette li::before,
+.pds-pearl li::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 0.68em;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--clay);
+}

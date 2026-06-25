@@ -1,0 +1,38 @@
+.pds-panel {
+  margin-top: 54px;
+  background: var(--paper2);
+  border: 1px solid var(--rule);
+  border-left: 5px solid var(--accent, var(--gold));
+  border-radius: 6px;
+  padding: 20px 26px;
+  box-shadow: var(--shadow);
+  font-family: var(--serif);
+}
+.pds-panel-title {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent, var(--gold));
+  margin: 0 0 10px;
+}
+.pds-panel p {
+  margin: 0 0 10px;
+  font-size: 15.5px;
+}
+.pds-panel p:last-child {
+  margin-bottom: 0;
+}
+.pds-panel ul {
+  margin: 0;
+  padding: 0 0 0 18px;
+  font-size: 15.5px;
+  line-height: 1.7;
+}
+.pds-panel li {
+  margin-bottom: 4px;
+}
+.pds-panel a {
+  color: var(--petrol);
+  text-underline-offset: 2px;
+}

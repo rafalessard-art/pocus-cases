@@ -1,0 +1,51 @@
+/*
+ * POCUS Design System — canonical tokens.
+ *
+ * The teaching site was authored page-by-page and the palette drifted: the
+ * index used --petrol / --clay / --rule / --paper2, while the case files used
+ * --teal / --rust / --line / --paper-card for the same roles. This file makes
+ * the index names canonical and aliases the case names onto them, so component
+ * CSS lifted verbatim from either source resolves against one source of truth.
+ */
+:root {
+  /* Surfaces & ink */
+  --paper: #f7f4ec;
+  --paper2: #fffdf8;
+  --ink: #1c2125;
+  --ink-soft: #404a51;
+  --rule: #d9d2c4;
+  --rule-soft: #e7dfce;
+
+  /* Accents */
+  --petrol: #114e4b;
+  --petrol-2: #16615d;
+  --petrol-bright: #1f7d80;
+  --clay: #bb4d1c;
+  --clay-soft: #f3e2d6;
+  --clay-deep: #9a4708;
+  --moss: #557a3a;
+  --moss-soft: #e7eedd;
+  --sky: #2f6c8f;
+  --sky-soft: #dce8ef;
+  --gold: #b07d12;
+
+  /* Status */
+  --crisis: #8c2f2a;
+  --crisis-bg: #f7e9e6;
+
+  /* Effects */
+  --shadow: 0 1px 0 rgba(0, 0, 0, 0.04), 0 16px 38px -20px rgba(17, 78, 75, 0.42);
+
+  /* Type */
+  --serif: "Iowan Old Style", "Palatino Linotype", "Palatino", "Georgia", serif;
+  --sans: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+
+  /* ---- Legacy aliases (case-file vocabulary → canonical) ---- */
+  --teal: var(--petrol);
+  --teal-bright: var(--petrol-bright);
+  --rust: var(--clay);
+  --rust-deep: var(--clay-deep);
+  --line: var(--rule);
+  --line-soft: var(--rule-soft);
+  --paper-card: var(--paper2);
+}

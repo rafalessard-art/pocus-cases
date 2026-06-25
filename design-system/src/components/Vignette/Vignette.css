@@ -1,0 +1,29 @@
+.pds-vignette {
+  background: linear-gradient(180deg, var(--paper2), #fbf7ee);
+  border: 1px solid var(--rule);
+  border-left: 5px solid var(--petrol);
+  border-radius: 10px;
+  padding: 22px 26px;
+  box-shadow: var(--shadow);
+  margin: 18px 0 8px;
+  font-family: var(--serif);
+}
+.pds-vignette--crisis {
+  border-left-color: var(--crisis);
+  background: linear-gradient(180deg, #fffaf8, var(--crisis-bg));
+}
+.pds-vignette .pds-vh {
+  font-family: var(--sans);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  font-size: 14px;
+  text-transform: uppercase;
+  color: var(--petrol);
+  margin: 0 0 10px;
+}
+.pds-vignette--crisis .pds-vh {
+  color: var(--crisis);
+}
+.pds-vignette p {
+  margin: 8px 0;
+}
