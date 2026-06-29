@@ -19,6 +19,10 @@
     --moss-soft:#e7eedd;
     --gold:#b07d12;
     --sky:#2f6c8f;
+    --good:#2f7d4f;
+    --good-bg:#e7f2ea;
+    --bad:#8c2f2a;
+    --bad-bg:#f7e9e6;
     --shadow:0 1px 0 rgba(0,0,0,.04), 0 14px 34px -18px rgba(17,78,75,.45);
     --serif:"Iowan Old Style","Palatino Linotype","Palatino","Georgia",serif;
     --sans:"Helvetica Neue","Segoe UI",Arial,sans-serif;
@@ -125,13 +129,33 @@
     margin-top:12px;border-top:1px solid var(--rule);padding-top:10px;}
   figcaption b{color:var(--petrol);}
 
+  /* ---------- MCQ review ---------- */
+  .mcq{border:1px solid var(--rule);border-radius:10px;background:var(--paper2);box-shadow:var(--shadow);padding:18px 20px;margin:18px 0;}
+  .mcq .stem{font-family:var(--sans);font-weight:600;font-size:16.5px;color:var(--ink);margin:0 0 12px;}
+  .mcq .stem .qn{display:block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--clay);font-weight:700;margin-bottom:5px;}
+  .opt{display:block;width:100%;text-align:left;font-family:var(--serif);font-size:16px;color:var(--ink);background:#fff;border:1px solid var(--rule);border-radius:8px;padding:10px 14px;margin:7px 0;cursor:pointer;transition:all .15s;}
+  .opt:hover{border-color:var(--petrol-2);background:#f3f7f5;}
+  .opt .ol{font-family:var(--sans);font-weight:700;color:var(--petrol);margin-right:10px;}
+  .mcq.answered .opt{cursor:default;}
+  .opt.correct{background:var(--good-bg);border-color:#bcdcc6;}
+  .opt.wrong{background:var(--bad-bg);border-color:#e6bdb6;}
+  .opt.correct .ol{color:var(--good);} .opt.wrong .ol{color:var(--bad);}
+  .mcq .exp{display:none;margin-top:12px;border-left:4px solid var(--petrol);background:#eef3ee;border-radius:7px;padding:10px 14px;font-size:14.5px;line-height:1.5;}
+  .mcq.answered .exp{display:block;animation:fade .3s ease;}
+  .mcq .exp b{color:var(--petrol);}
+  @keyframes fade{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+
   /* ---------- references ---------- */
   .refs{margin-top:50px;border-top:3px solid var(--ink);padding-top:20px;}
   .refs h2{font-size:18px;font-family:var(--sans);letter-spacing:.16em;text-transform:uppercase;
     color:var(--petrol);margin:0 0 14px;}
-  .refs ol{font-family:var(--sans);font-size:12.5px;line-height:1.5;color:var(--ink-soft);
-    padding-left:22px;margin:0;}
-  .refs li{margin-bottom:8px;}
+  .refs ol{list-style:none;counter-reset:r;padding-left:0;margin:0;
+    font-family:var(--serif);font-size:15px;line-height:1.5;color:var(--ink);}
+  .refs li{counter-increment:r;position:relative;padding-left:34px;margin:12px 0;}
+  .refs li::before{content:counter(r) ".";position:absolute;left:0;top:0;
+    font-family:var(--sans);font-weight:700;color:var(--clay);
+    width:auto;height:auto;background:none;border-radius:0;}
+  .refs a{color:var(--petrol);word-break:break-all;font-size:13px;}
   .refs i{color:var(--ink);}
 
   .disclaimer{font-family:var(--sans);font-size:11.5px;color:var(--ink-soft);line-height:1.55;
@@ -170,6 +194,7 @@
 <nav class="topnav">
   <div class="topnav-inner">
     <a href="/">Home</a>
+    <a href="/tools">Tools</a>
     <a href="/#about">About</a>
     <a href="/#resources">Resources</a>
   </div>
@@ -589,6 +614,69 @@
     figures are drawn from the cited literature and rounded for teaching.
   </div>
 
+  <!-- ============ End-of-case review ============ -->
+  <section class="prompt-divider">
+    <span class="tag">Review</span>
+    <h2>End-of-case review</h2>
+    <div class="pd-rule"></div>
+  </section>
+
+  <p>Six questions spanning both parts. Select an answer to reveal the correct choice and a brief explanation.</p>
+
+  <div class="mcq" data-correct="b">
+    <p class="stem"><span class="qn">Review 1 &middot; Mechanism</span>Which best captures GLP-1 receptor agonist prevalence and the mechanism behind the perioperative aspiration concern?</p>
+    <button class="opt" data-k="a"><span class="ol">A</span>They are rare drugs; the concern is bronchospasm</button>
+    <button class="opt" data-k="b"><span class="ol">B</span>~1 in 8 U.S. adults have used one; they delay gastric emptying, so residual gastric content can persist despite adequate fasting</button>
+    <button class="opt" data-k="c"><span class="ol">C</span>They speed gastric emptying, reducing aspiration risk</button>
+    <button class="opt" data-k="d"><span class="ol">D</span>They are only relevant in type 1 diabetes</button>
+    <div class="exp"><b>B.</b> ~12% of U.S. adults; the incretin effect delays gastric emptying &mdash; most pronounced during initiation/dose-escalation. The long half-life (semaglutide ≈ 1 week) means a one-day hold cannot clear the effect.</div>
+  </div>
+
+  <div class="mcq" data-correct="b">
+    <p class="stem"><span class="qn">Review 2 &middot; Risk factors</span>Which patient is at highest risk for clinically relevant delayed gastric emptying?</p>
+    <button class="opt" data-k="a"><span class="ol">A</span>Stable maintenance dose, no GI symptoms, daily short-acting agent</button>
+    <button class="opt" data-k="b"><span class="ol">B</span>Recent weekly (long-acting) agent during dose-escalation, with active GI symptoms such as nausea and early satiety</button>
+    <button class="opt" data-k="c"><span class="ol">C</span>A patient who stopped the drug six months ago</button>
+    <button class="opt" data-k="d"><span class="ol">D</span>Young, non-diabetic, no GI symptoms</button>
+    <div class="exp"><b>B.</b> Higher risk with dose-escalation, higher/weekly dosing, a recent dose (long half-life), and active GI symptoms. Diabetes &mdash; especially with poor control or dysautonomia &mdash; compounds it; our patient stacks several of these.</div>
+  </div>
+
+  <div class="mcq" data-correct="b">
+    <p class="stem"><span class="qn">Review 3 &middot; Guidance</span>Which best reflects the shift from the ASA 2023 guidance to the 2024 multisociety guidance?</p>
+    <button class="opt" data-k="a"><span class="ol">A</span>Both mandate a fixed one-week hold for all formulations</button>
+    <button class="opt" data-k="b"><span class="ol">B</span>2024 pivots from routine holding to risk-stratified shared decision-making &mdash; most patients can continue, with full-stomach precautions for the unreassuring</button>
+    <button class="opt" data-k="c"><span class="ol">C</span>2024 recommends cancelling all GLP-1 patients</button>
+    <button class="opt" data-k="d"><span class="ol">D</span>Withholding only patients with obesity is recommended</button>
+    <div class="exp"><b>B.</b> ASA 2023 advised holding (criticized for ignoring pharmacokinetics); the 2024 &ldquo;guidance, not guideline&rdquo; moved to individualized risk stratification &mdash; most continue, screen for high-risk features, and use full-stomach precautions rather than reflex cancellation. Withholding only for obesity may constitute weight bias.</div>
+  </div>
+
+  <div class="mcq" data-correct="c">
+    <p class="stem"><span class="qn">Review 4 &middot; POCUS grading</span>On gastric POCUS, which finding defines a high-risk (&ldquo;full&rdquo;) stomach?</p>
+    <button class="opt" data-k="a"><span class="ol">A</span>A flat, collapsed &ldquo;bull's-eye&rdquo; antrum in both positions</button>
+    <button class="opt" data-k="b"><span class="ol">B</span>Clear fluid seen only in the right lateral decubitus position (and not supine)</button>
+    <button class="opt" data-k="c"><span class="ol">C</span>Any solid/particulate content, clear fluid in both positions, or an estimated volume &gt; 1.5&nbsp;mL·kg⁻¹</button>
+    <button class="opt" data-k="d"><span class="ol">D</span>Imaging the gastric body/fundus rather than the antrum</button>
+    <div class="exp"><b>C.</b> Grade 2 / high-risk = clear fluid in both supine and RLD, or volume &gt; 1.5&nbsp;mL·kg⁻¹, or any solid. Measure antral CSA in RLD (GV = 27.0 + 14.6·CSA − 1.28·age); any volume estimate is invalid when solids are present &mdash; solids are high-risk regardless.</div>
+  </div>
+
+  <div class="mcq" data-correct="b">
+    <p class="stem"><span class="qn">Review 5 &middot; Discordance</span>A diabetic patient on semaglutide has a Grade 2 (high-risk) gastric POCUS. What does this tell you about her risk of <em>clinical</em> aspiration?</p>
+    <button class="opt" data-k="a"><span class="ol">A</span>She will almost certainly aspirate &mdash; cancel the case</button>
+    <button class="opt" data-k="b"><span class="ol">B</span>A high-risk grade describes the stomach <em>contents</em> and should change your technique, but it is not a measured probability of clinical aspiration &mdash; outcome data show no significant rise in aspiration with GLP-1 use</button>
+    <button class="opt" data-k="c"><span class="ol">C</span>The grade has no bearing on anesthetic technique</button>
+    <button class="opt" data-k="d"><span class="ol">D</span>Aspiration risk is identical to that of an empty stomach</button>
+    <div class="exp"><b>B.</b> Residual content is far more common in diabetic/GLP-1 patients (e.g. &ldquo;full stomach&rdquo; ~49% vs 18%), yet measured aspiration is not correspondingly elevated (elective surgery adjusted OR ~1.07, NS; opioids were a positive control at RR ~2.68). Use POCUS to tailor technique, not as a cancel/aspirate oracle.</div>
+  </div>
+
+  <div class="mcq" data-correct="b">
+    <p class="stem"><span class="qn">Review 6 &middot; Aspiration event</span>A witnessed aspiration of particulate gastric content occurs; she stabilizes to SpO&#8322; 97% with mildly elevated peak pressures and is otherwise asymptomatic. Regarding prophylactic antibiotics:</p>
+    <button class="opt" data-k="a"><span class="ol">A</span>Start broad-spectrum antibiotics immediately for all aspirations</button>
+    <button class="opt" data-k="b"><span class="ol">B</span>Do not start prophylactic antibiotics &mdash; the early insult is chemical pneumonitis; reserve antibiotics for failure to improve by ~48&nbsp;h, clear superinfection, or colonized-content risk</button>
+    <button class="opt" data-k="c"><span class="ol">C</span>Give routine corticosteroids and perform saline lavage</button>
+    <button class="opt" data-k="d"><span class="ol">D</span>Antibiotics prevent progression to pneumonia and reduce mortality</button>
+    <div class="exp"><b>B.</b> Early aspiration is a chemical pneumonitis, not infection; prophylactic antimicrobials show no mortality or ICU benefit and breed resistance. Support oxygenation, avoid routine lavage and steroids; start antibiotics only for non-improvement at 48&nbsp;h, secondary bacterial pneumonia, or a colonized aspirate.</div>
+  </div>
+
   <!-- ============ References ============ -->
   <div class="refs">
     <h2>Selected references</h2>
@@ -615,5 +703,19 @@
   </div>
 
 </div>
+
+<script>
+document.querySelectorAll('.mcq').forEach(function(m){
+  var correct=m.getAttribute('data-correct');
+  m.querySelectorAll('.opt').forEach(function(o){
+    o.addEventListener('click',function(){
+      if(m.classList.contains('answered'))return;
+      m.classList.add('answered');
+      m.querySelectorAll('.opt').forEach(function(x){ if(x.getAttribute('data-k')===correct) x.classList.add('correct'); });
+      if(o.getAttribute('data-k')!==correct) o.classList.add('wrong');
+    });
+  });
+});
+</script>
 </body>
 </html>

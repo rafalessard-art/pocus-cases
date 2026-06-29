@@ -111,7 +111,7 @@ figure.img { margin: 22px 0; text-align: center; }
 /* ---- References ---- */
 .ref-list { list-style: none; counter-reset: r; padding-left: 0; font-size: 15px; line-height: 1.5; }
 .ref-list li { counter-increment: r; position: relative; padding-left: 34px; margin: 12px 0; }
-.ref-list li::before { content: counter(r) "."; position: absolute; left: 0; top: 0; font-family: var(--sans); font-weight: 700; color: var(--rust-deep); }
+.ref-list li::before { content: counter(r) "."; position: absolute; left: 0; top: 0; font-family: var(--sans); font-weight: 700; color: var(--rust-deep); width: auto; height: auto; background: none; border-radius: 0; }
 
 footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); font-style: italic; font-size: 14px; color: var(--ink-soft); }
 
@@ -148,6 +148,7 @@ footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line);
 <nav class="topnav">
   <div class="topnav-inner">
     <a href="/">Home</a>
+    <a href="/tools">Tools</a>
     <a href="/#about">About</a>
     <a href="/#resources">Resources</a>
   </div>

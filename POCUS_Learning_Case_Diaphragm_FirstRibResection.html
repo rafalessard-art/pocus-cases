@@ -18,6 +18,10 @@
   --line-soft: #e7dfce;
   --crisis: #8c2f2a;
   --crisis-bg: #f7e9e6;
+  --good: #2f7d4f;
+  --good-bg: #e7f2ea;
+  --bad: #8c2f2a;
+  --bad-bg: #f7e9e6;
   --shadow: 0 1px 2px rgba(28,43,46,.06), 0 8px 24px rgba(28,43,46,.06);
   --serif: "Iowan Old Style","Palatino Linotype","Palatino","Georgia",serif;
   --sans: "Helvetica Neue","Segoe UI",Arial,sans-serif;
@@ -203,12 +207,28 @@ figure.img img {
   color: var(--rust-deep); margin-bottom: 6px;
 }
 
+/* ---- MCQ review ---- */
+.mcq { border: 1px solid var(--line-soft); border-radius: 10px; background: var(--paper-card); box-shadow: var(--shadow); padding: 18px 20px; margin: 18px 0; }
+.mcq .stem { font-family: var(--sans); font-weight: 600; font-size: 16.5px; color: var(--ink); margin: 0 0 12px; }
+.mcq .stem .qn { display: block; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--rust-deep); font-weight: 700; margin-bottom: 5px; }
+.opt { display: block; width: 100%; text-align: left; font-family: var(--serif); font-size: 16px; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin: 7px 0; cursor: pointer; transition: all .15s; }
+.opt:hover { border-color: var(--teal-bright); background: #f6fbfa; }
+.opt .ol { font-family: var(--sans); font-weight: 700; color: var(--teal); margin-right: 10px; }
+.mcq.answered .opt { cursor: default; }
+.opt.correct { background: var(--good-bg); border-color: #bcdcc6; }
+.opt.wrong { background: var(--bad-bg); border-color: #e6bdb6; }
+.opt.correct .ol { color: var(--good); } .opt.wrong .ol { color: var(--bad); }
+.mcq .exp { display: none; margin-top: 12px; border-left: 4px solid var(--teal); background: #f3ede1; border-radius: 7px; padding: 10px 14px; font-size: 14.5px; line-height: 1.5; }
+.mcq.answered .exp { display: block; animation: fade .3s ease; }
+.mcq .exp b { color: var(--teal); }
+
 /* ---- References ---- */
 .ref-list { list-style: none; counter-reset: r; padding-left: 0; font-size: 15px; line-height: 1.5; }
 .ref-list li { counter-increment: r; position: relative; padding-left: 34px; margin: 12px 0; }
 .ref-list li::before {
   content: counter(r) "."; position: absolute; left: 0; top: 0;
   font-family: var(--sans); font-weight: 700; color: var(--rust-deep);
+  width: auto; height: auto; background: none; border-radius: 0;
 }
 .ref-title { font-weight: 600; }
 .ref-detail { color: var(--ink-soft); }
@@ -244,6 +264,7 @@ footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line);
 <nav class="topnav">
   <div class="topnav-inner">
     <a href="/">Home</a>
+    <a href="/tools">Tools</a>
     <a href="/#about">About</a>
     <a href="/#resources">Resources</a>
   </div>
@@ -472,6 +493,67 @@ footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line);
   </section>
   </section>
 
+  <!-- ===================== MCQ REVIEW ===================== -->
+  <section class="block">
+    <h2 class="section">End-of-case review</h2>
+    <p>Six questions spanning both parts. Select an answer to reveal the correct choice and a brief explanation.</p>
+
+    <div class="mcq" data-correct="b">
+      <p class="stem"><span class="qn">Review 1 &middot; Subtypes</span>A young volleyball player has refractory neurogenic arm symptoms after 14 months of failed physiotherapy and proceeds to first rib resection. Which TOS subtype is this, and roughly how common is it?</p>
+      <button class="opt" data-k="a"><span class="ol">A</span>Venous (Paget&ndash;Schroetter), ~3&ndash;5%</button>
+      <button class="opt" data-k="b"><span class="ol">B</span>Neurogenic, ~90&ndash;95%</button>
+      <button class="opt" data-k="c"><span class="ol">C</span>Arterial, ~1&ndash;2%</button>
+      <button class="opt" data-k="d"><span class="ol">D</span>Mixed venous&ndash;arterial, ~50%</button>
+      <div class="exp"><b>B.</b> Neurogenic TOS accounts for ~90&ndash;95% of cases. First rib resection with scalenectomy is offered for persistent, disabling neurogenic symptoms after a dedicated physiotherapy trial.</div>
+    </div>
+
+    <div class="mcq" data-correct="c">
+      <p class="stem"><span class="qn">Review 2 &middot; Mechanism</span>On POD#0 after supraclavicular first rib resection she has orthopnea and an elevated right hemidiaphragm. Both a surgical phrenic injury and the interscalene-region block's phrenic palsy are plausible. What best distinguishes them?</p>
+      <button class="opt" data-k="a"><span class="ol">A</span>The thickening fraction on a single scan</button>
+      <button class="opt" data-k="b"><span class="ol">B</span>The chest radiograph appearance</button>
+      <button class="opt" data-k="c"><span class="ol">C</span>The time course on serial assessment &mdash; the block regresses over hours, a structural injury does not</button>
+      <button class="opt" data-k="d"><span class="ol">D</span>The presence of orthopnea</button>
+      <div class="exp"><b>C.</b> POCUS cannot separate them at a single time point; the local-anesthetic block recovers over hours while a structural injury persists, so <em>serial</em> scans are key. Transient phrenic palsy is reported in ~4% after the supraclavicular approach; permanent injury in ~1%.</div>
+    </div>
+
+    <div class="mcq" data-correct="b">
+      <p class="stem"><span class="qn">Review 3 &middot; Technique</span>Which single measurement most directly reflects intrinsic diaphragm contractile function rather than load?</p>
+      <button class="opt" data-k="a"><span class="ol">A</span>Excursion on quiet breathing</button>
+      <button class="opt" data-k="b"><span class="ol">B</span>Thickening fraction in the zone of apposition</button>
+      <button class="opt" data-k="c"><span class="ol">C</span>End-expiratory thickness alone</button>
+      <button class="opt" data-k="d"><span class="ol">D</span>Hemidiaphragm height on chest radiograph</button>
+      <div class="exp"><b>B.</b> Excursion is intuitive but load-dependent; thickening fraction &mdash; TF = (T<sub>insp</sub> &minus; T<sub>exp</sub>)/T<sub>exp</sub> &mdash; reflects contractile effort. TF &lt; 20% is consistent with paresis/paralysis.</div>
+    </div>
+
+    <div class="mcq" data-correct="c">
+      <p class="stem"><span class="qn">Review 4 &middot; Cutoffs</span>Which set of findings on the operated side is most consistent with hemidiaphragm paralysis?</p>
+      <button class="opt" data-k="a"><span class="ol">A</span>Deep-breath excursion 4&nbsp;cm with thickening fraction 80%</button>
+      <button class="opt" data-k="b"><span class="ol">B</span>Brisk caudal motion on sniff with thickening fraction 40%</button>
+      <button class="opt" data-k="c"><span class="ol">C</span>Deep-breath excursion &lt; 10&ndash;11&nbsp;mm (or paradoxical), paradoxical cephalad motion on sniff, and thickening fraction &lt; 20%</button>
+      <button class="opt" data-k="d"><span class="ol">D</span>End-expiratory thickness 1.7&nbsp;mm with thickening fraction 60%</button>
+      <div class="exp"><b>C.</b> Paralysis = absent/minimal or paradoxical excursion (deep-breath &lt; ~10&ndash;11&nbsp;mm), paradoxical cephalad motion on a sniff, and TF &lt; 20%. The contralateral hemidiaphragm is often hyperactive &mdash; a useful internal comparator.</div>
+    </div>
+
+    <div class="mcq" data-correct="c">
+      <p class="stem"><span class="qn">Review 5 &middot; PACU crisis</span>Lung POCUS shows normal bilateral lung sliding; the right diaphragm moves paradoxically with TF &lt; 20%. She is upright, speaking in short phrases, SpO&#8322; 86% on a non-rebreather. The best next step is:</p>
+      <button class="opt" data-k="a"><span class="ol">A</span>Immediate needle decompression of the right chest</button>
+      <button class="opt" data-k="b"><span class="ol">B</span>Emergent intubation regardless of other factors</button>
+      <button class="opt" data-k="c"><span class="ol">C</span>A trial of NIV/CPAP with upright positioning while treating reversible causes, escalating to intubation only if she tires or becomes hypercapnic</button>
+      <button class="opt" data-k="d"><span class="ol">D</span>Lay her flat for a portable chest radiograph before acting</button>
+      <div class="exp"><b>C.</b> Normal sliding excludes pneumothorax (no needle); a diaphragmatic cause in a patient who can protect her airway may be supported with NIV and upright posture. Resuscitate while you diagnose, never force supine, and reserve intubation for NIV failure or hypercapnia.</div>
+    </div>
+
+    <div class="mcq" data-correct="b">
+      <p class="stem"><span class="qn">Review 6 &middot; Long-term</span>Her dysfunction persists beyond the block. For symptomatic, non-recovering unilateral phrenic palsy, which sequencing principle is correct?</p>
+      <button class="opt" data-k="a"><span class="ol">A</span>Plicate early, since plication can always be converted to reconstruction later</button>
+      <button class="opt" data-k="b"><span class="ol">B</span>Observe and support first; if persistent and symptomatic, generally attempt phrenic nerve reconstruction before plication, because plication forecloses later reconstruction</button>
+      <button class="opt" data-k="c"><span class="ol">C</span>Diaphragm pacing is first-line for an injured, non-conducting nerve segment</button>
+      <button class="opt" data-k="d"><span class="ol">D</span>NIV is contraindicated in unilateral palsy</button>
+      <div class="exp"><b>B.</b> Most injuries are neuropraxic and recover, so observe and support first. When intervention is needed, functional reconstruction is generally attempted before static plication, since plication precludes later reconstruction. Pacing requires a viable, conducting phrenic nerve.</div>
+    </div>
+  </section>
+
+  <!-- ===================== REFERENCES ===================== -->
   <section class="block">
     <h2 class="section">Selected references</h2>
     <p><em>Key recent sources underpinning the prevalence figures and ultrasound cutoffs used above.</em></p>
@@ -497,6 +579,20 @@ footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line);
   </footer>
 
 </div>
+
+<script>
+document.querySelectorAll('.mcq').forEach(function(m){
+  var correct=m.getAttribute('data-correct');
+  m.querySelectorAll('.opt').forEach(function(o){
+    o.addEventListener('click',function(){
+      if(m.classList.contains('answered'))return;
+      m.classList.add('answered');
+      m.querySelectorAll('.opt').forEach(function(x){ if(x.getAttribute('data-k')===correct) x.classList.add('correct'); });
+      if(o.getAttribute('data-k')!==correct) o.classList.add('wrong');
+    });
+  });
+});
+</script>
 
 </body>
 </html>

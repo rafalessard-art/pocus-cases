@@ -15,12 +15,15 @@
 *{box-sizing:border-box;}
 html,body{margin:0;height:100%;}
 body{background:var(--paper);color:var(--ink);font-family:var(--serif);-webkit-font-smoothing:antialiased;}
+.topnav{display:flex;gap:0;padding:0 24px;border-bottom:1px solid var(--line);font-family:var(--sans);background:var(--paper-card);}
+.topnav a{display:inline-block;padding:11px 16px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--ink-soft);text-decoration:none;border-bottom:3px solid transparent;margin-bottom:-1px;transition:color .15s;}
+.topnav a:hover{color:var(--teal);}
 .head{padding:18px 24px 10px;}
 .kicker{font-family:var(--sans);font-weight:600;letter-spacing:.2em;text-transform:uppercase;font-size:11px;color:var(--teal);margin:0 0 6px;}
 h1{font-family:var(--sans);font-weight:700;font-size:clamp(19px,2.6vw,26px);line-height:1.1;margin:0;}
 .qlink{display:inline-block;font-family:var(--sans);font-weight:600;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--paper-card);background:var(--rust);padding:4px 10px;border-radius:4px;margin-top:7px;}
 
-.stage{display:flex;height:calc(100vh - 92px);min-height:560px;border-top:1px solid var(--line);}
+.stage{display:flex;height:calc(100vh - 145px);min-height:560px;border-top:1px solid var(--line);}
 @media(max-width:900px){.stage{flex-direction:column;height:auto;}}
 .viewport{position:relative;flex:1 1 auto;min-height:440px;background:radial-gradient(120% 120% at 50% 16%,#fffdf9,#ece3d2 62%,#e1d6c1);}
 #scene{display:block;width:100%;height:100%;cursor:grab;}
@@ -73,6 +76,10 @@ input[type=range]{width:100%;accent-color:var(--rust);}
 </style>
 </head>
 <body>
+<nav class="topnav">
+  <a href="/">← POCUS Learning Cases</a>
+  <a href="/tools">Tools</a>
+</nav>
 <div class="mobile-notice" role="note">
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.3 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.3a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
   <span><b>Best on a larger screen.</b> This interactive 3D tool uses click-and-drag orbit, zoom, and a side-by-side ultrasound panel. It will still load, but it's cramped on a phone — try a tablet or desktop for the full view.</span>
@@ -194,7 +201,13 @@ var STR={
       acc:"<b>Avoid</b> — watch the lateral/posterolateral arm and the radial forearm. (Spiral-groove injury → wrist drop.)"}},
   humerus:{name:"Humerus",group:"Bone",color:COL.bone,deep:true,
     info:{tag:"Bone · landmark",step:"Depth backstop",
-      role:"Bright cortical line with a clean acoustic shadow beneath.",acc:"Not cannulatable; frames how deep the bundle sits."}}
+      role:"Bright cortical line with a clean acoustic shadow beneath.",acc:"Not cannulatable; frames how deep the bundle sits."}},
+  radius:{name:"Radius",group:"Bone",color:COL.bone,deep:true,
+    info:{tag:"Bone · landmark",step:"Forearm — lateral bone",
+      role:"The <b>lateral</b> forearm bone (thumb side); a bright cortex with a clean acoustic shadow beneath.",acc:"Not cannulatable; a depth backstop on the radial side."}},
+  ulna:{name:"Ulna",group:"Bone",color:COL.bone,deep:true,
+    info:{tag:"Bone · landmark",step:"Forearm — medial bone",
+      role:"The <b>medial</b> forearm bone (little-finger side); a bright cortex with a clean acoustic shadow beneath.",acc:"Not cannulatable; a depth backstop on the ulnar side."}}
 };
 var visible={}; var offByDefault={mediannerve:1,ulnarnerve:1,radialnerve:1,subscapular:1};
 Object.keys(STR).forEach(function(k){visible[k]=!offByDefault[k];}); // default ON: superficial+deep veins (no subscapular), arteries, humerus; nerves OFF
@@ -232,7 +245,8 @@ var LEVELS=[
    {id:"medianantebrachial",u:0.0,d:0.5,mm:2.5},{id:"basilic",u:-1.6,d:0.5,mm:3.0},
    {id:"radialartery",u:1.25,d:1.35,mm:2.4},{id:"radialveins",u:1.45,d:1.35,mm:1.8},{id:"radialveins",u:1.05,d:1.35,mm:1.8},
    {id:"ulnarartery",u:-1.15,d:1.3,mm:2.4},{id:"ulnarveins",u:-1.35,d:1.3,mm:1.8},{id:"ulnarveins",u:-0.95,d:1.3,mm:1.8},
-   {id:"ulnarnerve",u:-1.55,d:1.12,mm:2.4},{id:"radialnerve",u:1.75,d:0.95,mm:1.8}]}
+   {id:"ulnarnerve",u:-1.55,d:1.12,mm:2.4},{id:"radialnerve",u:1.75,d:0.95,mm:1.8},
+   {id:"radius",u:1.05,d:2.2,mm:11},{id:"ulna",u:-0.95,d:2.35,mm:11}]}
 ];
 
 /* ============================================================
@@ -265,12 +279,12 @@ function drawUS(){
   for(var f=0;f<3;f++){uctx.strokeStyle="rgba(150,150,140,"+(0.18-f*0.04)+")";uctx.lineWidth=1;
     uctx.beginPath();for(var x=0;x<UW;x+=6){uctx.lineTo(x,26+f*9+Math.sin(x*0.05+f)*1.5);}uctx.stroke();}
 
-  us.hot=[];
+  us.hot=[]; var placedLabels=[];
   var items=us.level.s.filter(function(it){return visible[it.id];});
   // sort by depth so deep drawn first
   items.slice().sort(function(a,b){return b.d-a.d;}).forEach(function(it){
     var S=STR[it.id], cx=ux(it.u), cy=uy(it.d), rPx=(it.mm/10)/FOV_W*UW*0.5;
-    if(it.id==="humerus"){ // bright cortex + shadow
+    if(S.group==="Bone"){ // bright cortex + shadow (humerus proximally; radius & ulna in the forearm)
       uctx.save();
       var hw=(it.mm/10)/FOV_W*UW*0.5;
       var grd=uctx.createLinearGradient(0,cy-6,0,cy+4); grd.addColorStop(0,"#000");grd.addColorStop(.5,"#f2eede");grd.addColorStop(1,"#9a937e");
@@ -313,10 +327,18 @@ function drawUS(){
     if(us.selId===it.id){ uctx.strokeStyle="#ffd24a"; uctx.lineWidth=2.2; uctx.setLineDash([4,3]);
       uctx.beginPath(); uctx.ellipse(cx,cy,rx+5,ry+5,0,0,7); uctx.stroke(); uctx.setLineDash([]); }
     us.hot.push({id:it.id,x:cx,y:cy,r:Math.max(rx,ry)+4});
-    // label
-    if(us.labels){ uctx.fillStyle="rgba(255,255,255,.92)"; uctx.font="600 10px Helvetica,Arial"; uctx.textAlign="center";
-      var nm = it.id==="brachialartery"?"a.":it.id==="mediannerve"?"n.":it.id==="ulnarnerve"?"ulnar n.":STR[it.id].name.replace(" vein","").replace(" veins"," v.");
-      uctx.fillText(nm,cx,cy-ry-4); }
+    // label — clamped to the canvas and nudged upward to avoid overlapping neighbours
+    if(us.labels){ uctx.font="600 10px Helvetica,Arial"; uctx.textAlign="center";
+      var nm = it.id==="brachialartery"?"a.":it.id==="mediannerve"?"n.":it.id==="ulnarnerve"?"ulnar n.":STR[it.id].name.replace(" veins"," v.").replace(" vein","");
+      var lw=uctx.measureText(nm).width, lh=12;
+      var lx=Math.max(lw/2+3, Math.min(UW-lw/2-3, cx)), ly=cy-ry-6;
+      var box={x:lx-lw/2-2, y:ly-lh, w:lw+4, h:lh}, guard=0, moved=true;
+      while(moved && guard++<40){ moved=false;
+        for(var pi=0;pi<placedLabels.length;pi++){ var pb=placedLabels[pi];
+          if(box.x<pb.x+pb.w && box.x+box.w>pb.x && box.y<pb.y+pb.h && box.y+box.h>pb.y){
+            ly=pb.y-3; box.y=ly-lh; moved=true; break; } } }
+      placedLabels.push(box);
+      uctx.fillStyle="rgba(255,255,255,.92)"; uctx.fillText(nm,lx,ly); }
   });
   // probe footprint + depth scale
   uctx.fillStyle="rgba(255,255,255,.5)"; uctx.font="9px Helvetica"; uctx.textAlign="left";

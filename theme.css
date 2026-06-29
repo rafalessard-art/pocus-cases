@@ -108,6 +108,34 @@
   background: #fbfaf6;
 }
 
+/* ---- Top nav surface (both themes) ----
+ * The pages set .topnav { background: var(--paper) }, i.e. the same color as the
+ * page body, so the bar blends into the background and reads as just a floating
+ * toggle + a hairline. Give it its own slightly-raised surface and a soft drop
+ * shadow so it clearly separates from the content beneath it. Loaded after each
+ * page's inline <style>, so this wins. (--paper2 on index/tools; --paper-card on
+ * the case pages — fall back accordingly.) */
+.topnav {
+  background: var(--paper2, var(--paper-card));
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06), 0 1px 0 var(--rule, var(--line));
+}
+:root[data-theme="dark"] .topnav {
+  /* Soften the very-bright --ink bottom border in dark mode, and lift the bar
+   * off the near-black body with a stronger shadow. */
+  border-bottom-color: var(--rule);
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.5), 0 1px 0 var(--rule-soft);
+}
+
+/* ---- MCQ self-test (all cases) ----
+ * The .opt buttons and .exp panel hardcode light backgrounds (#fff / parchment),
+ * so remap them onto dark surfaces. correct/wrong use the dark --good-bg/--bad-bg
+ * tokens defined above. */
+:root[data-theme="dark"] .opt { background: #1a1e27; }
+:root[data-theme="dark"] .opt:hover { background: #20252f; }
+:root[data-theme="dark"] .opt.correct { background: var(--good-bg); border-color: #2f5e44; }
+:root[data-theme="dark"] .opt.wrong { background: var(--bad-bg); border-color: #5e2f2c; }
+:root[data-theme="dark"] .mcq .exp { background: #1a1e27; }
+
 /* ---- Theme toggle button (injected into the top nav by theme.js) ---- */
 .theme-toggle {
   margin-left: auto;

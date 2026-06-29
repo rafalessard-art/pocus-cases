@@ -18,6 +18,10 @@
   --line-soft: #e7dfce;
   --crisis: #8c2f2a;
   --crisis-bg: #f7e9e6;
+  --good: #2f7d4f;
+  --good-bg: #e7f2ea;
+  --bad: #8c2f2a;
+  --bad-bg: #f7e9e6;
   --shadow: 0 1px 2px rgba(28,43,46,.06), 0 8px 24px rgba(28,43,46,.06);
   --serif: "Iowan Old Style","Palatino Linotype","Palatino","Georgia",serif;
   --sans: "Helvetica Neue","Segoe UI",Arial,sans-serif;
@@ -221,6 +225,21 @@ figure.img svg { max-width: 100%; height: auto; border-radius: 8px; border: 1px 
   border:1px solid var(--line); color:var(--teal); background:#eef4ec; margin-left:4px;
 }
 
+/* ---- MCQ review ---- */
+.mcq { border: 1px solid var(--line-soft); border-radius: 10px; background: var(--paper-card); box-shadow: var(--shadow); padding: 18px 20px; margin: 18px 0; }
+.mcq .stem { font-family: var(--sans); font-weight: 600; font-size: 16.5px; color: var(--ink); margin: 0 0 12px; }
+.mcq .stem .qn { display: block; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--rust-deep); font-weight: 700; margin-bottom: 5px; }
+.opt { display: block; width: 100%; text-align: left; font-family: var(--serif); font-size: 16px; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin: 7px 0; cursor: pointer; transition: all .15s; }
+.opt:hover { border-color: var(--teal-bright); background: #f6fbfa; }
+.opt .ol { font-family: var(--sans); font-weight: 700; color: var(--teal); margin-right: 10px; }
+.mcq.answered .opt { cursor: default; }
+.opt.correct { background: var(--good-bg); border-color: #bcdcc6; }
+.opt.wrong { background: var(--bad-bg); border-color: #e6bdb6; }
+.opt.correct .ol { color: var(--good); } .opt.wrong .ol { color: var(--bad); }
+.mcq .exp { display: none; margin-top: 12px; border-left: 4px solid var(--teal); background: #f3ede1; border-radius: 7px; padding: 10px 14px; font-size: 14.5px; line-height: 1.5; }
+.mcq.answered .exp { display: block; animation: fade .3s ease; }
+.mcq .exp b { color: var(--teal); }
+
 /* ---- References ---- */
 .ref-list { list-style: none; counter-reset: r; padding-left: 0; font-size: 15px; line-height: 1.5; }
 .ref-list li { counter-increment: r; position: relative; padding-left: 34px; margin: 12px 0; }
@@ -263,6 +282,7 @@ footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line);
 <nav class="topnav">
   <div class="topnav-inner">
     <a href="/">Home</a>
+    <a href="/tools">Tools</a>
     <a href="/#about">About</a>
     <a href="/#resources">Resources</a>
   </div>
@@ -580,6 +600,67 @@ footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line);
   </section>
   </section>
 
+  <!-- ===================== MCQ REVIEW ===================== -->
+  <section class="block">
+    <h2 class="section">End-of-case review</h2>
+    <p>Six questions spanning both parts. Select an answer to reveal the correct choice and a brief explanation.</p>
+
+    <div class="mcq" data-correct="b">
+      <p class="stem"><span class="qn">Review 1 &middot; Differential</span>24&nbsp;hours postpartum after a difficult epidural with one ambiguous loss-of-resistance, she has a bilateral fronto-occipital headache that is mild supine and severe within ~1&ndash;2&nbsp;minutes of sitting. The single most useful bedside discriminator pointing to PDPH is:</p>
+      <button class="opt" data-k="a"><span class="ol">A</span>Photophobia</button>
+      <button class="opt" data-k="b"><span class="ol">B</span>The clear postural (orthostatic) pattern &mdash; worse upright, relieved supine</button>
+      <button class="opt" data-k="c"><span class="ol">C</span>Neck stiffness</button>
+      <button class="opt" data-k="d"><span class="ol">D</span>Tinnitus</button>
+      <div class="exp"><b>B.</b> &ldquo;What happens when you sit up?&rdquo; A crisp postural pattern after neuraxial anesthesia is the hallmark of PDPH (a diagnosis of exclusion). Its absence &mdash; or its loss over time &mdash; should redirect you to the dangerous secondary causes.</div>
+    </div>
+
+    <div class="mcq" data-correct="c">
+      <p class="stem"><span class="qn">Review 2 &middot; Red flags</span>Which feature mandates urgent neuroimaging rather than reassurance?</p>
+      <button class="opt" data-k="a"><span class="ol">A</span>A headache reliably relieved by lying flat</button>
+      <button class="opt" data-k="b"><span class="ol">B</span>Mild photophobia and tinnitus</button>
+      <button class="opt" data-k="c"><span class="ol">C</span>Loss of the postural pattern (a previously orthostatic headache becoming constant), focal deficit, seizure, or depressed consciousness</button>
+      <button class="opt" data-k="d"><span class="ol">D</span>Onset within 5 days of dural puncture</button>
+      <div class="exp"><b>C.</b> Loss of postural quality, focal neurology, seizure, altered consciousness, papilledema, thunderclap onset, fever/meningism, or hypertension with proteinuria all mandate imaging (MRI/MRV preferred where available).</div>
+    </div>
+
+    <div class="mcq" data-correct="b">
+      <p class="stem"><span class="qn">Review 3 &middot; Principle</span>Why does the ultrasonographic optic nerve sheath diameter (ONSD) track intracranial pressure?</p>
+      <button class="opt" data-k="a"><span class="ol">A</span>The optic nerve swells directly with systemic blood pressure</button>
+      <button class="opt" data-k="b"><span class="ol">B</span>The dural sheath is continuous with the intracranial subarachnoid space, so its CSF layer is pressure-coupled &mdash; it distends as ICP rises and is less distended when ICP falls</button>
+      <button class="opt" data-k="c"><span class="ol">C</span>The globe changes shape with intracranial pressure</button>
+      <button class="opt" data-k="d"><span class="ol">D</span>The retina thickens with raised intracranial pressure</button>
+      <div class="exp"><b>B.</b> The retrobulbar sheath ~3&nbsp;mm behind the globe is the most distensible segment and the standard place to measure (outer-to-outer, perpendicular to the nerve). ONSD &gt; 5.7&nbsp;mm suggests raised ICP (cutoffs vary ~5.0&ndash;6.0&nbsp;mm); a low ONSD accompanies intracranial hypotension.</div>
+    </div>
+
+    <div class="mcq" data-correct="b">
+      <p class="stem"><span class="qn">Review 4 &middot; Evidence</span>How should ONSD be used for the intracranial hypotension of PDPH?</p>
+      <button class="opt" data-k="a"><span class="ol">A</span>As a validated, stand-alone diagnostic test with an agreed cutoff</button>
+      <button class="opt" data-k="b"><span class="ol">B</span>As a supportive, adjunctive bedside data point &mdash; the evidence is preliminary, with no agreed threshold; a low value or a decrease from the patient's own baseline is the signal</button>
+      <button class="opt" data-k="c"><span class="ol">C</span>To exclude a subdural hematoma or cerebral venous sinus thrombosis</button>
+      <button class="opt" data-k="d"><span class="ol">D</span>It is more accurate for low ICP than for raised ICP</button>
+      <div class="exp"><b>B.</b> ONSD is robust for raised ICP (pooled sensitivity ~0.90, specificity ~0.85), but its use in intracranial hypotension rests on small observational studies and case reports with no validated cutoff &mdash; hypothesis-generating and adjunctive. PDPH remains a clinical diagnosis, and ONSD cannot rule out a structural catastrophe.</div>
+    </div>
+
+    <div class="mcq" data-correct="b">
+      <p class="stem"><span class="qn">Review 5 &middot; Management</span>A new mother has a functionally disabling postural headache after an unintentional Tuohy (large-bore) dural puncture. Which reflects the 2023 multisociety consensus?</p>
+      <button class="opt" data-k="a"><span class="ol">A</span>Mandate strict bed rest and aggressive IV fluids as definitive treatment</button>
+      <button class="opt" data-k="b"><span class="ol">B</span>Offer conservative care to all (analgesia, hydration, &plusmn; caffeine), and proactively discuss the epidural blood patch as the definitive option for severe/limiting PDPH</button>
+      <button class="opt" data-k="c"><span class="ol">C</span>Perform a routine prophylactic epidural blood patch for everyone with a wet tap</button>
+      <button class="opt" data-k="d"><span class="ol">D</span>Use a sphenopalatine ganglion block as the recommended first-line definitive therapy</button>
+      <div class="exp"><b>B.</b> Conservative measures for all (bed rest and IV fluids are <em>not</em> recommended as preventives). EBP is the most effective treatment for established, function-limiting PDPH but is not recommended routinely as prophylaxis. After a Tuohy breach ~50&ndash;80% develop PDPH, so discuss EBP proactively.</div>
+    </div>
+
+    <div class="mcq" data-correct="c">
+      <p class="stem"><span class="qn">Review 6 &middot; Late red flag</span>Twelve days later the headache is constant, no longer postural, with new mild drowsiness. The correct interpretation is:</p>
+      <button class="opt" data-k="a"><span class="ol">A</span>Reassure &mdash; this is the expected natural history of PDPH</button>
+      <button class="opt" data-k="b"><span class="ol">B</span>Repeat the epidural blood patch immediately without imaging</button>
+      <button class="opt" data-k="c"><span class="ol">C</span>Loss of the postural pattern plus a new neurological symptom is a red flag &mdash; arrange urgent neuroimaging (MRI/MRV or CT/CTV) for subdural hematoma / CVST; ONSD cannot exclude these</button>
+      <button class="opt" data-k="d"><span class="ol">D</span>Perform ONSD; a normal value safely excludes a structural cause</button>
+      <div class="exp"><b>C.</b> A dural-puncture headache that loses its postural quality, becomes constant, or acquires neurological features is a subdural hematoma / CVST until imaging proves otherwise. Prolonged intracranial hypotension lets the brain sag and tears bridging veins; pregnancy and the puerperium predispose to CVST.</div>
+    </div>
+  </section>
+
+  <!-- ===================== REFERENCES ===================== -->
   <section class="block">
     <h2 class="section">Selected references</h2>
     <p><em>Key recent sources underpinning the incidence figures, ultrasound technique, evidence appraisal, and management recommendations used above.</em></p>
@@ -603,6 +684,20 @@ footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line);
   </footer>
 
 </div>
+
+<script>
+document.querySelectorAll('.mcq').forEach(function(m){
+  var correct=m.getAttribute('data-correct');
+  m.querySelectorAll('.opt').forEach(function(o){
+    o.addEventListener('click',function(){
+      if(m.classList.contains('answered'))return;
+      m.classList.add('answered');
+      m.querySelectorAll('.opt').forEach(function(x){ if(x.getAttribute('data-k')===correct) x.classList.add('correct'); });
+      if(o.getAttribute('data-k')!==correct) o.classList.add('wrong');
+    });
+  });
+});
+</script>
 
 </body>
 </html>
