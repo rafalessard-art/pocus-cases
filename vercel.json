@@ -12,5 +12,23 @@
     { "source": "/POCUS_Learning_Case_ONSD_PDPH.html", "destination": "/cases/onsd-pdph", "permanent": false },
     { "source": "/POCUS_Learning_Case_VascularAccess.html", "destination": "/cases/vascular-access", "permanent": false },
     { "source": "/tools.html", "destination": "/tools", "permanent": false }
+  ],
+  "headers": [
+    {
+      "source": "/",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    },
+    {
+      "source": "/tools",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    },
+    {
+      "source": "/cases/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    },
+    {
+      "source": "/(.*).html",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    }
   ]
 }

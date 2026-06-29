@@ -30,6 +30,10 @@ h1{font-family:var(--sans);font-weight:700;font-size:clamp(19px,2.6vw,26px);line
 
 .panel{flex:0 0 360px;max-width:360px;border-left:1px solid var(--line);background:var(--paper-card);overflow-y:auto;padding:14px 14px 28px;}
 @media(max-width:900px){.panel{flex:1 1 auto;max-width:none;border-left:none;border-top:1px solid var(--line);}}
+.mobile-notice{display:none;}
+.mobile-notice b{font-weight:700;}
+.mobile-notice svg{flex:0 0 auto;margin-top:1px;color:#c98a5e;}
+@media(max-width:760px){.mobile-notice{display:flex;gap:9px;align-items:flex-start;box-sizing:border-box;margin:0;padding:11px 14px;font-family:var(--sans);font-size:12.5px;line-height:1.5;color:var(--ink);background:#fdf3e0;border-bottom:1px solid #e6cfa0;}}
 .panel h2{font-family:var(--sans);font-weight:700;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--teal);margin:10px 0 7px;}
 
 /* ultrasound */
@@ -69,6 +73,10 @@ input[type=range]{width:100%;accent-color:var(--rust);}
 </style>
 </head>
 <body>
+<div class="mobile-notice" role="note">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.3 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.3a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+  <span><b>Best on a larger screen.</b> This interactive 3D tool uses click-and-drag orbit, zoom, and a side-by-side ultrasound panel. It will still load, but it's cramped on a phone — try a tablet or desktop for the full view.</span>
+</div>
 <div class="head">
   <p class="kicker">POCUS Learning Case · Systematic Approach to Vascular Access</p>
   <h1>3D Arm + Live Ultrasound — the RaPeVA survey</h1>

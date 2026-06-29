@@ -1,8 +1,19 @@
 # Drafts and working files — never deploy
 *_Draft.md
-VascularAccess_*
 AnswerKey_Accuracy_Review.md
+SITE_AUDIT.md
 .claude/
+
+# VascularAccess drafts/benchmarks — but NOT the deployed VascularAccess_3D_Sono.html.
+# (Use specific names, not the catch-all VascularAccess_*, so the live tool can't be
+#  silently un-tracked on a future rename/re-add.)
+VascularAccess_3D_Arm.html
+VascularAccess_3D_Sono_BENCHMARK_*
+VascularAccess_3D_Sono_v2_restore.html
+VascularAccess_InteractiveFigure.html
+VascularAccess_LiteratureReview.md
+VascularAccess_CaseQuestions_Draft.md
+!VascularAccess_3D_Sono.html
 
 # Local backups — never deploy
 _backups/
