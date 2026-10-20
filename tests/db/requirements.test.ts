@@ -69,6 +69,7 @@ describe('scan logbook (counts only)', () => {
     expect(cat(s, 'cardiac')).toMatchObject({ verified: 12, met: false });
     expect(cat(s, 'gastric')).toMatchObject({ verified: 20, met: true }); // no views rule for gastric
     expect(s.scans.verified_total).toBe(37);
+    expect(s.scans.reviewed_total).toBe(37);
     expect(s.scans.history[0].entries).toHaveLength(3);
     expect(s.scans.history[0].note).toBe('Reviewed in QPath with the resident');
     const [log] = await sql(`select action, details from public.audit_log where action = 'scans_attested' order by id desc limit 1`);

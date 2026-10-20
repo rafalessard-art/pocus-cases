@@ -30,7 +30,8 @@ export type ItarState = {
 export type Rotation = {
   itar?: ItarState | null;
   requirements: RotationReq[];
-  scans: { categories: ScanCategory[]; verified_total: number; target_total: number; reported_total: number | null; history: ScanBatch[] };
+  /** verified_total counts each category only up to its target; reviewed_total is the raw number of faculty-verified scans. */
+  scans: { categories: ScanCategory[]; verified_total: number; reviewed_total?: number; target_total: number; reported_total: number | null; history: ScanBatch[] };
 };
 
 export const REQ_LABEL: Record<ReqStatus, string> = {
@@ -90,7 +91,7 @@ export function requirementsSection(rot: Rotation): { key: string; title: string
         : '';
     let body = REQ_LABEL[r.status];
     if (r.kind === 'scan_log') {
-      body += ` — ${rot.scans.verified_total} of ${rot.scans.target_total} faculty-verified reviewed scans (${rot.scans.categories.map((x) => `${x.label} ${x.verified}/${x.target}${x.views_note && x.verified >= x.target && !x.views_confirmed ? ', views not confirmed' : ''}`).join('; ')})`;
+      body += ` — ${rot.scans.verified_total} of ${rot.scans.target_total} required faculty-verified reviewed scans${(rot.scans.reviewed_total ?? 0) > rot.scans.verified_total ? ` (${rot.scans.reviewed_total} reviewed in total)` : ''} (${rot.scans.categories.map((x) => `${x.label} ${x.verified}/${x.target}${x.views_note && x.verified >= x.target && !x.views_confirmed ? ', views not confirmed' : ''}`).join('; ')})`;
     } else if (r.kind === 'attestation' && r.stage) {
       body += ` — ${r.detail}`;
     } else if (r.detail) {

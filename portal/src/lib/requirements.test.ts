@@ -24,7 +24,7 @@ const rot: Rotation = {
   ],
   scans: {
     categories: [cat('airway', 5, 5), cat('cardiac', 40, 40, { views_note: 'PLAX, PSAX, S4C, A4C, IVC', views_confirmed: false, met: false }), cat('gastric', 20, 0, { reported: 6 })],
-    verified_total: 45, target_total: 65, reported_total: 6, history: [],
+    verified_total: 45, reviewed_total: 45, target_total: 65, reported_total: 6, history: [],
   },
 };
 
@@ -50,7 +50,7 @@ describe('ITAR section', () => {
     expect(s.text).toMatch(/Mandatory rotation activities complete: 3 of 7 \(1 not yet due\)\./);
     expect(s.text).toMatch(/• C6 POCUS EPAs: Complete — EPA review complete \(by Dr\. Faculty, October 20, 2026\)\./);
     expect(s.text).toMatch(/• Written POCUS examination: Complete — Score 80% — rotation pass mark 75% met \(by the portal \(automatic scoring\)/);
-    expect(s.text).toMatch(/45 of 65 faculty-verified reviewed scans \(Airway 5\/5; Cardiac 40\/40, views not confirmed; Gastric 0\/20\)/);
+    expect(s.text).toMatch(/45 of 65 required faculty-verified reviewed scans \(Airway 5\/5; Cardiac 40\/40, views not confirmed; Gastric 0\/20\)/);
     const withHistory = requirementsSection({ ...rot, scans: { ...rot.scans, history: [{ batch_id: 'b', created_at: '2026-10-21T12:00:00Z', reviewed_on: '2026-10-21', is_correction: false, source: 'faculty_attestation', by: 'Dr. Faculty', note: '', entries: [] }] } });
     expect(withHistory.text).toMatch(/Gastric 0\/20\) \(last attested by Dr\. Faculty, October 21, 2026\)\./);
   });

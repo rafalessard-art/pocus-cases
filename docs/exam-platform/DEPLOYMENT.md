@@ -25,6 +25,7 @@ Use **either** option.
 20261020000700_itar_preparation.sql
 20261020000800_rotation_requirements.sql
 20261020000900_validation_fixes.sql
+20261020001000_scan_totals.sql
 ```
 
 **B — Supabase CLI.**

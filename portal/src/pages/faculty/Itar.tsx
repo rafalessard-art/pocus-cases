@@ -221,6 +221,8 @@ export function ItarWorkspace() {
   if (ws.error) return <div className="wrap"><ErrorNote error={ws.error} /></div>;
   const w = ws.data!;
   const reload = () => { ws.reload(); rot.reload(); };
+  // quick actions return requirement status only; keep the ITAR state and refresh it in the background
+  const setRot = (r: Rotation) => { rot.setData({ ...r, itar: r.itar ?? rot.data?.itar ?? null }); rot.reload(); };
   const rc = rot.data ? completion(rot.data.requirements) : null;
   const ev = w.evaluation;
   const locked = ev?.status === 'approved';
@@ -263,7 +265,7 @@ export function ItarWorkspace() {
             </a>
           ))}
         </nav>
-        {rot.error ? <ErrorNote error={rot.error} /> : rot.data && <RequirementsSection w={w} rot={rot.data} reload={reload} setRot={rot.setData} />}
+        {rot.error ? <ErrorNote error={rot.error} /> : rot.data && <RequirementsSection w={w} rot={rot.data} reload={reload} setRot={setRot} />}
         <ExamSection w={w} chosen={chosen} locked={locked} passPct={rotationPassPct(rot.data)} onSelect={(id) => setSel({ key: `${cohortId}/${learnerId}`, id })} />
         <CasesSection w={w} reload={reload} />
         <EpaSection key={`${learnerId}-${w.epa_review?.updated_at ?? 'new'}`} w={w} reload={reload} />

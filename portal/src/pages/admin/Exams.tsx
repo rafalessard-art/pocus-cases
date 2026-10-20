@@ -109,6 +109,11 @@ function VersionPanel({ v, onChanged }: { v: Version; onChanged: (selectId?: str
   const [adding, setAdding] = useState(false);
   const [confirmPub, setConfirmPub] = useState(false);
   const [busy, setBusy] = useState(false);
+  const rotPass = useLoad(async () => {
+    const { data } = await supabase.from('rotation_requirements').select('config').eq('kind', 'exam').is('cohort_id', null).is('archived_at', null).limit(1);
+    const v = data?.[0]?.config?.pass_pct;
+    return v == null ? null : Number(v);
+  }, []);
 
   async function loadItems() {
     const { data, error } = await supabase.from('exam_items').select('position, section, points, question_version_id, qv:question_versions(*, questions!question_versions_question_id_fkey(question_key, current_version_id))').eq('exam_version_id', v.id).order('position');
@@ -254,6 +259,11 @@ function VersionPanel({ v, onChanged }: { v: Version; onChanged: (selectId?: str
                 <label className="field">Pass threshold %<input type="number" min={0} max={100} value={s.pass_threshold_pct ?? ''}
                   onChange={(e) => setS({ ...s, pass_threshold_pct: e.target.value === '' ? null : Number(e.target.value) })} data-testid="pass-threshold" /></label>
               </div>
+              {rotPass.data != null && (
+                Number(s.pass_threshold_pct) === rotPass.data
+                  ? <p className="small muted" style={{ marginTop: -6 }}>Matches the rotation pass mark ({rotPass.data}%).</p>
+                  : <div className="notice warn small" data-testid="pass-mismatch">The rotation requires {rotPass.data}% (Admin → ITAR setup). Residents see this exam's own threshold on their result page, so set it to {rotPass.data}% to avoid conflicting messages.</div>
+              )}
               <label className="field">Learner feedback after release
                 <select value={s.feedback_policy} onChange={(e) => setS({ ...s, feedback_policy: e.target.value })} data-testid="feedback-policy">
                   <option value="none">None (completion only)</option>

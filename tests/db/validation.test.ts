@@ -73,6 +73,16 @@ describe('scan attestation', () => {
   });
 });
 
+describe('scan totals', () => {
+  it('extra scans in one category do not make up for another; the raw number is kept separately', async () => {
+    const r2 = await createUser('learner', { cohortId: block });
+    const s = await rpc(faculty, 'attest_scans', { p_attested: true, p_learner: r2.id, p_cohort: block, p_reviewed_on: '2026-10-16',
+      p_entries: [{ category: cats.gastric, delta: 30 }, { category: cats.dvt, delta: 1 }] });
+    expect(s.scans).toMatchObject({ verified_total: 21, reviewed_total: 31, target_total: 102 });
+    expect(s.requirements.find((r: any) => r.key === 'scan_logbook').detail).toBe('21/102 faculty-verified scans');
+  });
+});
+
 describe('after an ITAR is approved', () => {
   let evalId: string;
 

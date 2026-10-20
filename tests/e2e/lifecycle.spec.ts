@@ -487,7 +487,7 @@ test('full examination lifecycle', async ({ page, context }) => {
     await expect(page.getByTestId('section-sources')).toHaveValue(/4 verified by Dr\. Demo Faculty/);
     await expect(page.getByTestId('section-sources')).toHaveValue(/assigns no overall rating/);
     await expect(page.getByTestId('section-requirements')).toHaveValue(/Mandatory rotation activities complete: 6 of 7 \(1 not yet due\)/);
-    await expect(page.getByTestId('section-requirements')).toHaveValue(/102 of 102 faculty-verified reviewed scans/);
+    await expect(page.getByTestId('section-requirements')).toHaveValue(/102 of 102 required faculty-verified reviewed scans/);
     await expect(page.getByTestId('section-requirements')).toHaveValue(/not an assessment of scanning competence/);
     await expect(page.getByTestId('section-learning_needs')).toHaveValue(/POCUS rounds presentation: not yet due/);
     // faculty judgement is never filled in for them
