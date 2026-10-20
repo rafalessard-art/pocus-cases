@@ -69,7 +69,7 @@ export const TONE: Record<EvidenceStatus | 'missing', 'ok' | 'warn' | 'bad' | 'i
 const fmt = (d?: string | null) => (d ? new Date(d.length === 10 ? `${d}T12:00:00` : d).toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' }) : '');
 const sentence = (s: string) => {
   const t = s.trim();
-  return /[.!?:]$/.test(t) ? t : `${t}.`;
+  return /[.!?:][)"”’]?$/.test(t) ? t : `${t}.`;
 };
 const andList = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
 

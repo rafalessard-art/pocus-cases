@@ -84,7 +84,8 @@ export function requirementsSection(rot: Rotation): { key: string; title: string
   lines.push(`Mandatory rotation activities complete: ${c.done} of ${c.total}${c.notYetDue ? ` (${c.notYetDue} not yet due)` : ''}.`);
   for (const r of rot.requirements.filter((x) => x.required)) {
     const last = r.kind === 'scan_log' && r.status !== 'verified' ? rot.scans.history[0] : undefined;
-    const who = last
+    // The EPA detail already names the reviewer and date ("Reviewed in Elentra by … on …").
+    const who = r.kind === 'epa' && !r.override && r.detail.startsWith('Reviewed in Elentra by') ? '' : last
       ? [last.by && `by ${last.by}`, fmt(last.created_at)].filter(Boolean).join(', ')
       : ['verified', 'not_yet_due', 'not_applicable'].includes(r.status) || r.override
         ? [r.verified_by_name && `by ${r.verified_by_name}`, r.verified_at && fmt(r.verified_at)].filter(Boolean).join(', ')

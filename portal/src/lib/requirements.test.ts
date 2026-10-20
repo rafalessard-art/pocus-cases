@@ -46,6 +46,10 @@ describe('outstanding list', () => {
 
 describe('ITAR section', () => {
   const s = requirementsSection(rot);
+  it('does not repeat the reviewer for a streamlined EPA verification', () => {
+    const r2: Rotation = { ...rot, requirements: [req('C6 POCUS EPAs', 'epa', 'verified', { verified_by_name: 'Dr. Faculty', verified_at: '2026-10-20T12:00:00Z', detail: 'Reviewed in Elentra by Dr. Faculty on Oct 20, 2026 — criteria met' })] };
+    expect(requirementsSection(r2).text).toContain('• C6 POCUS EPAs: Complete — Reviewed in Elentra by Dr. Faculty on Oct 20, 2026 — criteria met.');
+  });
   it('lists every requirement with who verified it and when', () => {
     expect(s.text).toMatch(/Mandatory rotation activities complete: 3 of 7 \(1 not yet due\)\./);
     expect(s.text).toMatch(/• C6 POCUS EPAs: Complete — EPA review complete \(by Dr\. Faculty, October 20, 2026\)\./);
