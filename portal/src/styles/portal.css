@@ -222,8 +222,21 @@ details.disclosure > summary { cursor: pointer; font-weight: 700; color: var(--p
 .hist-labels { display: flex; gap: 4px; font-size: 10.5px; color: var(--ink-soft); }
 .hist-labels span { flex: 1; text-align: center; }
 
+/* ---------- ITAR workspace ---------- */
+.checklist { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; margin: 0 0 6px; }
+.checklist a { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 8px;
+  background: var(--paper2); text-decoration: none; color: var(--ink); font-size: 13px; }
+.checklist a > span:first-child { font-size: 16px; color: var(--gold); }
+.checklist a.done { border-color: var(--moss); background: var(--moss-soft); }
+.checklist a.done > span:first-child { color: var(--ok-ink); }
+.checklist a:hover { border-color: var(--petrol); }
+label.btn:focus-within { outline: 3px solid var(--sky); outline-offset: 2px; }
+[id] { scroll-margin-top: 70px; }
+.print-only { display: none; }
+
 /* ---------- print (evaluation reports) ---------- */
 @media print {
+  .print-only { display: block; }
   .topnav, .no-print, .theme-toggle { display: none !important; }
   body { background: #fff; color: #000; font-size: 12pt; }
   .wrap { padding: 0; max-width: none; }

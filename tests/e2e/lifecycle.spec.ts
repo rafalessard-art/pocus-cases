@@ -269,6 +269,33 @@ test('full examination lifecycle', async ({ page, context }) => {
     // the attempt is closed: returning to it shows the result page, not the questions
     await page.goto(attemptUrl);
     await expect(page.getByText('Submitted — results not yet released')).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------- ITAR: resident uploads proof of Brightspace completion
+  const CASES = [
+    { title: 'Gastric Ultrasound', file: 'SYNTHETIC-brightspace-completion-1.pdf' },
+    { title: 'Diaphragm POCUS', file: 'SYNTHETIC-brightspace-completion-2.pdf' },
+    { title: 'Optic Nerve Sheath', file: 'SYNTHETIC-brightspace-completion-3.pdf' },
+    { title: 'Peripheral Vascular Access', file: 'SYNTHETIC-brightspace-screenshot.png' },
+  ];
+  await test.step('resident uploads Brightspace completion evidence for each required case', async () => {
+    await page.goto('/app/');
+    await page.getByRole('link', { name: 'Upload evidence' }).click();
+    await expect(page.getByRole('heading', { name: 'Learning-case evidence' })).toBeVisible();
+    await expect(page.getByText(cohortName)).toBeVisible();
+    await expect(page.getByTestId('evidence-requirement')).toHaveCount(4);
+    for (const c of CASES) {
+      const row = page.getByTestId('evidence-requirement').filter({ hasText: c.title });
+      await row.getByTestId('evidence-file').setInputFiles(join(FIX, c.file));
+      await row.getByTestId('evidence-upload').click();
+      await expect(row.getByText('Awaiting faculty review')).toBeVisible();
+    }
+    await expect(page.getByText('0 of 4')).toBeVisible();
+    await shot(page, '09b-resident-evidence');
+    await a11y(page, 'resident evidence');
+    // residents cannot reach faculty pages
+    await page.goto('/app/faculty');
+    await expect(page.getByRole('heading', { name: /Welcome/ })).toBeVisible();
     await signOut(page);
   });
 
@@ -302,22 +329,162 @@ test('full examination lifecycle', async ({ page, context }) => {
     await expect(page.getByText('Engaged well in the scanning sessions.')).toBeVisible();
   });
 
-  await test.step('evaluation workspace drafts from verified data and requires approval', async () => {
+  // ---------------------------------------------------------------- ITAR: faculty side
+  const evidenceRow = (title: string) => page.getByTestId('evidence-row').filter({ hasText: title });
+
+  await test.step('block overview lists the resident and what needs attention', async () => {
     await page.goto('/app/faculty');
-    await page.getByRole('row').filter({ hasText: 'Dr. Demo Resident' }).getByRole('link', { name: 'Evaluation' }).click();
-    await page.getByTestId('eval-observations').fill('Directly observed 8 focused cardiac scans with appropriate depth and gain adjustments.');
+    await page.getByTestId('block-card').filter({ hasText: cohortName }).click();
+    await expect(page.getByRole('heading', { name: cohortName })).toBeVisible();
+    const row = page.getByTestId('overview-row').filter({ hasText: 'Dr. Demo Resident' });
+    await expect(row).toContainText('100.0%');
+    await expect(row).toContainText('0/4');
+    await expect(row).toContainText('4 to review');
+    await expect(row).toContainText('not started');
+    await expect(row).toContainText('Review evidence (4)');
+    await shot(page, '12a-block-overview');
+    await a11y(page, 'block overview');
+    await row.click();
+    await expect(page).toHaveURL(/\/app\/faculty\/itar\//);
+  });
+
+  await test.step('faculty previews evidence, verifies three and returns one for clarification', async () => {
+    await expect(page.getByRole('heading', { name: 'Dr. Demo Resident' })).toBeVisible();
+    // A. exam result comes in automatically, with the attempt used stated
+    await expect(page.getByText(/Rule: most recent submitted attempt/)).toBeVisible();
+    // PDF preview through a short-lived private link
+    await evidenceRow('Gastric Ultrasound').getByTestId('preview-evidence').click();
+    await expect(page.getByRole('dialog').locator('iframe')).toHaveAttribute('src', /\/storage\/v1\/object\/sign\/itar-evidence\//);
+    await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
+    // image preview actually renders
+    await evidenceRow('Peripheral Vascular Access').getByTestId('preview-evidence').click();
+    const img = page.getByRole('dialog').locator('img');
+    await expect.poll(() => img.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBe(900);
+    await shot(page, '12b-evidence-preview');
+    await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
+    for (const t of ['Gastric Ultrasound', 'Diaphragm POCUS', 'Optic Nerve Sheath']) {
+      await evidenceRow(t).getByTestId('verify-evidence').click();
+      await expect(evidenceRow(t).locator('.badge', { hasText: 'Verified' })).toBeVisible();
+    }
+    await evidenceRow('Peripheral Vascular Access').getByRole('button', { name: 'Needs clarification…' }).click();
+    await evidenceRow('Peripheral Vascular Access').getByTestId('evidence-message').fill('The screenshot does not show the completion date clearly. Please upload the completion page.');
+    await evidenceRow('Peripheral Vascular Access').getByRole('button', { name: 'Request clarification' }).click();
+    await expect(evidenceRow('Peripheral Vascular Access').locator('.badge', { hasText: 'Clarification requested' })).toBeVisible();
+    await signOut(page);
+  });
+
+  await test.step('resident sees the faculty message and uploads a replacement', async () => {
+    await signIn(page, LEARNER);
+    await expect(page.getByText('Action needed')).toBeVisible();
+    await page.goto('/app/evidence');
+    const row = page.getByTestId('evidence-requirement').filter({ hasText: 'Peripheral Vascular Access' });
+    await expect(row.getByText(/does not show the completion date clearly/)).toBeVisible();
+    await expect(page.getByText('3 of 4')).toBeVisible();
+    await row.getByTestId('evidence-file').setInputFiles(join(FIX, 'SYNTHETIC-brightspace-completion-3.pdf'));
+    await row.getByTestId('evidence-upload').click();
+    await expect(row.getByText('Awaiting faculty review')).toBeVisible();
+    // the resident sees no EPA review, observations or ITAR draft anywhere
+    await expect(page.getByText(/EPA|ITAR draft|observation/i)).toHaveCount(0);
+    await signOut(page);
+  });
+
+  let itarUrl = '';
+  await test.step('faculty verifies the replacement, records the EPA review and observations', async () => {
+    await signIn(page, ADMIN);
+    await page.goto('/app/faculty');
+    await page.getByTestId('block-card').filter({ hasText: cohortName }).click();
+    await page.getByTestId('overview-row').filter({ hasText: 'Dr. Demo Resident' }).click();
+    itarUrl = page.url();
+    await expect(evidenceRow('Peripheral Vascular Access').getByText('Earlier uploads (1)')).toBeVisible();
+    await evidenceRow('Peripheral Vascular Access').getByTestId('verify-evidence').click();
+    await expect(page.locator('.checklist a.done', { hasText: 'Learning cases' })).toContainText('4/4 verified');
+
+    // C. EPA review (fictional, transcribed from Elentra)
+    await page.getByTestId('epa-id').first().fill('DEMO-EPA-1');
+    await page.getByLabel('EPA title').first().fill('Fictional EPA: focused cardiac ultrasound');
+    await page.getByLabel('Number of assessments').first().fill('3');
+    await page.getByTestId('epa-entrustment').first().fill('Fictional: supervision on request');
+    await page.getByTestId('epa-strengths').fill('Fictional data: clear communication of findings to the team');
+    await page.getByTestId('epa-complete').click();
+    await expect(page.locator('#epa').getByText(/^Complete/)).toBeVisible();
+
+    // D. observations, by category
+    await page.getByTestId('obs-category').selectOption('scanning');
+    await page.getByTestId('obs-body').fill('Fictional: obtained PLAX and A4C views independently, adjusting depth and gain appropriately');
+    await page.getByTestId('obs-add').click();
+    await expect(page.getByText(/obtained PLAX and A4C views independently/)).toBeVisible();
+    await page.getByTestId('obs-category').selectOption('professionalism');
+    await page.getByTestId('obs-body').fill('Fictional: prepared for every session and sought feedback');
+    await page.getByTestId('obs-add').click();
+    await expect(page.getByText(/sought feedback/)).toBeVisible();
+    await expect(page.getByText(/Other faculty notes on file, not tied to this block \(1\)/)).toBeVisible();
+    await a11y(page, 'ITAR workspace');
+  });
+
+  await test.step('the ITAR draft is assembled from the evidence, edited and approved', async () => {
     await page.getByTestId('generate-draft').click();
-    const summary = page.getByTestId('eval-summary');
-    await expect(summary).toHaveValue(/score was 100\.0%/);
-    await expect(summary).toHaveValue(/do not assess image acquisition/);
-    await expect(summary).toHaveValue(/Faculty observations: Directly observed 8 focused cardiac scans/);
+    await expect(page.getByTestId('section-exam')).toHaveValue(/score was 100\.0%/);
+    await expect(page.getByTestId('section-exam')).toHaveValue(/reflect knowledge only/);
+    await expect(page.getByTestId('section-cases')).toHaveValue(/4 of 4 required learning cases was verified/);
+    await expect(page.getByTestId('section-epa')).toHaveValue(/DEMO-EPA-1 — Fictional EPA: focused cardiac ultrasound: 3 assessments; entrustment: Fictional: supervision on request/);
+    await expect(page.getByTestId('section-observations')).toHaveValue(/Practical scanning skills:\n• Fictional: obtained PLAX/);
+    await expect(page.getByTestId('section-observations')).toHaveValue(/No observations recorded for: Clinical judgement, Technical performance/);
+    await expect(page.getByTestId('section-observations')).not.toHaveValue(/Engaged well in the scanning sessions/); // not tied to the block
+    await expect(page.getByTestId('section-sources')).toHaveValue(/4 verified by Dr\. Demo Faculty/);
+    await expect(page.getByTestId('section-sources')).toHaveValue(/assigns no overall rating/);
+    // faculty judgement is never filled in for them
+    await expect(page.getByTestId('approve-eval')).toBeDisabled();
+    await page.getByTestId('eval-strengths').fill('Fictional: consistent, careful image acquisition');
+    await page.getByTestId('eval-areas').fill('Fictional: practise lung ultrasound in more patients');
+    await page.getByTestId('generate-draft').click();
+    await page.getByRole('button', { name: 'Replace draft text' }).click();
+    await expect(page.getByTestId('approve-eval')).toBeEnabled();
+    await page.getByTestId('section-strengths').fill('Fictional: consistent, careful image acquisition. Edited directly by faculty.');
     await page.getByTestId('save-eval').click();
-    await expect(page.getByText('Draft saved.')).toBeVisible();
+    await expect(page.locator('#itar .badge', { hasText: 'Draft' })).toBeVisible();
+    // saved: survives a full reload
+    await page.reload();
+    await expect(page.getByTestId('section-strengths')).toHaveValue(/Edited directly by faculty/);
+    await shot(page, '12c-itar-draft');
     await page.getByTestId('approve-eval').click();
     await page.getByRole('button', { name: 'Approve and lock' }).click();
-    await expect(page.getByText('Evaluation approved and locked.')).toBeVisible();
-    await expect(summary).toBeDisabled();
-    await shot(page, '12-evaluation');
+    await expect(page.locator('#itar').getByText(/^Approved/)).toBeVisible();
+    await expect(page.getByTestId('section-strengths')).toBeDisabled();
+  });
+
+  await test.step('faculty copies and exports the approved ITAR', async () => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.getByTestId('copy-all').click();
+    await expect(page.getByText('Whole draft copied')).toBeVisible();
+    const clip = await page.evaluate(() => navigator.clipboard.readText());
+    expect(clip).toContain('KNOWLEDGE ASSESSMENT — WRITTEN EXAMINATION');
+    expect(clip).toContain('Edited directly by faculty');
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.getByTestId('export-text').click()]);
+    const txt = await (await import('node:fs/promises')).readFile((await dl.path())!, 'utf8');
+    expect(txt).toMatch(/Status: approved by Dr\. Demo Faculty/);
+    expect(txt).toContain('EVIDENCE SOURCES AND VERIFICATION STATUS');
+    await shot(page, '12d-itar-approved');
+    // verification, EPA completion, approval and export are all in the audit log
+    const db = new pg.Client({ connectionString: process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:5432/postgres' });
+    await db.connect();
+    const { rows } = await db.query(
+      `select action, count(*)::int n from public.audit_log a join public.profiles p on p.id = a.actor
+        where p.email = $1 and action in ('evidence_verified','evidence_clarification_requested','epa_review_completed','evaluation_approved','itar_exported')
+        group by action order by action`, [ADMIN]);
+    await db.end();
+    expect(Object.fromEntries(rows.map((r) => [r.action, r.n]))).toEqual({
+      epa_review_completed: 1, evaluation_approved: 1, evidence_clarification_requested: 1, evidence_verified: 4, itar_exported: 2,
+    });
+  });
+
+  await test.step('the block overview shows the resident complete', async () => {
+    await page.getByRole('link', { name: '← Block' }).click();
+    const row = page.getByTestId('overview-row').filter({ hasText: 'Dr. Demo Resident' });
+    await expect(row).toContainText('4/4');
+    await expect(row).toContainText('approved');
+    await expect(row).toContainText('Complete');
+    await expect(page.locator('.stat', { hasText: 'ITARs approved' })).toContainText('1/1');
+    await shot(page, '12e-block-complete');
     await signOut(page);
   });
 

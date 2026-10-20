@@ -123,6 +123,10 @@ export function LearnerHome() {
   const required = (cur.data?.items ?? []).filter((i: any) => i.required);
   const done = required.filter((i: any) => i.completed_at).length;
   const active = (exams.data ?? []).filter((e) => e.state === 'available' || e.state === 'in_progress');
+  const ev = useLoad(() => rpc<any[]>('my_evidence'), []);
+  const evReq = (ev.data ?? []).flatMap((b) => b.requirements.filter((r: any) => r.required));
+  const evVerified = evReq.filter((r: any) => r.submissions[0]?.status === 'verified').length;
+  const evReturned = evReq.filter((r: any) => ['clarification_requested', 'rejected'].includes(r.submissions[0]?.status)).length;
   return (
     <Page kicker="POCUS Rotation" title={`Welcome${profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}`}
       subtitle="Your curriculum and end-of-block examination">
@@ -148,6 +152,17 @@ export function LearnerHome() {
           </div>
           <Link to="/exams" className="btn secondary">All examinations</Link>
         </div>
+        {evReq.length > 0 && (
+          <div className="card" style={{ ['--accent' as any]: 'var(--moss)' }}>
+            <p className="kicker">Learning-case evidence</p>
+            <div className="stats">
+              <div className="stat"><b>{evVerified}/{evReq.length}</b><span>verified by faculty</span></div>
+            </div>
+            {evReturned > 0 && <p className="small"><Badge tone="warn">Action needed</Badge> {evReturned} upload(s) returned with a message from faculty.</p>}
+            <p className="small muted">Upload proof that you completed your Brightspace learning cases.</p>
+            <Link to="/evidence" className="btn secondary">Upload evidence</Link>
+          </div>
+        )}
       </div>
       <p className="seclabel">Open examinations</p>
       {exams.loading ? <Spinner /> : <ErrorNote error={exams.error} />}

@@ -5,6 +5,7 @@ import { Badge, DomainBars, Empty, ErrorNote, Spinner, fmtDate, pct, useLoad } f
 import { download, toCSV } from '../../lib/csv';
 import { cohorts as loadCohorts, pocusCourse } from '../../lib/content';
 import { rpc, supabase } from '../../lib/supabase';
+import { BlocksPanel } from './Itar';
 
 const LETTERS = 'ABCDEFGHIJKLMNOP';
 
@@ -28,6 +29,9 @@ export function FacultyDashboard() {
   const [q, setQ] = useState('');
   return (
     <Page kicker="Faculty" title="Faculty dashboard" subtitle="Results, grading and end-of-block evaluations for your learners">
+      <p className="seclabel" style={{ marginTop: 0 }}>ITAR preparation — rotation blocks</p>
+      <BlocksPanel />
+      <p className="seclabel">Examinations and grading</p>
       <div className="grid two">
         <section className="card" style={{ ['--accent' as any]: 'var(--clay)' }}>
           <h3>Needs attention</h3>
@@ -69,7 +73,7 @@ export function FacultyDashboard() {
                 <td><Link to={`/faculty/learners/${l.id}`}>{l.full_name || l.email}</Link></td>
                 <td>{l.training_level ?? '—'}</td>
                 <td className="small">{l.cohort_members.map((m: any) => m.cohorts?.name).filter(Boolean).join(', ') || '—'}</td>
-                <td><Link className="btn small secondary" to={`/faculty/evaluations/new?learner=${l.id}`}>Evaluation</Link></td>
+                <td><Link className="btn small secondary" to={`/faculty/evaluations/new?learner=${l.id}`}>ITAR</Link></td>
               </tr>
             ))}
           </tbody>
@@ -267,7 +271,7 @@ export function AttemptReview() {
       subtitle={`${exam.title} v${exam.version} · attempt ${a.attempt_no}`}
       actions={<>
         <Link className="btn secondary" to={`/faculty/exams/${exam.version_id}`}>← Exam results</Link>
-        <Link className="btn secondary" to={`/faculty/evaluations/new?learner=${learner.id}&attempt=${a.id}`}>Start evaluation</Link>
+        <Link className="btn secondary" to={`/faculty/evaluations/new?learner=${learner.id}&attempt=${a.id}`}>ITAR workspace</Link>
       </>}>
       <div className="grid two">
         <section className="card">
@@ -371,7 +375,7 @@ export function LearnerView() {
   }
   return (
     <Page kicker="Faculty · Learner" title={r.learner.full_name || r.learner.email} subtitle={[r.learner.training_level, r.learner.program].filter(Boolean).join(' · ')}
-      actions={<Link className="btn" to={`/faculty/evaluations/new?learner=${learnerId}`}>New end-of-block evaluation</Link>}>
+      actions={<Link className="btn" to={`/faculty/evaluations/new?learner=${learnerId}`}>ITAR workspace</Link>}>
       <div className="grid two">
         <section className="card flat">
           <h3>Rotation</h3>

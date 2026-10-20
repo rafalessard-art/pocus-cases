@@ -25,6 +25,7 @@ export function AdminHome() {
     { to: '/admin/questions', title: 'Question bank', body: 'Versioned questions mapped to domains and objectives.', stat: d?.questions, label: 'questions', accent: 'var(--petrol)' },
     { to: '/admin/media', title: 'Media library', body: 'Upload and govern ultrasound loops and stills.', stat: d?.media, label: `clips · ${d?.mediaTodo ?? 0} need review`, accent: 'var(--sky)' },
     { to: '/admin/people', title: 'People & cohorts', body: 'Invitations, roles, rotation cohorts, accommodations.', stat: d?.people, label: `active · ${d?.invites ?? 0} pending invites`, accent: 'var(--moss)' },
+    { to: '/admin/itar', title: 'ITAR setup', body: 'Required learning-case evidence and evidence retention.', stat: undefined, label: '', accent: 'var(--moss)' },
     { to: '/admin/import', title: 'Import', body: 'Migrate an existing exam from CSV/JSON with validation.', stat: undefined, label: '', accent: 'var(--gold)' },
   ];
   return (

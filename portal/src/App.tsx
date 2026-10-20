@@ -23,6 +23,10 @@ const FacultyDashboard = lazy(() => import('./pages/faculty/Faculty').then((m) =
 const ExamResults = lazy(() => import('./pages/faculty/Faculty').then((m) => ({ default: m.ExamResults })));
 const AttemptReview = lazy(() => import('./pages/faculty/Faculty').then((m) => ({ default: m.AttemptReview })));
 const LearnerView = lazy(() => import('./pages/faculty/Faculty').then((m) => ({ default: m.LearnerView })));
+const BlockOverview = lazy(() => import('./pages/faculty/Itar').then((m) => ({ default: m.BlockOverview })));
+const ItarWorkspace = lazy(() => import('./pages/faculty/Itar').then((m) => ({ default: m.ItarWorkspace })));
+const ItarSetup = lazy(() => import('./pages/admin/ItarSetup').then((m) => ({ default: m.ItarSetup })));
+const MyEvidence = lazy(() => import('./pages/MyEvidence').then((m) => ({ default: m.MyEvidence })));
 
 function RequireAuth({ role }: { role?: 'staff' | 'admin' }) {
   const { loading, session, profile } = useAuth();
@@ -67,12 +71,15 @@ export function App() {
           <Route path="/curriculum" element={<Curriculum />} />
           <Route path="/exams" element={<ExamsList />} />
           <Route path="/exams/result/:attemptId" element={<Result />} />
+          <Route path="/evidence" element={<Suspense fallback={<Spinner />}><MyEvidence /></Suspense>} />
           <Route element={<RequireAuth role="staff" />}>
             <Route path="/faculty" element={<FacultyDashboard />} />
             <Route path="/faculty/exams/:versionId" element={<ExamResults />} />
             <Route path="/faculty/attempts/:attemptId" element={<AttemptReview />} />
             <Route path="/faculty/learners/:learnerId" element={<LearnerView />} />
             <Route path="/faculty/evaluations/:evalId" element={<EvaluationWorkspace />} />
+            <Route path="/faculty/blocks/:cohortId" element={<BlockOverview />} />
+            <Route path="/faculty/itar/:cohortId/:learnerId" element={<ItarWorkspace />} />
           </Route>
           <Route element={<RequireAuth role="admin" />}>
             <Route path="/admin" element={<AdminHome />} />
@@ -83,6 +90,7 @@ export function App() {
             <Route path="/admin/exams/:examId" element={<ExamEditor />} />
             <Route path="/admin/import" element={<ImportExam />} />
             <Route path="/admin/people" element={<People />} />
+            <Route path="/admin/itar" element={<ItarSetup />} />
           </Route>
           <Route path="*" element={<div className="wrap"><h1>Not found</h1><p><a href="/app/">Portal home</a></p></div>} />
         </Route>

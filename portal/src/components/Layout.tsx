@@ -39,6 +39,7 @@ export function TopNav({ children }: { children?: ReactNode }) {
             <NavLink to="/" end>Home</NavLink>
             <NavLink to="/curriculum">Curriculum</NavLink>
             <NavLink to="/exams">Examinations</NavLink>
+            {!isStaff(profile) && <NavLink to="/evidence">My evidence</NavLink>}
             {isStaff(profile) && <NavLink to="/faculty">Faculty Dashboard</NavLink>}
             {isAdmin(profile) && <NavLink to="/admin">Admin</NavLink>}
           </>
