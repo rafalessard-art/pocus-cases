@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { NextSteps } from '../components/NextSteps';
 import { Page } from '../components/Layout';
 import { Badge, Empty, ErrorNote, Spinner, fmtDate, useLoad } from '../components/ui';
 import { useAuth } from '../lib/auth';
@@ -27,8 +28,15 @@ export function Requirements() {
 
 function BlockReqs({ b, onChange }: { b: Block; onChange: (r: Rotation) => void }) {
   const c = completion(b.rotation.requirements);
+  const loc = useLocation();
+  useEffect(() => {
+    // deep links from "next steps" (#req-<key>, #scans)
+    const id = loc.hash.replace('#', '');
+    if (id) setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }, [loc.hash]);
   return (
     <section style={{ marginBottom: 30 }}>
+      <NextSteps rotation={b.rotation} compact />
       <p className="seclabel">{b.cohort.course} · {b.cohort.name}</p>
       <div className="row between" style={{ marginBottom: 12 }}>
         <span className="small muted">{b.cohort.start_date || b.cohort.end_date ? `${b.cohort.start_date ?? '—'} → ${b.cohort.end_date ?? '—'}` : ''}</span>
@@ -63,7 +71,7 @@ function ReqCard({ r, cohortId, rotation, onChange }: { r: RotationReq; cohortId
   }
 
   return (
-    <div className="panel" data-testid={`my-req-${r.key}`}>
+    <div className="panel" data-testid={`my-req-${r.key}`} id={`req-${r.key}`} style={{ scrollMarginTop: 80 }}>
       <div className="row between">
         <strong>{r.title}</strong>
         <Badge tone={REQ_TONE[r.status]}>{REQ_LABEL[r.status]}</Badge>
@@ -75,7 +83,12 @@ function ReqCard({ r, cohortId, rotation, onChange }: { r: RotationReq; cohortId
         {r.faculty_message && !locked && <div className="notice warn small" role="status" style={{ marginTop: 8 }}><strong>Message from faculty:</strong> {r.faculty_message}</div>}
       </div>
 
-      {r.kind === 'learning_cases' && <div style={{ marginTop: 8 }}><Link className="btn secondary small" to="/evidence">Upload Brightspace evidence</Link></div>}
+      {r.kind === 'learning_cases' && (
+        <div className="row" style={{ marginTop: 8 }}>
+          {r.status !== 'verified' && <Link className="btn small" to="/evidence">Upload Brightspace evidence</Link>}
+          {r.extra && <span className="small muted">{r.extra.verified ?? 0} verified · {r.extra.awaiting ?? 0} awaiting review · {r.extra.returned ?? 0} returned · {r.extra.missing ?? 0} not uploaded</span>}
+        </div>
+      )}
       {r.kind === 'exam' && r.status !== 'verified' && <div style={{ marginTop: 8 }}><Link className="btn secondary small" to="/exams">Examinations</Link></div>}
       {r.kind === 'epa' && r.status !== 'verified' && <p className="small muted" style={{ margin: '6px 0 0' }}>Recorded by faculty from your Elentra assessments.</p>}
       {r.kind === 'scan_log' && <ScanProgress rotation={rotation} cohortId={cohortId} onChange={onChange} />}
@@ -105,7 +118,11 @@ function ReqCard({ r, cohortId, rotation, onChange }: { r: RotationReq; cohortId
 
 function ScanProgress({ rotation, cohortId, onChange }: { rotation: Rotation; cohortId: string; onChange: (r: Rotation) => void }) {
   const cats = rotation.scans.categories;
-  const [edit, setEdit] = useState(false);
+  const loc = useLocation();
+  const [edit, setEdit] = useState(() => new URLSearchParams(window.location.search).get('report') === 'scans');
+  useEffect(() => {
+    if (new URLSearchParams(loc.search).get('report') === 'scans') setEdit(true);
+  }, [loc.search, loc.key]);
   const [counts, setCounts] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<unknown>();
@@ -126,7 +143,7 @@ function ScanProgress({ rotation, cohortId, onChange }: { rotation: Rotation; co
   }
 
   return (
-    <div style={{ marginTop: 10 }}>
+    <div style={{ marginTop: 10, scrollMarginTop: 80 }} id="scans">
       <div className="tablewrap">
         <table className="data">
           <thead><tr><th>Category</th><th>Verified by faculty</th><th className="num">Target</th><th className="num">Reported by you</th></tr></thead>
@@ -152,12 +169,12 @@ function ScanProgress({ rotation, cohortId, onChange }: { rotation: Rotation; co
       </div>
       <div className="row" style={{ marginTop: 8 }}>
         <span className="small"><strong>{rotation.scans.verified_total}/{rotation.scans.target_total}</strong> verified</span>
-        {!edit && <button className="btn secondary small" onClick={() => setEdit(true)} data-testid="my-scan-edit">Update my scan counts</button>}
+        {!edit && <button className="btn small" onClick={() => setEdit(true)} data-testid="my-scan-edit">Report scan counts</button>}
         {edit && <button className="btn small" disabled={busy} onClick={save} data-testid="my-scan-save">Save — ask faculty to review</button>}
         {edit && <button className="btn ghost small" onClick={() => setEdit(false)}>Cancel</button>}
       </div>
       <p className="small muted" style={{ margin: '6px 0 0' }}>
-        Report how many scans you have archived for review (numbers only). Faculty review the images in QPath and record the verified totals.
+        Report how many scans you have archived for review — <strong>numbers only</strong>. Don't upload your Excel logbook or anything with patient details; faculty check your logbook and the images in QPath and record the verified totals.
       </p>
       <ErrorNote error={err} />
     </div>

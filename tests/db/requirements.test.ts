@@ -171,13 +171,60 @@ describe('computed from existing records', () => {
   });
 
   it('EPA and Brightspace cases follow the existing EPA review and evidence verification', async () => {
-    await as(faculty, (q) => q(`insert into public.epa_reviews (course_id, learner_id, cohort_id, entries, review_date, status) select course_id, $1, $2, '[{"epa":"DEMO"}]', current_date, 'complete' from public.cohorts where id = $2`, [resident.id, block]));
+    await rpc(faculty, 'verify_epa', { p_learner: resident.id, p_cohort: block, p_reviewed: true, p_criteria_status: 'met', p_criteria_confirmed: true });
     const s = await rpc(faculty, 'rotation_status', { p_learner: resident.id, p_cohort: block });
     expect(status(s, 'c6_epas')).toMatchObject({ status: 'verified' });
+    expect(status(s, 'c6_epas').detail).toMatch(/^Reviewed in Elentra by .* — criteria met$/);
     expect(status(s, 'brightspace_cases')).toMatchObject({ status: 'not_started', action: 'resident', detail: '0/4 verified' });
-    // the resident sees the EPA status but none of the EPA review content
-    const mine = (await rpc(resident, 'my_requirements'))[0].rotation;
-    expect(status(mine, 'c6_epas')).toMatchObject({ status: 'verified', detail: '' });
+  });
+});
+
+describe('streamlined EPA verification', () => {
+  const verify = (who: User, learner: User, args: Record<string, unknown>) =>
+    rpc(who, 'verify_epa', { p_learner: learner.id, p_cohort: block, p_reviewed: true, ...args });
+
+  it('no re-entry needed: attestation + decision; partially met / outstanding keep the requirement open for the resident', async () => {
+    await verify(faculty, otherResident, { p_criteria_status: 'partially_met', p_areas: 'Fictional: two more EPA observations needed' });
+    let s = await rpc(faculty, 'rotation_status', { p_learner: otherResident.id, p_cohort: block });
+    expect(status(s, 'c6_epas')).toMatchObject({ status: 'in_progress', action: 'resident' });
+    expect(status(s, 'c6_epas').detail).toMatch(/— criteria partially met$/);
+    expect(status(s, 'c6_epas').extra).toMatchObject({ criteria_status: 'partially_met', criteria_draft: true, has_concerns: false });
+    const [row] = await sql(`select entries, completed_by from public.epa_reviews where learner_id = $1 and cohort_id = $2`, [otherResident.id, block]);
+    expect(row).toEqual({ entries: [], completed_by: faculty.id });
+    // updating re-opens then completes: earlier verification stays in the audit log
+    await verify(faculty, otherResident, { p_criteria_status: 'outstanding', p_concerns: 'Fictional: no cardiac EPA observed yet' });
+    s = await rpc(faculty, 'rotation_status', { p_learner: otherResident.id, p_cohort: block });
+    expect(status(s, 'c6_epas').extra).toMatchObject({ criteria_status: 'outstanding', has_concerns: true });
+    const acts = (await sql(`select a.action from public.audit_log a join public.epa_reviews r on a.entity_id = r.id::text
+      where r.learner_id = $1 and a.action like 'epa_%' order by a.id`, [otherResident.id])).map((x) => x.action);
+    expect(acts).toEqual(['epa_review_completed', 'epa_review_reopened', 'epa_review_completed']);
+  });
+
+  it('"met" needs the program criteria explicitly confirmed; an Elentra review attestation is mandatory', async () => {
+    const r3 = await createUser('learner', { cohortId: block });
+    await expect(verify(faculty, r3, { p_criteria_status: 'met' })).rejects.toThrow(/criteria are met/);
+    await expect(rpc(faculty, 'verify_epa', { p_learner: r3.id, p_cohort: block, p_reviewed: false, p_criteria_status: 'met', p_criteria_confirmed: true }))
+      .rejects.toThrow(/reviewed the resident's EPA assessments in Elentra/);
+    await expect(verify(faculty, r3, { p_criteria_status: 'met', p_criteria_confirmed: true, p_concerns: 'MRN 4481234' })).rejects.toThrow(/patient identifiers/);
+  });
+
+  it('residents see the decision but never concerns or notes, and cannot verify', async () => {
+    const mine = (await rpc(otherResident, 'my_requirements'))[0].rotation;
+    expect(status(mine, 'c6_epas').detail).toMatch(/criteria outstanding$/);
+    expect(JSON.stringify(status(mine, 'c6_epas'))).not.toMatch(/cardiac EPA|has_concerns/);
+    await expect(verify(otherResident, otherResident, { p_criteria_status: 'met', p_criteria_confirmed: true })).rejects.toThrow();
+    await expect(verify(otherFaculty, otherResident, { p_criteria_status: 'met', p_criteria_confirmed: true })).rejects.toThrow();
+  });
+
+  it('a review completed under the old form asks for re-verification instead of counting as met', async () => {
+    const r4 = await createUser('learner', { cohortId: block });
+    await sql(`insert into public.epa_reviews (course_id, learner_id, cohort_id, entries, status, reviewed_in_elentra, criteria_status)
+               select course_id, $1, $2, '[{"epa":"OLD"}]', 'pending', false, null from public.cohorts where id = $2`, [r4.id, block]);
+    await sql(`alter table public.epa_reviews disable trigger epa_reviews_guard`);
+    await sql(`update public.epa_reviews set status = 'complete', completed_at = now() where learner_id = $1`, [r4.id]);
+    await sql(`alter table public.epa_reviews enable trigger epa_reviews_guard`);
+    const s = await rpc(faculty, 'rotation_status', { p_learner: r4.id, p_cohort: block });
+    expect(status(s, 'c6_epas')).toMatchObject({ status: 'in_progress', action: 'faculty', detail: 'Recorded before criteria verification — please re-verify' });
   });
 });
 

@@ -8,8 +8,8 @@
 | Time | Show | Say |
 |---|---|---|
 | 0:00–0:45 | **Block overview** | One row per resident. **Alex**: 7/7, 102/102 scans, exam ≥ 75%, ITAR approved, "No action needed". **Jordan**: 0/7 with outstanding items listed. "Needs attention" splits **You** (faculty) from **Resident**, so nobody chases the wrong person. |
-| 0:45–1:30 | **Resident view** (Jordan → Requirements) | The 7 official requirements with statuses. Scan bars show faculty-verified counts; the resident's own counts are shown separately and don't count. A faculty clarification message appears right on the item. |
-| 1:30–2:15 | **Jordan's workspace → Rotation requirements** | Exam (0%, below the **75%** rotation pass mark; flagged as a faculty decision on a re-attempt), Brightspace (1/4, 1 returned), EPA started: all pulled automatically, **no re-entry**. Each item shows who confirmed it and when. |
+| 0:45–1:30 | **Resident view** (Jordan, signed in with own email link) | Home opens on **Your next steps**: requirements met, verified scans /102, big **Upload Brightspace evidence** and **Report scan counts** buttons, a numbered to-do list (returned upload with the faculty message, EPA criteria partially met, rounds, exam) and "Waiting on faculty". **Report scan counts** jumps straight to the six-number form: numbers only, no logbook upload. |
+| 1:30–2:15 | **Jordan's workspace → EPA verification** | Three clicks: ☑ reviewed in Elentra → *met / partially met / outstanding* → Save. Name and date are recorded automatically; no EPA titles or ratings are re-typed. "Met" requires confirming the (draft, configurable) program criteria. Optional concerns go into the ITAR draft. Requirements table: exam below **75%** (faculty decision on a re-attempt), Brightspace 1/4 with 1 returned, all pulled automatically. |
 | 2:15–3:00 | **Scan logbook** | After reviewing images in QPath, faculty set totals for all six categories at once: "Fill in resident-reported counts", tick views where required, tick the **attestation statement**, Record. Counts only, no patient data. Notes with an MRN-like number are refused. History and corrections are kept. Counts ≠ competence. |
 | 3:00–3:45 | **Evidence** | Preview a synthetic Brightspace PDF and Verify (2 clicks), or return it with a message. |
 | 3:45–4:40 | **Alex's workspace → ITAR draft** | The draft is assembled from the exam, cases, EPA, observations and the **requirements completion record**. Faculty write strengths and areas themselves; there's no rating and no inference from scores. Approved versions are preserved (v1 → v2). Evidence that changes after approval is flagged; a revision is a deliberate faculty action. Copy all or Download into the official ITAR. |
@@ -19,6 +19,8 @@
 - *Where is patient data?* There is none in the portal: counts only; images stay in QPath.
 - *Can it replace the official ITAR?* No. It prepares the text and evidence summary.
 - *Other rotations?* Requirements, scan targets and pass marks are configured per rotation or block.
-- *What does a resident see of faculty notes?* Nothing: EPA content, observations and drafts are faculty-only.
+- *What does a resident see of faculty notes?* Only the EPA criteria decision, the reviewer and the date. EPA notes and concerns, observations and drafts are faculty-only.
+- *Can it read Elentra reports?* Not yet. A proposal (ELENTRA_IMPORT_PROPOSAL.md) lists the fields and approvals needed.
+- *Can residents upload their Excel logbook?* No, by design: it can contain MRNs. They report six totals; faculty verify in the logbook or QPath.
 
 **Fallback:** if the preview link is blocked, use the screenshots from the automated test run (`E2E_SHOTS`) or the hosted preview share link from Vercel.

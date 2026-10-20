@@ -104,13 +104,19 @@ export function requirementsSection(rot: Rotation): { key: string; title: string
 }
 
 /** Actions for the block overview that are NOT already covered by exam/evidence/EPA columns. */
-export function requirementActions(reqs: (Pick<RotationReq, 'kind' | 'title' | 'status' | 'action'> & { extra?: Record<string, any> })[]) {
+export function requirementActions(reqs: (Pick<RotationReq, 'kind' | 'title' | 'status' | 'action'> & { extra?: Record<string, any>; detail?: string })[]) {
   const faculty: string[] = [];
   const resident: string[] = [];
   for (const r of reqs) {
     // an exam below the rotation pass mark needs a program decision (another attempt), not just resident effort
     if (r.kind === 'exam' && (r as RotationReq).extra?.met === false && r.status === 'in_progress') {
       faculty.push(`Exam below ${Math.round(Number((r as RotationReq).extra?.pass_pct ?? 75))}% — decide on re-attempt`);
+      continue;
+    }
+    if (r.kind === 'epa') {
+      const cs = (r as RotationReq).extra?.criteria_status as string | undefined;
+      if (r.action === 'resident' && cs) resident.push(`C6 EPAs: criteria ${cs === 'partially_met' ? 'partially met' : 'outstanding'}`);
+      else if (r.action === 'faculty' && r.status === 'in_progress' && /re-verify/.test((r as RotationReq).detail ?? '')) faculty.push('Re-verify EPA review');
       continue;
     }
     if (!['scan_log', 'attestation'].includes(r.kind) || !r.action) continue;
@@ -172,4 +178,44 @@ export function withSelectedAttempt(
 export function rotationPassPct(rot: Rotation | null | undefined): number | null {
   const v = rot?.requirements.find((r) => r.kind === 'exam')?.extra?.pass_pct;
   return v == null ? null : Number(v);
+}
+
+// ---------------------------------------------------------------------------
+// Resident view: what to do next, and what is waiting on faculty
+// ---------------------------------------------------------------------------
+export type NextStep = { key: string; label: string; detail?: string; to?: string; cta?: string; tone?: 'warn' | 'info' };
+
+export function residentNextSteps(rot: Rotation, openExam = false): { todo: NextStep[]; waiting: NextStep[] } {
+  const todo: NextStep[] = [];
+  const waiting: NextStep[] = [];
+  for (const r of rot.requirements.filter((x) => x.required)) {
+    if (['verified', 'not_applicable', 'not_yet_due'].includes(r.status)) continue;
+    const anchor = `/requirements#req-${r.key}`;
+    if (r.kind === 'learning_cases') {
+      const e = r.extra ?? {};
+      if (e.returned > 0) todo.push({ key: `${r.key}-returned`, label: `Re-upload ${e.returned} learning case${e.returned === 1 ? '' : 's'} returned by faculty`, to: '/evidence', cta: 'Open evidence', tone: 'warn' });
+      if (e.missing > 0) todo.push({ key: `${r.key}-missing`, label: `Upload Brightspace completion for ${e.missing} learning case${e.missing === 1 ? '' : 's'}`, to: '/evidence', cta: 'Upload' });
+      if (e.awaiting > 0) waiting.push({ key: `${r.key}-awaiting`, label: `${e.awaiting} learning-case upload${e.awaiting === 1 ? '' : 's'} awaiting faculty review` });
+    } else if (r.kind === 'scan_log') {
+      const s = rot.scans;
+      todo.push({ key: r.key, label: `Report your scan counts — ${s.verified_total}/${s.target_total} verified so far`, to: '/requirements?report=scans#scans', cta: 'Report scans' });
+      if (s.categories.some((c) => (c.reported ?? 0) > c.verified)) waiting.push({ key: `${r.key}-review`, label: 'Reported scans awaiting faculty verification' });
+    } else if (r.kind === 'attestation') {
+      if (r.status === 'clarification_requested') todo.push({ key: r.key, label: `${r.title}: faculty asked for clarification`, detail: r.faculty_message, to: anchor, cta: 'Respond', tone: 'warn' });
+      else if (r.status === 'submitted') waiting.push({ key: r.key, label: `${r.title} — awaiting faculty confirmation` });
+      else if (r.resident_submits) {
+        const plan = r.stages.some((x) => x.by === 'resident') && !r.stage;
+        todo.push({ key: r.key, label: plan ? `Plan your ${r.title.replace(/^POCUS /, 'POCUS ')} (topic and date)` : `Submit ${r.title} for faculty confirmation`, to: anchor, cta: plan ? 'Plan' : 'Submit' });
+      } else waiting.push({ key: r.key, label: `${r.title} — recorded by faculty` });
+    } else if (r.kind === 'exam') {
+      if (r.extra?.met === false) waiting.push({ key: r.key, label: `${r.detail}. Faculty will contact you about a re-attempt.`, tone: 'warn' });
+      else if (r.status === 'submitted') waiting.push({ key: r.key, label: `Written examination: ${r.detail.toLowerCase()}` });
+      else todo.push({ key: r.key, label: openExam || r.status === 'in_progress' ? 'Complete the written POCUS examination' : 'Written POCUS examination — not yet open', to: '/exams', cta: 'Examinations' });
+    } else if (r.kind === 'epa') {
+      const cs = r.extra?.criteria_status;
+      if (cs === 'partially_met' || cs === 'outstanding') todo.push({ key: r.key, label: `C6 EPAs: criteria ${cs === 'partially_met' ? 'partially met' : 'outstanding'} — continue requesting EPA assessments in Elentra`, to: anchor, cta: 'Details' });
+      else waiting.push({ key: r.key, label: 'C6 EPA review by faculty (from your Elentra assessments)' });
+    }
+  }
+  return { todo, waiting };
 }

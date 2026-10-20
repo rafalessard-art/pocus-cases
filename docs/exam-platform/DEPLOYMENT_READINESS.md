@@ -9,7 +9,8 @@
 | Name, institutional email, role, training level | The person, admins, block evaluators | Supabase Postgres (ca-central-1) |
 | Exam answers, scores, attempts | The resident (per release policy), block evaluators, admins | Postgres |
 | Brightspace completion screenshots/PDFs | The resident, block evaluators, admins | Supabase Storage, private bucket (ca-central-1) |
-| EPA review (transcribed), faculty observations, ITAR drafts and approved versions | Block evaluators and admins only, **never residents** | Postgres |
+| EPA verification: Elentra-review attestation and criteria decision | The resident (decision, reviewer and date only), block evaluators, admins | Postgres |
+| EPA notes and concerns, faculty observations, ITAR drafts and approved versions | Block evaluators and admins only, **never residents** | Postgres |
 | Rotation requirement statuses; scan **counts** per category (no patient data) | The resident (own), block evaluators, admins | Postgres |
 | Audit log (approvals, verifications, exports, deletions) | Admins | Postgres |
 | Ultrasound teaching clips (de-identified/synthetic, with provenance) | Staff; residents during exams | Private Storage bucket |
@@ -42,5 +43,5 @@ Vercel serves only static code; it stores no learner data.
   - review the auth redirect URLs.
 - **Vercel:** merge to `main` only after approval. The production domain is `pocus-cases.vercel.app` or an institutional domain. Keep preview protection on.
 - **Exam:** publish the real exam with a 75% threshold and confirmed attempts and feedback settings.
-- **Optional:** SSO (institutional identity provider), scheduled auto-close of abandoned attempts (pg_cron), and approved Brightspace / Elentra / QPath count imports (the data model reserves them).
+- **Optional:** SSO (institutional identity provider), scheduled auto-close of abandoned attempts (pg_cron), and approved Brightspace / Elentra / QPath count imports (the data model reserves them; Elentra design in ELENTRA_IMPORT_PROPOSAL.md).
 - **Operations:** a named admin and a backup admin, export of results and approved ITARs each block, and an incident contact.

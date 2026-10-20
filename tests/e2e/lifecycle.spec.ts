@@ -280,7 +280,10 @@ test('full examination lifecycle', async ({ page, context }) => {
   ];
   await test.step('resident uploads Brightspace completion evidence for each required case', async () => {
     await page.goto('/app/');
-    await page.getByRole('link', { name: 'Upload evidence' }).click();
+    // the resident home leads with requirements, next steps and the two main actions
+    await expect(page.getByTestId('next-steps')).toContainText('0/7');
+    await expect(page.getByTestId('todo-list')).toContainText('Upload Brightspace completion for 4 learning cases');
+    await page.getByTestId('cta-upload').click();
     await expect(page.getByRole('heading', { name: 'Learning-case evidence' })).toBeVisible();
     await expect(page.getByText(cohortName)).toBeVisible();
     await expect(page.getByTestId('evidence-requirement')).toHaveCount(5); // 4 required cases + optional TeachingMedicine record
@@ -301,10 +304,10 @@ test('full examination lifecycle', async ({ page, context }) => {
   });
 
   await test.step('resident reports scan counts (numbers only) and submits rotation activities', async () => {
-    await page.getByRole('link', { name: 'Requirements', exact: true }).click();
+    await page.getByRole('link', { name: 'Home', exact: true }).click();
+    await page.getByTestId('cta-report-scans').click(); // opens the scan-count form directly
     await expect(page.getByRole('heading', { name: 'Rotation requirements' })).toBeVisible();
     await expect(page.getByTestId('req-summary')).toContainText('0 of 7');
-    await page.getByTestId('my-scan-edit').click();
     for (const [k, n] of [['airway', 5], ['cardiac', 40], ['lung_pleura', 15], ['abdominal_fast', 20], ['gastric', 20], ['dvt', 2]] as const) {
       await page.getByTestId(`my-scan-count-${k}`).fill(String(n));
     }
@@ -404,6 +407,7 @@ test('full examination lifecycle', async ({ page, context }) => {
 
   await test.step('resident sees the faculty message and uploads a replacement', async () => {
     await signIn(page, LEARNER);
+    await expect(page.getByTestId('todo-list')).toContainText('Re-upload 1 learning case returned by faculty');
     await expect(page.getByText('Action needed').first()).toBeVisible();
     await page.goto('/app/evidence');
     const row = page.getByTestId('evidence-requirement').filter({ hasText: 'Peripheral Vascular Access' });
@@ -429,13 +433,17 @@ test('full examination lifecycle', async ({ page, context }) => {
     await expect(page.locator('.checklist a.done', { hasText: 'Learning cases' })).toContainText('4/4 verified');
 
     // C. EPA review (fictional, transcribed from Elentra)
-    await page.getByTestId('epa-id').first().fill('DEMO-EPA-1');
-    await page.getByLabel('EPA title').first().fill('Fictional EPA: focused cardiac ultrasound');
-    await page.getByLabel('Number of assessments').first().fill('3');
-    await page.getByTestId('epa-entrustment').first().fill('Fictional: supervision on request');
+    // streamlined: attest the Elentra review, decide on the criteria, optional note — no EPA re-entry
+    await expect(page.getByTestId('epa-form')).toContainText('draft — pending director approval');
+    await page.getByTestId('epa-reviewed').check();
+    await page.getByTestId('epa-decision-met').check();
+    await expect(page.getByTestId('epa-save')).toBeDisabled(); // "met" needs the criteria confirmed
+    await page.getByTestId('epa-criteria-confirmed').check();
+    await page.getByTestId('epa-form').getByText('Optional notes').click();
     await page.getByTestId('epa-strengths').fill('Fictional data: clear communication of findings to the team');
-    await page.getByTestId('epa-complete').click();
-    await expect(page.locator('#epa').getByText(/^Complete/)).toBeVisible();
+    await page.getByTestId('epa-save').click();
+    await expect(page.getByTestId('epa-summary')).toContainText('Reviewed in Elentra by Dr. Demo Faculty');
+    await expect(page.locator('#epa .badge', { hasText: 'Criteria met' })).toBeVisible();
 
     // D. observations, by category
     await page.getByTestId('obs-category').selectOption('scanning');
@@ -480,7 +488,8 @@ test('full examination lifecycle', async ({ page, context }) => {
     await expect(page.getByTestId('section-exam')).toHaveValue(/score was 100\.0%/);
     await expect(page.getByTestId('section-exam')).toHaveValue(/reflect knowledge only/);
     await expect(page.getByTestId('section-cases')).toHaveValue(/4 of 4 required learning cases was verified/);
-    await expect(page.getByTestId('section-epa')).toHaveValue(/DEMO-EPA-1 — Fictional EPA: focused cardiac ultrasound: 3 assessments; entrustment: Fictional: supervision on request/);
+    await expect(page.getByTestId('section-epa')).toHaveValue(/Dr\. Demo Faculty reviewed the resident's EPA assessments in Elentra on .*C6 POCUS EPA completion criteria: met \(criteria confirmed by the reviewing faculty member\); the criteria are a draft pending rotation director approval\./s);
+    await expect(page.getByTestId('section-epa')).toHaveValue(/Strengths noted from EPA assessments: Fictional data: clear communication/);
     await expect(page.getByTestId('section-observations')).toHaveValue(/Practical scanning skills:\n• Fictional: obtained PLAX/);
     await expect(page.getByTestId('section-observations')).toHaveValue(/No observations recorded for: Clinical judgement, Technical performance/);
     await expect(page.getByTestId('section-observations')).not.toHaveValue(/Engaged well in the scanning sessions/); // not tied to the block

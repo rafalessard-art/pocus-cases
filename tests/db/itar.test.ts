@@ -110,19 +110,25 @@ describe('evidence upload and verification', () => {
 });
 
 describe('EPA review, observations and access separation', () => {
-  it('EPA review: faculty of the block only; completion needs a date; complete reviews are locked until re-opened', async () => {
+  it('EPA verification: faculty of the block only; needs an Elentra attestation and a criteria decision; locked until re-opened', async () => {
     await expect(as(otherFaculty, (q) => q(`insert into public.epa_reviews (course_id, learner_id, cohort_id) values ($1, $2, $3)`, [course, resident.id, block])))
       .rejects.toThrow(/row-level security/);
     const [r] = await as(faculty, (q) => q(
       `insert into public.epa_reviews (course_id, learner_id, cohort_id, entries, strengths) values ($1, $2, $3, $4, 'Fictional strength') returning id, status`,
-      [course, resident.id, block, JSON.stringify([{ epa: 'DEMO-EPA-1', title: 'Fictional EPA', n_assessments: 2, entrustment: 'Level 4 (x2)' }])],
+      [course, resident.id, block, JSON.stringify([{ epa: 'DEMO-EPA-1', title: 'Optional detail', n_assessments: 2 }])],
     ));
     expect(r.status).toBe('pending');
-    await expect(as(faculty, (q) => q(`update public.epa_reviews set status = 'complete' where id = $1`, [r.id]))).rejects.toThrow(/review date/);
-    await as(faculty, (q) => q(`update public.epa_reviews set status = 'complete', review_date = '2026-09-27' where id = $1`, [r.id]));
-    await expect(as(faculty, (q) => q(`update public.epa_reviews set strengths = 'changed' where id = $1`, [r.id]))).rejects.toThrow(/Re-open/);
-    await as(faculty, (q) => q(`update public.epa_reviews set status = 'pending' where id = $1`, [r.id]));
-    await as(faculty, (q) => q(`update public.epa_reviews set status = 'complete' where id = $1`, [r.id]));
+    const upd = (set: string) => as(faculty, (q) => q(`update public.epa_reviews set ${set} where id = $1`, [r.id]));
+    await expect(upd(`status = 'complete'`)).rejects.toThrow(/reviewed the resident's EPA assessments in Elentra/);
+    await expect(upd(`reviewed_in_elentra = true, status = 'complete'`)).rejects.toThrow(/met, partially met or outstanding/);
+    await expect(upd(`reviewed_in_elentra = true, criteria_status = 'met', status = 'complete'`)).rejects.toThrow(/criteria are met/);
+    await upd(`reviewed_in_elentra = true, criteria_status = 'met', criteria_confirmed = true, status = 'complete'`);
+    const [row] = await sql(`select review_date = current_date as today, completed_by, criteria_snapshot from public.epa_reviews where id = $1`, [r.id]);
+    expect(row).toMatchObject({ today: true, completed_by: faculty.id });
+    expect(row.criteria_snapshot).toMatch(/^DRAFT — pending rotation director approval/);
+    await expect(upd(`strengths = 'changed'`)).rejects.toThrow(/Re-open/);
+    await upd(`status = 'pending'`);
+    await upd(`status = 'complete'`);
     const acts = (await sql(`select action from public.audit_log where entity = 'epa_reviews' and entity_id = $1 and action like 'epa_%' order by id`, [r.id])).map((x) => x.action);
     expect(acts).toEqual(['epa_review_completed', 'epa_review_reopened', 'epa_review_completed']);
     await expect(as(faculty, (q) => q(`delete from public.epa_reviews where id = $1`, [r.id]))).resolves.toEqual([]);

@@ -17,7 +17,8 @@ const base = (o: Partial<ItarInput> = {}): ItarInput => ({
     { id: 'r2', title: 'ONSD case', required: true, submissions: [{ id: 's2', status: 'clarification_requested', original_filename: 'b.png', mime_type: 'image/png', storage_path: 'q', created_at: '2026-09-11T00:00:00Z' }] },
     { id: 'r3', title: 'Vascular case', required: true, submissions: [] },
   ],
-  epa: { status: 'complete', entries: [{ epa: 'DEMO-1', title: 'Fictional EPA', n_assessments: 2, entrustment: 'Level 4' }], strengths: 'Organised', areas_for_improvement: '', review_date: '2026-09-27', completed_by_name: 'Dr Faculty', completed_at: '2026-09-27T15:00:00Z' },
+  epa: { status: 'complete', entries: [{ epa: 'DEMO-1', title: 'Fictional EPA', n_assessments: 2, entrustment: 'Level 4' }], strengths: 'Organised', areas_for_improvement: '', review_date: '2026-09-27', completed_by_name: 'Dr Faculty', completed_at: '2026-09-27T15:00:00Z',
+    reviewed_in_elentra: true, criteria_status: 'met', criteria_confirmed: true, criteria_snapshot: 'DRAFT — pending rotation director approval: …', concerns: '' },
   observations: [{ id: 'o1', category: 'scanning', observed_on: '2026-09-12', body: 'Obtained a clear A4C view without assistance', author: 'Dr Faculty', created_at: '2026-09-12T10:00:00Z' }],
   strengths: '', areasForImprovement: '', otherComments: '', today: '2026-09-28',
   ...o,
@@ -59,7 +60,10 @@ describe('ITAR draft', () => {
   });
 
   it('uses only a completed EPA review and faculty-written observations', () => {
-    expect(s.find((x) => x.key === 'epa')!.text).toMatch(/reviewed by Dr Faculty on September 27, 2026\.\n• DEMO-1 — Fictional EPA: 2 assessments; entrustment: Level 4/);
+    const epa = s.find((x) => x.key === 'epa')!.text;
+    expect(epa).toMatch(/^Dr Faculty reviewed the resident's EPA assessments in Elentra on September 27, 2026\. C6 POCUS EPA completion criteria: met \(criteria confirmed by the reviewing faculty member\); the criteria are a draft pending rotation director approval\./);
+    expect(epa).toMatch(/\n• DEMO-1 — Fictional EPA: 2 assessments; entrustment: Level 4/); // optional details still included when recorded
+    expect(epa).toMatch(/not a separate assessment of clinical competence/);
     expect(draftItar(base({ epa: { ...base().epa!, status: 'pending' } })).find((x) => x.key === 'epa')!.text).toBe('EPA review pending.');
     const o = s.find((x) => x.key === 'observations')!.text;
     expect(o).toMatch(/Practical scanning skills:\n• Obtained a clear A4C view without assistance\. \(Dr Faculty, September 12, 2026\)/);
@@ -95,6 +99,20 @@ describe('ITAR draft', () => {
     b.requirements[1].submissions[0].status = 'verified';
     expect(fingerprint(b)).not.toBe(a);
     expect(requirementState(b.requirements[1])).toBe('verified');
+  });
+});
+
+describe('streamlined EPA verification in the draft', () => {
+  it('concerns appear in the EPA section and are carried into areas for improvement', () => {
+    const d = draftItar(base({ epa: { ...base().epa!, entries: [], criteria_status: 'partially_met', criteria_confirmed: false, concerns: 'Fictional: limited cardiac EPA observations' } }));
+    expect(d.find((x) => x.key === 'epa')!.text).toMatch(/criteria: partially met; the criteria are a draft/);
+    expect(d.find((x) => x.key === 'epa')!.text).toMatch(/Concerns noted by the reviewing faculty member: Fictional: limited cardiac EPA observations\./);
+    expect(d.find((x) => x.key === 'learning_needs')!.text).toMatch(/Concerns from the EPA review \(faculty to address in the ITAR\): Fictional: limited cardiac EPA observations\./);
+    expect(outstanding(base({ epa: { ...base().epa!, criteria_status: 'partially_met' } }))).toContain('C6 POCUS EPA criteria partially met');
+  });
+  it('a review completed under the old form is not treated as verified', () => {
+    const d = draftItar(base({ epa: { ...base().epa!, criteria_status: null } }));
+    expect(d.find((x) => x.key === 'epa')!.text).toBe('EPA review recorded before criteria verification; re-verification pending.');
   });
 });
 

@@ -27,7 +27,13 @@ export type EpaEntry = { epa: string; title?: string; n_assessments?: number | n
 export type EpaReview = {
   id?: string; status: 'pending' | 'complete'; entries: EpaEntry[]; strengths: string; areas_for_improvement: string;
   review_date: string | null; completed_by_name?: string | null; completed_at?: string | null;
+  /** streamlined verification (migration 11) */
+  reviewed_in_elentra?: boolean; criteria_status?: 'met' | 'partially_met' | 'outstanding' | null; criteria_confirmed?: boolean;
+  criteria_snapshot?: string; concerns?: string;
 };
+export const CRITERIA_LABEL = { met: 'met', partially_met: 'partially met', outstanding: 'outstanding' } as const;
+/** A completed review under the streamlined form (older completed reviews lack a criteria decision). */
+export const epaVerified = (e: EpaReview | null | undefined) => !!e && e.status === 'complete' && !!e.criteria_status;
 export type Category = 'scanning' | 'clinical_judgement' | 'technical' | 'professionalism' | 'communication' | 'general';
 export type Observation = { id: string; category: Category; observed_on: string | null; context?: string; body: string; author?: string | null; created_at: string };
 export type WsAttempt = {
@@ -136,7 +142,8 @@ export function outstanding(i: Pick<ItarInput, 'examAssigned' | 'attempts' | 'se
     const s = requirementState(r);
     if (s !== 'verified') out.push(`Learning case “${r.title}”: ${STATUS_LABEL[s].toLowerCase()}`);
   }
-  if (!i.epa || i.epa.status !== 'complete') out.push('EPA review (Elentra) pending');
+  if (!epaVerified(i.epa)) out.push('EPA review (Elentra) pending');
+  else if (i.epa!.criteria_status !== 'met') out.push(`C6 POCUS EPA criteria ${CRITERIA_LABEL[i.epa!.criteria_status!]}`);
   return out;
 }
 
@@ -184,17 +191,22 @@ export function draftItar(i: ItarInput): ItarSection[] {
   }
   S.push({ key: 'cases', title: 'Required learning cases (Brightspace)', text: cases.join(' ') });
 
-  // C. EPA review
+  // C. EPA review — faculty verification of Elentra assessments (no re-entry of EPA details required)
   const epa: string[] = [];
-  if (!i.epa || i.epa.status !== 'complete') epa.push('EPA review pending.');
+  if (!epaVerified(i.epa)) epa.push(i.epa?.status === 'complete' ? 'EPA review recorded before criteria verification; re-verification pending.' : 'EPA review pending.');
   else {
-    epa.push(`EPA assessments in Elentra were reviewed${i.epa.completed_by_name ? ` by ${i.epa.completed_by_name}` : ''} on ${fmt(i.epa.review_date)}.`);
-    for (const x of i.epa.entries.filter((x) => x.epa?.trim())) {
-      const n = x.n_assessments == null || Number.isNaN(Number(x.n_assessments)) ? '' : `: ${x.n_assessments} assessment${Number(x.n_assessments) === 1 ? '' : 's'}`;
-      epa.push(`\n• ${x.epa.trim()}${x.title?.trim() ? ` — ${x.title.trim()}` : ''}${n}${x.entrustment?.trim() ? `; entrustment: ${x.entrustment.trim()}` : ''}${x.comment?.trim() ? `. ${sentence(x.comment)}` : ''}`);
+    const x = i.epa!;
+    const draftCriteria = /^\s*DRAFT/i.test(x.criteria_snapshot ?? '');
+    epa.push(`${x.completed_by_name ?? 'Faculty'} reviewed the resident's EPA assessments in Elentra on ${fmt(x.completed_at || x.review_date)}.`);
+    epa.push(`C6 POCUS EPA completion criteria: ${CRITERIA_LABEL[x.criteria_status!]}${x.criteria_status === 'met' ? ' (criteria confirmed by the reviewing faculty member)' : ''}${draftCriteria ? '; the criteria are a draft pending rotation director approval' : ''}.`);
+    for (const e of i.epa!.entries.filter((e) => e.epa?.trim())) {
+      const n = e.n_assessments == null || Number.isNaN(Number(e.n_assessments)) ? '' : `: ${e.n_assessments} assessment${Number(e.n_assessments) === 1 ? '' : 's'}`;
+      epa.push(`\n• ${e.epa.trim()}${e.title?.trim() ? ` — ${e.title.trim()}` : ''}${n}${e.entrustment?.trim() ? `; entrustment: ${e.entrustment.trim()}` : ''}${e.comment?.trim() ? `. ${sentence(e.comment)}` : ''}`);
     }
-    if (i.epa.strengths.trim()) epa.push(`\nStrengths from EPA assessments: ${sentence(i.epa.strengths)}`);
-    if (i.epa.areas_for_improvement.trim()) epa.push(`\nAreas for improvement from EPA assessments: ${sentence(i.epa.areas_for_improvement)}`);
+    if (x.strengths.trim()) epa.push(`\nStrengths noted from EPA assessments: ${sentence(x.strengths)}`);
+    if (x.areas_for_improvement.trim()) epa.push(`\nAreas for improvement noted from EPA assessments: ${sentence(x.areas_for_improvement)}`);
+    if (x.concerns?.trim()) epa.push(`\nConcerns noted by the reviewing faculty member: ${sentence(x.concerns)}`);
+    epa.push('\nThis records that EPA assessments were reviewed against the program criteria; it is not a separate assessment of clinical competence.');
   }
   S.push({ key: 'epa', title: 'Workplace-based assessment — EPA review (Elentra)', text: epa.join(' ').replace(/ \n/g, '\n') });
 
@@ -220,6 +232,7 @@ export function draftItar(i: ItarInput): ItarSection[] {
   // Faculty synthesis
   S.push({ key: 'strengths', title: 'Strengths', text: i.strengths.trim() ? sentence(i.strengths) : '[Faculty to complete: strengths observed during the block.]' });
   const needs: string[] = [i.areasForImprovement.trim() ? sentence(i.areasForImprovement) : '[Faculty to complete: areas for improvement and learning plan.]'];
+  if (epaVerified(i.epa) && i.epa!.concerns?.trim()) needs.push(`\nConcerns from the EPA review (faculty to address in the ITAR): ${sentence(i.epa!.concerns!)}`);
   const o = outstanding(i);
   needs.push(o.length ? `\nOutstanding requirements:\n${o.map((x) => `• ${x}`).join('\n')}` : '\nNo outstanding requirements recorded in the portal.');
   if (e && e.gradingStatus === 'complete') {
@@ -237,8 +250,8 @@ export function draftItar(i: ItarInput): ItarSection[] {
   const reviewers = [...new Set(verified.map((r) => latestSubmission(r)?.reviewer_name).filter(Boolean))] as string[];
   const count = (s: string) => req.filter((r) => requirementState(r) === s).length;
   src.push(`• Learning cases: screenshots/PDFs uploaded by the resident (not retrieved from Brightspace); ${verified.length} verified${reviewers.length ? ` by ${andList(reviewers)}` : ''}, ${count('submitted')} awaiting review, ${count('clarification_requested') + count('rejected')} returned to the resident, ${count('missing')} not submitted.`);
-  src.push(i.epa?.status === 'complete'
-    ? `• EPA review: transcribed from Elentra by faculty${i.epa.completed_by_name ? ` (${i.epa.completed_by_name})` : ''}, completed ${fmt(i.epa.completed_at || i.epa.review_date)}; not retrieved from Elentra automatically.`
+  src.push(epaVerified(i.epa)
+    ? `• EPA review: faculty attestation that the Elentra assessments were reviewed${i.epa!.completed_by_name ? ` (${i.epa!.completed_by_name})` : ''}, ${fmt(i.epa!.completed_at || i.epa!.review_date)}; EPA data not retrieved from Elentra automatically.`
     : '• EPA review: pending.');
   const authors = [...new Set(i.observations.map((x) => x.author).filter(Boolean))] as string[];
   src.push(`• Direct observations: ${i.observations.length} entr${i.observations.length === 1 ? 'y' : 'ies'}${authors.length ? ` by ${andList(authors)}` : ''}.`);
@@ -257,7 +270,7 @@ export function fingerprint(i: ItarInput): string {
   const key = JSON.stringify([
     attempt?.id, attempt?.score_pct, attempt?.grading_status,
     i.requirements.map((r) => [r.id, latestSubmission(r)?.id, requirementState(r)]),
-    i.epa ? [i.epa.status, i.epa.completed_at] : null,
+    i.epa ? [i.epa.status, i.epa.completed_at, i.epa.criteria_status] : null,
     i.observations.map((o) => o.id).sort(),
     i.rotationReqs ? [i.rotationReqs.requirements.map((r) => [r.key, r.status, r.stage]), i.rotationReqs.scans.verified_total] : null,
   ]);

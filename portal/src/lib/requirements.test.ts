@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FORBIDDEN, draftItar, outstanding, type ItarInput } from './itar';
-import { completion, outstandingRequirements, requirementActions, requirementsSection, scanDeltas, withSelectedAttempt, type Rotation, type RotationReq, type ScanCategory } from './requirements';
+import { completion, outstandingRequirements, requirementActions, requirementsSection, residentNextSteps, scanDeltas, withSelectedAttempt, type Rotation, type RotationReq, type ScanCategory } from './requirements';
 
 const req = (key: string, kind: RotationReq['kind'], status: RotationReq['status'], extra: Partial<RotationReq> = {}): RotationReq => ({
   id: key, key, kind, title: key, description: '', required: true, resident_submits: kind === 'attestation', stages: [], evidence_requirement_id: null,
@@ -117,5 +117,43 @@ describe('exam consistency between the requirements section and the exam section
     const exam = draftItar(input).find((s) => s.key === 'exam')!.text;
     expect(exam).toMatch(/below the rotation pass mark of 75%/);
     expect(exam).not.toMatch(/60%/);
+  });
+});
+
+describe('resident next steps', () => {
+  it('turns requirement states into resident actions and a separate "waiting on faculty" list', () => {
+    const r: Rotation = {
+      ...rot,
+      requirements: [
+        req('C6 POCUS EPAs', 'epa', 'in_progress', { key: 'c6_epas', action: 'resident', extra: { criteria_status: 'partially_met' } }),
+        req('Brightspace learning cases', 'learning_cases', 'clarification_requested', { key: 'bs', extra: { returned: 1, missing: 2, awaiting: 1, verified: 0 } }),
+        req('TeachingMedicine online skills modules', 'attestation', 'clarification_requested', { key: 'tm', faculty_message: 'Module 4 missing' }),
+        req('QPath mentor review and ultrasound portfolio', 'attestation', 'submitted', { key: 'qp' }),
+        req('Logbook of reviewed POCUS scans', 'scan_log', 'submitted', { key: 'scan_logbook' }),
+        req('Written POCUS examination', 'exam', 'in_progress', { key: 'exam', detail: 'Score 60.0% (attempt 1) — below the rotation pass mark of 75%', extra: { met: false, pass_pct: 75 } }),
+        req('POCUS rounds presentation', 'attestation', 'not_started', { key: 'rounds', stages: [{ key: 'planned', label: 'Planned', by: 'resident' }] }),
+      ],
+    };
+    const { todo, waiting } = residentNextSteps(r);
+    expect(todo.map((t) => t.label)).toEqual([
+      'C6 EPAs: criteria partially met — continue requesting EPA assessments in Elentra',
+      'Re-upload 1 learning case returned by faculty',
+      'Upload Brightspace completion for 2 learning cases',
+      'TeachingMedicine online skills modules: faculty asked for clarification',
+      'Report your scan counts — 45/65 verified so far',
+      'Plan your POCUS rounds presentation (topic and date)',
+    ]);
+    expect(todo.find((t) => t.key === 'tm')).toMatchObject({ detail: 'Module 4 missing', to: '/requirements#req-tm', tone: 'warn' });
+    expect(todo.find((t) => t.key === 'scan_logbook')!.to).toBe('/requirements?report=scans#scans');
+    expect(waiting.map((t) => t.label)).toEqual([
+      '1 learning-case upload awaiting faculty review',
+      'QPath mentor review and ultrasound portfolio — awaiting faculty confirmation',
+      'Reported scans awaiting faculty verification',
+      'Score 60.0% (attempt 1) — below the rotation pass mark of 75%. Faculty will contact you about a re-attempt.',
+    ]);
+  });
+  it('shows nothing to do once everything is complete or not yet due', () => {
+    const done: Rotation = { ...rot, requirements: rot.requirements.map((x) => ({ ...x, status: x.status === 'not_yet_due' ? 'not_yet_due' : 'verified' })) };
+    expect(residentNextSteps(done)).toEqual({ todo: [], waiting: [] });
   });
 });

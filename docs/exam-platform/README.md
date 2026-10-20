@@ -80,7 +80,13 @@ POCUS is simply the first row in `courses` (migration `…600_pocus_course.sql`)
 **ITAR preparation workspace (Phase 2).** Faculty → rotation block → resident. One page brings together, for that resident and block:
 - **A. Exam performance**, pulled automatically: score, date, pass/fail and domains. The **most recent submitted attempt** is used by default. Faculty can pick another, and the draft states which attempt was used and why.
 - **B. Learning-case evidence (Brightspace).** Residents upload a screenshot or PDF per required case (Learner → *My evidence*) to the private `itar-evidence` bucket. Faculty preview it and mark it *verified*, *needs clarification* or *rejected*, with a message the resident sees. Re-uploads keep the full history. Requirements are configured in Admin → *ITAR setup*, any number per rotation or per block. They are seeded as drafts from the 4 required teaching cases and need confirming against the Brightspace course. A future official Brightspace import has a reserved `source` value and `external_ref` column, but is not built.
-- **C. EPA review (Elentra).** A faculty-entered form with EPA IDs, number of assessments, entrustment as recorded, strengths, areas for improvement, review date, and status *pending* / *complete*. Complete reviews are locked until re-opened.
+- **C. EPA verification (Elentra).** A streamlined form:
+  1. tick "I reviewed this resident's EPA assessments in Elentra";
+  2. choose *C6 POCUS EPA criteria met / partially met / outstanding*;
+  3. for "met", confirm the configured criteria (draft until the director approves them in Admin → ITAR setup);
+  4. optionally add strengths, areas or **concerns**.
+
+  The reviewer and date are recorded automatically, and no EPA titles or ratings are re-entered. An optional detail table remains for faculty who want it. Only *met* with confirmed criteria satisfies the C6 requirement; *partially met* or *outstanding* leaves it open for the resident. Concerns are carried into the ITAR draft (the EPA section and areas for improvement). Verifications are locked and audit-logged; updating one re-opens it and logs both events. Reviews saved under the old form show "please re-verify". An Elentra report import is proposed only, not built ([ELENTRA_IMPORT_PROPOSAL.md](ELENTRA_IMPORT_PROPOSAL.md)).
 - **D. Direct faculty observations** by category (scanning, clinical judgement, technical, professionalism, communication, general), date and context. They are shown apart from exam scores and never derived from them.
 - **E. ITAR draft.** Built from a template into editable sections: rotation, exam, cases, EPA, observations, strengths, areas for improvement and outstanding requirements, and evidence sources and verification status.
   - Faculty-judgement sections start as `[Faculty to complete…]` placeholders, and approval is blocked until they are replaced.
@@ -107,6 +113,14 @@ Resident-reported counts are shown separately and never count. TeachingMedicine,
 
 The resident sees a dashboard with progress bars. Faculty see a requirements table at the top of the ITAR workspace, with who verified each item and when. The block overview shows requirements and scans columns. The ITAR draft gains a "Rotation requirements — completion record" section. It states that scan numbers are a completion measure and not a competence assessment, and it assigns no rating. See [QPATH_AND_SCAN_LOG.md](QPATH_AND_SCAN_LOG.md).
 
+**Resident home (Phase 5).** The resident's home page opens with **Your next steps**:
+- progress (requirements met, and faculty-verified scans out of 102);
+- one-click buttons for **Upload Brightspace evidence** and **Report scan counts**;
+- a numbered to-do list built from the requirement statuses (returned uploads with the faculty message, TeachingMedicine / QPath / rounds submissions, the exam per release settings, EPA criteria not yet met);
+- a "Waiting on faculty" list.
+
+Residents never need faculty screens. Excel logbooks are not uploaded; see QPATH_AND_SCAN_LOG.md for the aggregate-template assessment.
+
 **Before the departmental demonstration:** see [VALIDATION_REPORT.md](VALIDATION_REPORT.md), [DEMO_SCRIPT.md](DEMO_SCRIPT.md), [DIRECTOR_DECISIONS.md](DIRECTOR_DECISIONS.md) and [DEPLOYMENT_READINESS.md](DEPLOYMENT_READINESS.md).
 
 **Block overview (cohort dashboard).** Faculty → block card. It shows one row per resident: exam, evidence verified/awaiting/returned/missing, EPA, observations, ITAR status, and "needs attention", split into *you* vs *resident*. It has an "only needing attention" filter, CSV export, one click into each resident, and Previous/Next between residents.
@@ -121,8 +135,8 @@ The resident sees a dashboard with progress bars. Faculty see a requirements tab
 
 ## 4. Tests
 
-- **Unit (27):** autosave queue (offline, crash-restore, ordering), CSV, importer, evaluation drafting guardrails, ITAR draft (attempt rule, verified-only evidence, no rating/inference, placeholders, sources, staleness), overview attention rules.
-- **Database (44):** the ITAR suite (13) covers evidence privacy and upload rules, block-scoped faculty access, review messages and audit, EPA locking, learner exclusion, one ITAR per resident per block, approval lock, and retention. The original suite (31): permissions and secrecy for every role, invitation gating, versioning and immutability, autosave seq rule, timing and deadline, attempts and accommodations, partial-credit, short-answer and hotspot scoring, release policy, storage policy, evaluations.
+- **Unit (41):** autosave queue (offline, crash-restore, ordering), CSV, importer, evaluation drafting guardrails, ITAR draft (attempt rule, verified-only evidence, no rating/inference, placeholders, sources, staleness), overview attention rules.
+- **Database (71):** the ITAR suite (13) covers evidence privacy and upload rules, block-scoped faculty access, review messages and audit, EPA locking, learner exclusion, one ITAR per resident per block, approval lock, and retention. The original suite (31): permissions and secrecy for every role, invitation gating, versioning and immutability, autosave seq rule, timing and deadline, attempts and accommodations, partial-credit, short-answer and hotspot scoring, release policy, storage policy, evaluations.
 - **End-to-end (2 tests; the main scenario now includes the 8-step ITAR workflow):** the full demonstration lifecycle in a real browser against a Supabase-equivalent stack. It includes an interruption with a reload, offline autosave, video playback checks, a phone-width layout check and automated WCAG 2.1 AA checks (axe) on the main screens.
 
 See [TESTING.md](TESTING.md).

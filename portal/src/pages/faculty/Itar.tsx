@@ -7,7 +7,7 @@ import { isAdmin, useAuth } from '../../lib/auth';
 import { download, toCSV } from '../../lib/csv';
 import { deleteEvidenceFiles } from '../../lib/evidence';
 import {
-  CATEGORIES, STATUS_LABEL, TONE, attention, chooseAttempt, composeSummary, draftItar, factsFrom, fingerprint, latestSubmission, outstanding,
+  CATEGORIES, CRITERIA_LABEL, epaVerified, STATUS_LABEL, TONE, attention, chooseAttempt, composeSummary, draftItar, factsFrom, fingerprint, latestSubmission, outstanding,
   requirementState, type AttemptRule, type EpaEntry, type EpaReview, type ItarInput, type ItarSection, type Observation, type OverviewRow,
   type Requirement, type WsAttempt,
 } from '../../lib/itar';
@@ -130,7 +130,7 @@ export function BlockOverview() {
           <div className="stat"><b>{n}</b><span>residents</span></div>
           <div className="stat"><b>{count((r) => !!r.exam.latest)}/{n}</b><span>exams submitted</span></div>
           <div className="stat"><b>{count((r) => r.evidence.required > 0 && r.evidence.verified === r.evidence.required)}/{n}</b><span>cases all verified</span></div>
-          <div className="stat"><b>{count((r) => r.epa_status === 'complete')}/{n}</b><span>EPA reviews done</span></div>
+          <div className="stat"><b>{rq.data ? rows.filter((x) => x.x?.requirements.find((q) => q.kind === 'epa')?.status === 'verified').length : count((r) => r.epa_status === 'complete')}/{n}</b><span>EPA criteria met</span></div>
           {rq.data && <div className="stat"><b>{rows.filter((x) => x.c && x.c.outstanding === 0).length}/{n}</b><span>requirements complete</span></div>}
           <div className="stat"><b>{count((r) => r.itar?.status === 'approved')}/{n}</b><span>ITARs approved</span></div>
         </div>
@@ -185,7 +185,18 @@ export function BlockOverview() {
                       {r.evidence.required - r.evidence.submitted > 0 && <Badge>{r.evidence.required - r.evidence.submitted} missing</Badge>}
                     </div>
                   </td>
-                  <td>{r.epa_status === 'complete' ? <Badge tone="ok">complete</Badge> : <Badge tone="warn">pending</Badge>}</td>
+                  <td>
+                    {(() => {
+                      const q = x?.requirements.find((y) => y.kind === 'epa');
+                      const cs = q?.extra?.criteria_status as string | undefined;
+                      const b = q?.status === 'not_applicable' || q?.status === 'not_yet_due' ? <Badge>{REQ_LABEL[q.status]}</Badge>
+                        : cs === 'met' ? <Badge tone="ok">criteria met</Badge>
+                        : cs === 'partially_met' ? <Badge tone="warn">partially met</Badge>
+                        : cs === 'outstanding' ? <Badge tone="bad">outstanding</Badge>
+                        : <Badge tone="warn">{r.epa_status === 'complete' ? 're-verify' : 'pending'}</Badge>;
+                      return <>{b}{q?.extra?.has_concerns && <div><Badge tone="bad">concern noted</Badge></div>}</>;
+                    })()}
+                  </td>
                   <td className="num">{r.n_observations}</td>
                   <td>
                     {!r.itar ? <Badge>not started</Badge> : r.itar.status === 'approved' ? <Badge tone="ok">approved</Badge> : <Badge tone="warn">draft</Badge>}
@@ -240,7 +251,7 @@ export function ItarWorkspace() {
     ...(rc ? [{ id: 'requirements', label: 'Requirements', ok: rc.outstanding === 0, detail: `${rc.done}/${rc.total} complete${rc.notYetDue ? ` · ${rc.notYetDue} not yet due` : ''}` }] : []),
     { id: 'exam', label: 'A · Exam', ok: !!chosen.attempt && chosen.attempt.grading_status === 'complete', detail: chosen.attempt?.score_pct != null ? pct(chosen.attempt.score_pct, 1) : w.exam_assigned ? 'outstanding' : 'none assigned' },
     { id: 'cases', label: 'B · Learning cases', ok: req.length > 0 && nVerified === req.length, detail: `${nVerified}/${req.length} verified` },
-    { id: 'epa', label: 'C · EPA review', ok: w.epa_review?.status === 'complete', detail: w.epa_review?.status === 'complete' ? 'complete' : 'pending' },
+    { id: 'epa', label: 'C · EPA review', ok: epaVerified(w.epa_review) && w.epa_review!.criteria_status === 'met', detail: epaVerified(w.epa_review) ? `criteria ${CRITERIA_LABEL[w.epa_review!.criteria_status!]}` : w.epa_review?.status === 'complete' ? 're-verify' : 'pending' },
     { id: 'observations', label: 'D · Observations', ok: blockObs.length > 0, detail: `${blockObs.length} recorded` },
     { id: 'itar', label: 'E · ITAR draft', ok: locked, detail: locked ? 'approved' : ev ? 'draft' : 'not started' },
   ];
@@ -464,77 +475,126 @@ const blankEntry = (): EpaEntry => ({ epa: '', title: '', n_assessments: null, e
 
 function EpaSection({ w, reload }: { w: Ws; reload: () => void }) {
   const r = w.epa_review;
+  const verified = epaVerified(r);
+  const legacy = r?.status === 'complete' && !r.criteria_status;
+  const crit = useLoad(async () => {
+    const { data } = await supabase.from('rotation_requirements').select('config, cohort_id').eq('kind', 'epa').is('archived_at', null);
+    const rows = (data ?? []).filter((x: any) => !x.cohort_id || x.cohort_id === w.cohort.id).sort((a: any, b: any) => (a.cohort_id ? 0 : 1) - (b.cohort_id ? 0 : 1));
+    const c = rows[0]?.config ?? {};
+    return { text: String(c.criteria ?? ''), approved: c.criteria_status === 'approved' };
+  }, [w.cohort.id]);
+  const [editing, setEditing] = useState(!verified);
   const [f, setF] = useState(() => ({
-    entries: r?.entries?.length ? r.entries : [blankEntry()],
-    strengths: r?.strengths ?? '', areas_for_improvement: r?.areas_for_improvement ?? '', review_date: r?.review_date ?? today(),
+    reviewed: false, decision: (r?.criteria_status ?? '') as '' | 'met' | 'partially_met' | 'outstanding', confirmed: false,
+    strengths: r?.strengths ?? '', areas: r?.areas_for_improvement ?? '', concerns: r?.concerns ?? '',
   }));
+  const [details, setDetails] = useState((r?.entries?.length ?? 0) > 0);
+  const [entries, setEntries] = useState<EpaEntry[]>(r?.entries?.length ? r.entries : [blankEntry()]);
   const [err, setErr] = useState<unknown>();
   const [busy, setBusy] = useState(false);
-  const complete = r?.status === 'complete';
+  const canSave = f.reviewed && !!f.decision && (f.decision !== 'met' || f.confirmed) && w.me !== w.learner.id;
 
-  async function save(status: 'pending' | 'complete') {
+  async function save() {
     setBusy(true);
     setErr(undefined);
-    const body = {
-      entries: f.entries.filter((e) => e.epa.trim() || e.title?.trim() || e.entrustment?.trim() || e.comment?.trim())
-        .map((e) => ({ ...e, n_assessments: e.n_assessments == null || (e.n_assessments as any) === '' ? null : Number(e.n_assessments) })),
-      strengths: f.strengths, areas_for_improvement: f.areas_for_improvement, review_date: f.review_date || null, status,
-    };
-    const q = r
-      ? supabase.from('epa_reviews').update(body).eq('id', r.id)
-      : supabase.from('epa_reviews').insert({ ...body, course_id: w.cohort.course_id, learner_id: w.learner.id, cohort_id: w.cohort.id });
-    const { error } = await q;
-    setBusy(false);
-    if (error) setErr(error);
-    else reload();
+    try {
+      await rpc('verify_epa', {
+        p_learner: w.learner.id, p_cohort: w.cohort.id, p_reviewed: f.reviewed, p_criteria_status: f.decision,
+        p_criteria_confirmed: f.decision === 'met' && f.confirmed, p_strengths: f.strengths, p_areas: f.areas, p_concerns: f.concerns,
+        p_entries: details
+          ? entries.filter((e) => e.epa.trim() || e.title?.trim() || e.entrustment?.trim() || e.comment?.trim())
+            .map((e) => ({ ...e, n_assessments: e.n_assessments == null || (e.n_assessments as any) === '' ? null : Number(e.n_assessments) }))
+          : null,
+      });
+      reload();
+    } catch (e) {
+      setErr(e);
+      setBusy(false);
+    }
   }
-  async function reopen() {
-    setBusy(true);
-    const { error } = await supabase.from('epa_reviews').update({ status: 'pending' }).eq('id', r!.id);
-    setBusy(false);
-    if (error) setErr(error);
-    else reload();
-  }
-  const setEntry = (i: number, k: keyof EpaEntry, v: any) => setF({ ...f, entries: f.entries.map((e, j) => (j === i ? { ...e, [k]: v } : e)) });
+  const setEntry = (i: number, k: keyof EpaEntry, v: any) => setEntries(entries.map((e, j) => (j === i ? { ...e, [k]: v } : e)));
+  const label = r?.criteria_status ? CRITERIA_LABEL[r.criteria_status] : null;
 
   return (
     <section>
-      <SectionHead id="epa" letter="C" title="EPA assessment review (Elentra)">
-        {complete ? <Badge tone="ok">Complete · {fmtDate(r!.completed_at)}</Badge> : <Badge tone="warn">Pending</Badge>}
+      <SectionHead id="epa" letter="C" title="EPA review (Elentra)">
+        {verified ? <Badge tone={r!.criteria_status === 'met' ? 'ok' : 'warn'}>Criteria {label}</Badge> : <Badge tone="warn">{legacy ? 'Re-verify' : 'Pending'}</Badge>}
       </SectionHead>
-      <p className="small muted" style={{ marginTop: -4 }}>Transcribe what you reviewed in Elentra. Only a review marked complete feeds the ITAR draft.</p>
-      <div className="panel stack">
-        <div className="tablewrap">
-          <table className="data">
-            <thead><tr><th>EPA</th><th>Title</th><th className="num"># assessments</th><th>Entrustment observed</th><th>Comment</th><th /></tr></thead>
-            <tbody>
-              {f.entries.map((e, i) => (
-                <tr key={i}>
-                  <td><input type="text" value={e.epa} disabled={complete} onChange={(x) => setEntry(i, 'epa', x.target.value)} placeholder="e.g. TTD-1" aria-label="EPA identifier" data-testid="epa-id" style={{ minWidth: 90 }} /></td>
-                  <td><input type="text" value={e.title ?? ''} disabled={complete} onChange={(x) => setEntry(i, 'title', x.target.value)} aria-label="EPA title" style={{ minWidth: 160 }} /></td>
-                  <td><input type="number" min={0} value={e.n_assessments ?? ''} disabled={complete} onChange={(x) => setEntry(i, 'n_assessments', x.target.value === '' ? null : Number(x.target.value))} aria-label="Number of assessments" style={{ width: 80 }} /></td>
-                  <td><input type="text" value={e.entrustment ?? ''} disabled={complete} onChange={(x) => setEntry(i, 'entrustment', x.target.value)} placeholder="as recorded in Elentra" aria-label="Entrustment" data-testid="epa-entrustment" style={{ minWidth: 140 }} /></td>
-                  <td><input type="text" value={e.comment ?? ''} disabled={complete} onChange={(x) => setEntry(i, 'comment', x.target.value)} aria-label="Comment" style={{ minWidth: 160 }} /></td>
-                  <td>{!complete && f.entries.length > 1 && <button className="btn ghost small" onClick={() => setF({ ...f, entries: f.entries.filter((_, j) => j !== i) })} aria-label="Remove EPA row">✕</button>}</td>
-                </tr>
+      <p className="small muted" style={{ marginTop: -4 }}>
+        Review the resident's EPA assessments in Elentra, then record your verification here. You don't need to re-type EPA titles, ratings or comments.
+      </p>
+      {legacy && <div className="notice warn small" style={{ marginBottom: 10 }}>This review was recorded with the earlier form and has no criteria decision. Please re-verify.</div>}
+      {verified && !editing && (
+        <div className="panel stack" data-testid="epa-summary">
+          <div><strong>✓ Reviewed in Elentra</strong> by {r!.completed_by_name ?? 'faculty'} · {fmtDate(r!.completed_at)} — C6 POCUS EPA criteria <strong>{label}</strong></div>
+          {r!.criteria_snapshot && <div className="small muted">Criteria at the time: {r!.criteria_snapshot}</div>}
+          {r!.strengths && <div className="small"><strong>Strengths:</strong> {r!.strengths}</div>}
+          {r!.areas_for_improvement && <div className="small"><strong>Areas for improvement:</strong> {r!.areas_for_improvement}</div>}
+          {r!.concerns && <div className="notice warn small"><strong>Concerns:</strong> {r!.concerns} <span className="muted">(carried into the ITAR draft)</span></div>}
+          {(r!.entries?.length ?? 0) > 0 && <div className="small muted">{r!.entries.length} optional EPA detail row(s) recorded.</div>}
+          <div><button className="btn secondary small" onClick={() => setEditing(true)} data-testid="epa-update">Update verification</button></div>
+        </div>
+      )}
+      {editing && (
+        <div className="panel stack" data-testid="epa-form">
+          <div className="small" style={{ background: 'var(--paper2)', border: '1px solid var(--rule)', borderRadius: 6, padding: '8px 10px' }}>
+            <strong>C6 POCUS EPA completion criteria</strong>{' '}
+            {crit.data && (crit.data.approved ? <Badge tone="ok">approved</Badge> : <Badge tone="warn">draft — pending director approval</Badge>)}
+            <div style={{ marginTop: 4 }}>{crit.data?.text || <span className="muted">Not configured yet (Admin → ITAR setup). "Met" cannot be recorded until the criteria are set.</span>}</div>
+          </div>
+          <label className="check"><input type="checkbox" checked={f.reviewed} onChange={(e) => setF({ ...f, reviewed: e.target.checked })} data-testid="epa-reviewed" />{' '}
+            I reviewed this resident's EPA assessments in Elentra.</label>
+          <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+            <legend className="small"><strong>Are the C6 POCUS EPA criteria met?</strong></legend>
+            <div className="row">
+              {(['met', 'partially_met', 'outstanding'] as const).map((k) => (
+                <label key={k} className="check"><input type="radio" name={`epa-decision-${w.learner.id}`} checked={f.decision === k} disabled={k === 'met' && !crit.data?.text}
+                  onChange={() => setF({ ...f, decision: k, confirmed: false })} data-testid={`epa-decision-${k}`} /> {k === 'met' ? 'Met' : k === 'partially_met' ? 'Partially met' : 'Outstanding'}</label>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </fieldset>
+          {f.decision === 'met' && (
+            <label className="check"><input type="checkbox" checked={f.confirmed} onChange={(e) => setF({ ...f, confirmed: e.target.checked })} data-testid="epa-criteria-confirmed" />{' '}
+              I confirm the completion criteria above are met.</label>
+          )}
+          <details className="disclosure" open={!!(f.strengths || f.areas || f.concerns)}>
+            <summary>Optional notes — strengths, areas for improvement, concerns</summary>
+            <div className="formgrid">
+              <label className="field">Strengths<textarea rows={2} value={f.strengths} onChange={(e) => setF({ ...f, strengths: e.target.value })} data-testid="epa-strengths" /></label>
+              <label className="field">Areas for improvement<textarea rows={2} value={f.areas} onChange={(e) => setF({ ...f, areas: e.target.value })} /></label>
+              <label className="field">Concerns <span className="hint">brief; carried into the ITAR draft</span>
+                <textarea rows={2} value={f.concerns} onChange={(e) => setF({ ...f, concerns: e.target.value })} data-testid="epa-concerns" /></label>
+            </div>
+          </details>
+          <label className="check small"><input type="checkbox" checked={details} onChange={(e) => setDetails(e.target.checked)} /> Also record individual EPA details (optional)</label>
+          {details && (
+            <div className="tablewrap">
+              <table className="data">
+                <thead><tr><th>EPA</th><th>Title</th><th className="num"># assessments</th><th>Entrustment</th><th>Comment</th><th /></tr></thead>
+                <tbody>
+                  {entries.map((e, i) => (
+                    <tr key={i}>
+                      <td><input type="text" value={e.epa} onChange={(x) => setEntry(i, 'epa', x.target.value)} aria-label="EPA identifier" style={{ minWidth: 90 }} /></td>
+                      <td><input type="text" value={e.title ?? ''} onChange={(x) => setEntry(i, 'title', x.target.value)} aria-label="EPA title" /></td>
+                      <td><input type="number" min={0} value={e.n_assessments ?? ''} onChange={(x) => setEntry(i, 'n_assessments', x.target.value === '' ? null : Number(x.target.value))} aria-label="Number of assessments" style={{ width: 70 }} /></td>
+                      <td><input type="text" value={e.entrustment ?? ''} onChange={(x) => setEntry(i, 'entrustment', x.target.value)} aria-label="Entrustment" /></td>
+                      <td><input type="text" value={e.comment ?? ''} onChange={(x) => setEntry(i, 'comment', x.target.value)} aria-label="Comment" /></td>
+                      <td>{entries.length > 1 && <button className="btn ghost small" onClick={() => setEntries(entries.filter((_, j) => j !== i))} aria-label="Remove EPA row">✕</button>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <button className="btn ghost small" onClick={() => setEntries([...entries, blankEntry()])}>+ Add EPA</button>
+            </div>
+          )}
+          <div className="row">
+            <button className="btn small" disabled={busy || !canSave} onClick={save} data-testid="epa-save">Save verification</button>
+            {verified && <button className="btn ghost small" onClick={() => setEditing(false)}>Cancel</button>}
+            <span className="small muted">Your name and today's date are recorded automatically.</span>
+          </div>
+          <ErrorNote error={err} />
         </div>
-        {!complete && <div><button className="btn ghost small" onClick={() => setF({ ...f, entries: [...f.entries, blankEntry()] })}>+ Add EPA</button></div>}
-        <div className="formgrid">
-          <label className="field">Strengths (from EPA assessments)<textarea rows={3} value={f.strengths} disabled={complete} onChange={(e) => setF({ ...f, strengths: e.target.value })} data-testid="epa-strengths" /></label>
-          <label className="field">Areas for improvement (from EPA assessments)<textarea rows={3} value={f.areas_for_improvement} disabled={complete} onChange={(e) => setF({ ...f, areas_for_improvement: e.target.value })} /></label>
-          <label className="field" style={{ maxWidth: 220 }}>Review date<input type="date" value={f.review_date ?? ''} disabled={complete} onChange={(e) => setF({ ...f, review_date: e.target.value })} /></label>
-        </div>
-        <div className="row">
-          {!complete && <button className="btn secondary small" disabled={busy} onClick={() => save('pending')}>Save (pending)</button>}
-          {!complete && <button className="btn small" disabled={busy} onClick={() => save('complete')} data-testid="epa-complete">Mark review complete</button>}
-          {complete && <button className="btn secondary small" disabled={busy} onClick={reopen}>Re-open to edit</button>}
-          {r?.updated_by_name && <span className="small muted">Last saved by {r.updated_by_name} · {fmtDate(r.updated_at)}</span>}
-        </div>
-        <ErrorNote error={err} />
-      </div>
+      )}
     </section>
   );
 }

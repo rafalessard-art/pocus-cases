@@ -291,6 +291,15 @@ function RotationConfig() {
                   {r.kind === 'exam' ? (
                     <label>Pass mark % <input type="number" min={0} max={100} defaultValue={r.config?.pass_pct ?? ''} style={{ width: 64 }} data-testid="config-pass-pct"
                       onBlur={(e) => save('rotation_requirements', r.id, { config: { ...r.config, pass_pct: e.target.value === '' ? undefined : Number(e.target.value) } })} /></label>
+                  ) : r.kind === 'epa' ? (
+                    <div className="stack" style={{ minWidth: 260 }}>
+                      <label>Completion criteria (shown to faculty when verifying)
+                        <textarea rows={3} defaultValue={r.config?.criteria ?? ''} data-testid="config-epa-criteria"
+                          onBlur={(e) => e.target.value !== (r.config?.criteria ?? '') && save('rotation_requirements', r.id, { config: { ...r.config, criteria: e.target.value } })} />
+                      </label>
+                      <label className="check"><input type="checkbox" checked={r.config?.criteria_status === 'approved'}
+                        onChange={(e) => save('rotation_requirements', r.id, { config: { ...r.config, criteria_status: e.target.checked ? 'approved' : 'draft' } })} /> Approved by the rotation director</label>
+                    </div>
                   ) : '—'}
                 </td>
                 <td><button className="btn ghost small" onClick={() => save('rotation_requirements', r.id, { archived_at: r.archived_at ? null : new Date().toISOString() })}>{r.archived_at ? 'Restore' : 'Archive'}</button></td>
