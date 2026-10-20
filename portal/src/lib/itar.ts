@@ -11,6 +11,7 @@
  * professionalism from exam scores, and never assigns an overall rating.
  * Placeholders in [square brackets] mark what faculty must write themselves.
  */
+import { outstandingRequirements, requirementsSection, type Rotation } from './requirements';
 import { domainHighlights, type ExamFacts } from './summary';
 
 export type EvidenceStatus = 'submitted' | 'verified' | 'clarification_requested' | 'rejected';
@@ -115,10 +116,13 @@ export type ItarInput = {
   areasForImprovement: string;
   otherComments: string;
   today: string; // ISO date the draft is generated
+  /** Rotation requirements (completion tracker); when present, it drives the outstanding list. */
+  rotationReqs?: Rotation | null;
 };
 
 /** What is still outstanding, in plain words (used in the draft and the UI). */
-export function outstanding(i: Pick<ItarInput, 'examAssigned' | 'attempts' | 'selectedAttemptId' | 'requirements' | 'epa'>) {
+export function outstanding(i: Pick<ItarInput, 'examAssigned' | 'attempts' | 'selectedAttemptId' | 'requirements' | 'epa' | 'rotationReqs'>) {
+  if (i.rotationReqs?.requirements.length) return outstandingRequirements(i.rotationReqs);
   const out: string[] = [];
   const { attempt } = chooseAttempt(i.attempts, i.selectedAttemptId);
   if (!attempt) {
@@ -141,6 +145,7 @@ export function draftItar(i: ItarInput): ItarSection[] {
   const who = `${i.learnerName}${i.trainingLevel ? ` (${i.trainingLevel})` : ''}`;
   const dates = i.blockStart || i.blockEnd ? `, ${fmt(i.blockStart) || '—'} to ${fmt(i.blockEnd) || '—'}` : '';
   S.push({ key: 'rotation', title: 'Rotation', text: `${who} — ${i.rotation}, ${i.blockName}${dates}.` });
+  if (i.rotationReqs?.requirements.length) S.push(requirementsSection(i.rotationReqs));
 
   // A. Written examination
   const { attempt, rule } = chooseAttempt(i.attempts, i.selectedAttemptId);
@@ -251,6 +256,7 @@ export function fingerprint(i: ItarInput): string {
     i.requirements.map((r) => [r.id, latestSubmission(r)?.id, requirementState(r)]),
     i.epa ? [i.epa.status, i.epa.completed_at] : null,
     i.observations.map((o) => o.id).sort(),
+    i.rotationReqs ? [i.rotationReqs.requirements.map((r) => [r.key, r.status, r.stage]), i.rotationReqs.scans.verified_total] : null,
   ]);
   let h = 5381;
   for (let k = 0; k < key.length; k++) h = ((h << 5) + h + key.charCodeAt(k)) | 0;

@@ -283,7 +283,7 @@ test('full examination lifecycle', async ({ page, context }) => {
     await page.getByRole('link', { name: 'Upload evidence' }).click();
     await expect(page.getByRole('heading', { name: 'Learning-case evidence' })).toBeVisible();
     await expect(page.getByText(cohortName)).toBeVisible();
-    await expect(page.getByTestId('evidence-requirement')).toHaveCount(4);
+    await expect(page.getByTestId('evidence-requirement')).toHaveCount(5); // 4 required cases + optional TeachingMedicine record
     for (const c of CASES) {
       const row = page.getByTestId('evidence-requirement').filter({ hasText: c.title });
       await row.getByTestId('evidence-file').setInputFiles(join(FIX, c.file));
@@ -293,6 +293,26 @@ test('full examination lifecycle', async ({ page, context }) => {
     await expect(page.getByText('0 of 4')).toBeVisible();
     await shot(page, '09b-resident-evidence');
     await a11y(page, 'resident evidence');
+  });
+
+  await test.step('resident reports scan counts (numbers only) and submits rotation activities', async () => {
+    await page.getByRole('link', { name: 'Requirements', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Rotation requirements' })).toBeVisible();
+    await expect(page.getByTestId('req-summary')).toContainText('0 of 7');
+    await page.getByTestId('my-scan-edit').click();
+    for (const [k, n] of [['airway', 5], ['cardiac', 40], ['lung_pleura', 15], ['abdominal_fast', 20], ['gastric', 20], ['dvt', 2]] as const) {
+      await page.getByTestId(`my-scan-count-${k}`).fill(String(n));
+    }
+    await page.getByTestId('my-scan-save').click();
+    await expect(page.getByTestId('my-scan-cardiac')).toContainText('0/40'); // reported ≠ verified
+    await expect(page.getByTestId('my-req-scan_logbook')).toContainText('Submitted for review');
+    await page.getByTestId('my-req-note-teachingmedicine').fill('All modules completed');
+    await page.getByTestId('my-req-submit-teachingmedicine').click();
+    await expect(page.getByTestId('my-req-teachingmedicine').locator('.badge')).toHaveText(/Submitted for review/i);
+    await page.getByTestId('my-req-stage-pocus_rounds-planned').click();
+    await expect(page.getByTestId('my-req-pocus_rounds').locator('.badge')).toHaveText(/In progress/i);
+    await shot(page, '09c-resident-requirements');
+    await a11y(page, 'resident requirements');
     // residents cannot reach faculty pages
     await page.goto('/app/faculty');
     await expect(page.getByRole('heading', { name: /Welcome/ })).toBeVisible();
@@ -375,7 +395,7 @@ test('full examination lifecycle', async ({ page, context }) => {
 
   await test.step('resident sees the faculty message and uploads a replacement', async () => {
     await signIn(page, LEARNER);
-    await expect(page.getByText('Action needed')).toBeVisible();
+    await expect(page.getByText('Action needed').first()).toBeVisible();
     await page.goto('/app/evidence');
     const row = page.getByTestId('evidence-requirement').filter({ hasText: 'Peripheral Vascular Access' });
     await expect(row.getByText(/does not show the completion date clearly/)).toBeVisible();
@@ -418,6 +438,29 @@ test('full examination lifecycle', async ({ page, context }) => {
     await page.getByTestId('obs-add').click();
     await expect(page.getByText(/sought feedback/)).toBeVisible();
     await expect(page.getByText(/Other faculty notes on file, not tied to this block \(1\)/)).toBeVisible();
+  });
+
+  await test.step('faculty batch-attest reviewed scans and confirm rotation activities', async () => {
+    await expect(page.getByTestId('req-scan_logbook')).toContainText('Submitted for review');
+    await expect(page.getByTestId('req-written_exam')).toContainText('Complete'); // 100% ≥ rotation pass mark 75%
+    await page.getByTestId('scan-accept-reported').click();
+    for (const k of ['airway', 'cardiac', 'lung_pleura', 'abdominal_fast']) await page.getByTestId(`scan-views-${k}`).check();
+    await page.getByTestId('scan-note').fill('MRN 1234567');
+    await page.getByTestId('scan-record').click();
+    await expect(page.getByText(/must not contain patient identifiers/)).toBeVisible();
+    await page.getByTestId('scan-note').fill('Reviewed in QPath with the resident (fictional)');
+    await page.getByTestId('scan-record').click();
+    await expect(page.getByText('Recorded 6 categories.')).toBeVisible();
+    await expect(page.getByTestId('req-scan_logbook')).toContainText('Complete');
+    await expect(page.getByTestId('scan-cardiac')).toContainText('40/40 ✓');
+    await page.getByTestId('req-verify-teachingmedicine').click();
+    await expect(page.getByTestId('req-teachingmedicine').locator('.badge')).toHaveText(/Complete/i);
+    await page.getByTestId('req-verify-qpath_portfolio').click();
+    await expect(page.getByTestId('req-qpath_portfolio').locator('.badge')).toHaveText(/Complete/i);
+    await page.getByTestId('req-more-pocus_rounds').selectOption('not_yet_due');
+    await expect(page.getByTestId('req-pocus_rounds').locator('.badge')).toHaveText(/Not yet due/i);
+    await expect(page.locator('.checklist a', { hasText: 'Requirements' })).toContainText('6/7 complete');
+    await shot(page, '12b2-requirements');
     await a11y(page, 'ITAR workspace');
   });
 
@@ -432,6 +475,10 @@ test('full examination lifecycle', async ({ page, context }) => {
     await expect(page.getByTestId('section-observations')).not.toHaveValue(/Engaged well in the scanning sessions/); // not tied to the block
     await expect(page.getByTestId('section-sources')).toHaveValue(/4 verified by Dr\. Demo Faculty/);
     await expect(page.getByTestId('section-sources')).toHaveValue(/assigns no overall rating/);
+    await expect(page.getByTestId('section-requirements')).toHaveValue(/Mandatory rotation activities complete: 6 of 7 \(1 not yet due\)/);
+    await expect(page.getByTestId('section-requirements')).toHaveValue(/102 of 102 faculty-verified reviewed scans/);
+    await expect(page.getByTestId('section-requirements')).toHaveValue(/not an assessment of scanning competence/);
+    await expect(page.getByTestId('section-learning_needs')).toHaveValue(/POCUS rounds presentation: not yet due/);
     // faculty judgement is never filled in for them
     await expect(page.getByTestId('approve-eval')).toBeDisabled();
     await page.getByTestId('eval-strengths').fill('Fictional: consistent, careful image acquisition');
@@ -483,6 +530,8 @@ test('full examination lifecycle', async ({ page, context }) => {
     await expect(row).toContainText('4/4');
     await expect(row).toContainText('approved');
     await expect(row).toContainText('Complete');
+    await expect(row).toContainText('6/7');
+    await expect(row).toContainText('102/102');
     await expect(page.locator('.stat', { hasText: 'ITARs approved' })).toContainText('1/1');
     await shot(page, '12e-block-complete');
     await signOut(page);

@@ -13,7 +13,8 @@ type Req = {
 /** Admin: what residents must upload per rotation/block, and how long evidence files are kept. */
 export function ItarSetup() {
   return (
-    <Page kicker="Administration" title="ITAR setup" subtitle="Required learning-case evidence and evidence retention">
+    <Page kicker="Administration" title="ITAR setup" subtitle="Rotation requirements, scan targets, learning-case evidence and evidence retention">
+      <RotationConfig />
       <Requirements />
       <Retention />
     </Page>
@@ -206,6 +207,144 @@ function Retention() {
         <Confirm title="Delete evidence files?" danger confirmLabel="Delete files" onCancel={() => setConfirm(false)} onConfirm={purge}
           body={<p>The files are permanently removed from storage. Records, review history and file fingerprints are kept, and the deletion is audit-logged.</p>} />
       )}
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Rotation requirements and reviewed-scan targets (per rotation, or per block)
+// ---------------------------------------------------------------------------
+type RotReq = { id: string; course_id: string; cohort_id: string | null; key: string; kind: string; title: string; description: string; required: boolean;
+  resident_submits: boolean; config: Record<string, any>; sort: number; archived_at: string | null };
+type ScanCat = { id: string; course_id: string; cohort_id: string | null; key: string; label: string; target: number; views_note: string; sort: number; archived_at: string | null };
+const KIND_LABEL: Record<string, string> = { exam: 'Exam (automatic)', learning_cases: 'Brightspace cases (automatic)', epa: 'EPA review (automatic)', scan_log: 'Scan logbook', attestation: 'Faculty-confirmed activity' };
+const slug = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 40) || 'item';
+
+function RotationConfig() {
+  const course = useLoad(pocusCourse, []);
+  const coh = useLoad(loadCohorts, []);
+  const reqs = useLoad(async () => {
+    const { data, error } = await supabase.from('rotation_requirements').select('*').order('archived_at', { nullsFirst: true }).order('sort');
+    if (error) throw error;
+    return data as RotReq[];
+  }, []);
+  const cats = useLoad(async () => {
+    const { data, error } = await supabase.from('scan_categories').select('*').order('archived_at', { nullsFirst: true }).order('sort');
+    if (error) throw error;
+    return data as ScanCat[];
+  }, []);
+  const [err, setErr] = useState<unknown>();
+  const [msg, setMsg] = useState<string | null>(null);
+  const [nr, setNr] = useState({ title: '', resident_submits: true, cohort_id: '' });
+  const [nc, setNc] = useState({ label: '', target: '0', views_note: '', cohort_id: '' });
+  const blockName = (id: string | null) => (id ? (coh.data ?? []).find((c: any) => c.id === id)?.name ?? 'block' : 'All blocks');
+
+  async function save(table: 'rotation_requirements' | 'scan_categories', id: string, patch: Record<string, unknown>) {
+    setErr(undefined);
+    setMsg(null);
+    const { error } = await supabase.from(table).update(patch).eq('id', id);
+    if (error) setErr(error);
+    else {
+      setMsg('Saved.');
+      table === 'rotation_requirements' ? reqs.reload() : cats.reload();
+    }
+  }
+  async function addReq() {
+    setErr(undefined);
+    const { error } = await supabase.from('rotation_requirements').insert({
+      course_id: course.data!.id, cohort_id: nr.cohort_id || null, key: slug(nr.title), kind: 'attestation', title: nr.title.trim(),
+      resident_submits: nr.resident_submits, sort: 100 + (reqs.data?.length ?? 0) * 10,
+    });
+    if (error) setErr(error);
+    else { setNr({ title: '', resident_submits: true, cohort_id: '' }); reqs.reload(); }
+  }
+  async function addCat() {
+    setErr(undefined);
+    const { error } = await supabase.from('scan_categories').insert({
+      course_id: course.data!.id, cohort_id: nc.cohort_id || null, key: slug(nc.label), label: nc.label.trim(), target: Number(nc.target) || 0,
+      views_note: nc.views_note, sort: 100 + (cats.data?.length ?? 0) * 10,
+    });
+    if (error) setErr(error);
+    else { setNc({ label: '', target: '0', views_note: '', cohort_id: '' }); cats.reload(); }
+  }
+
+  if (reqs.loading || cats.loading) return <Spinner />;
+  return (
+    <section style={{ marginBottom: 30 }}>
+      <p className="seclabel">Rotation requirements</p>
+      <p className="small muted">
+        Applies to every block of the rotation, unless a block has its own row with the same key (to change a requirement for one block, add a block-specific one).
+        Exam, Brightspace and EPA statuses are calculated automatically; faculty confirm the others.
+      </p>
+      <div className="tablewrap">
+        <table className="data" data-testid="config-requirements">
+          <thead><tr><th>Requirement</th><th>Type</th><th>Applies to</th><th>Required</th><th>Resident submits</th><th>Setting</th><th /></tr></thead>
+          <tbody>
+            {(reqs.data ?? []).map((r) => (
+              <tr key={r.id} style={r.archived_at ? { opacity: 0.55 } : undefined}>
+                <td><input type="text" defaultValue={r.title} aria-label="Requirement title" style={{ minWidth: 240 }} onBlur={(e) => e.target.value.trim() !== r.title && save('rotation_requirements', r.id, { title: e.target.value.trim() })} /></td>
+                <td className="small">{KIND_LABEL[r.kind] ?? r.kind}</td>
+                <td className="small">{blockName(r.cohort_id)}</td>
+                <td><input type="checkbox" checked={r.required} aria-label="Required" onChange={(e) => save('rotation_requirements', r.id, { required: e.target.checked })} /></td>
+                <td>{r.kind === 'attestation' ? <input type="checkbox" checked={r.resident_submits} aria-label="Resident submits" onChange={(e) => save('rotation_requirements', r.id, { resident_submits: e.target.checked })} /> : '—'}</td>
+                <td className="small">
+                  {r.kind === 'exam' ? (
+                    <label>Pass mark % <input type="number" min={0} max={100} defaultValue={r.config?.pass_pct ?? ''} style={{ width: 64 }} data-testid="config-pass-pct"
+                      onBlur={(e) => save('rotation_requirements', r.id, { config: { ...r.config, pass_pct: e.target.value === '' ? undefined : Number(e.target.value) } })} /></label>
+                  ) : '—'}
+                </td>
+                <td><button className="btn ghost small" onClick={() => save('rotation_requirements', r.id, { archived_at: r.archived_at ? null : new Date().toISOString() })}>{r.archived_at ? 'Restore' : 'Archive'}</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="row" style={{ marginTop: 10, alignItems: 'flex-end' }}>
+        <label className="field" style={{ flex: 1, minWidth: 220 }}>New faculty-confirmed activity<input type="text" value={nr.title} onChange={(e) => setNr({ ...nr, title: e.target.value })} placeholder="e.g. Simulation session attended" /></label>
+        <label className="field" style={{ maxWidth: 220 }}>Applies to
+          <select value={nr.cohort_id} onChange={(e) => setNr({ ...nr, cohort_id: e.target.value })}>
+            <option value="">All blocks</option>
+            {(coh.data ?? []).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </label>
+        <label className="check small"><input type="checkbox" checked={nr.resident_submits} onChange={(e) => setNr({ ...nr, resident_submits: e.target.checked })} /> Resident can submit</label>
+        <button className="btn secondary" disabled={!nr.title.trim() || !course.data} onClick={addReq}>Add</button>
+      </div>
+
+      <p className="seclabel" style={{ marginTop: 24 }}>Minimum reviewed-scan targets</p>
+      <div className="tablewrap">
+        <table className="data" data-testid="config-scans">
+          <thead><tr><th>Category</th><th className="num">Target</th><th>Required views (faculty confirm)</th><th>Applies to</th><th /></tr></thead>
+          <tbody>
+            {(cats.data ?? []).map((c) => (
+              <tr key={c.id} style={c.archived_at ? { opacity: 0.55 } : undefined}>
+                <td><input type="text" defaultValue={c.label} aria-label="Category" onBlur={(e) => e.target.value.trim() !== c.label && save('scan_categories', c.id, { label: e.target.value.trim() })} /></td>
+                <td className="num"><input type="number" min={0} max={1000} defaultValue={c.target} aria-label={`Target for ${c.label}`} style={{ width: 70 }} data-testid={`config-target-${c.key}`}
+                  onBlur={(e) => Number(e.target.value) !== c.target && save('scan_categories', c.id, { target: Number(e.target.value) || 0 })} /></td>
+                <td><input type="text" defaultValue={c.views_note} aria-label={`Required views for ${c.label}`} style={{ minWidth: 260 }}
+                  onBlur={(e) => e.target.value !== c.views_note && save('scan_categories', c.id, { views_note: e.target.value })} /></td>
+                <td className="small">{blockName(c.cohort_id)}</td>
+                <td><button className="btn ghost small" onClick={() => save('scan_categories', c.id, { archived_at: c.archived_at ? null : new Date().toISOString() })}>{c.archived_at ? 'Restore' : 'Archive'}</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="small">Total target: <strong>{(cats.data ?? []).filter((c) => !c.archived_at && !c.cohort_id).reduce((a, c) => a + c.target, 0)}</strong> reviewed scans (rotation-wide rows).</p>
+      <div className="row" style={{ alignItems: 'flex-end' }}>
+        <label className="field">New category<input type="text" value={nc.label} onChange={(e) => setNc({ ...nc, label: e.target.value })} /></label>
+        <label className="field" style={{ maxWidth: 100 }}>Target<input type="number" min={0} value={nc.target} onChange={(e) => setNc({ ...nc, target: e.target.value })} /></label>
+        <label className="field" style={{ flex: 1 }}>Required views<input type="text" value={nc.views_note} onChange={(e) => setNc({ ...nc, views_note: e.target.value })} /></label>
+        <label className="field" style={{ maxWidth: 200 }}>Applies to
+          <select value={nc.cohort_id} onChange={(e) => setNc({ ...nc, cohort_id: e.target.value })}>
+            <option value="">All blocks</option>
+            {(coh.data ?? []).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </label>
+        <button className="btn secondary" disabled={!nc.label.trim() || !course.data} onClick={addCat}>Add</button>
+      </div>
+      {msg && <p className="small" role="status">{msg}</p>}
+      <ErrorNote error={err} />
     </section>
   );
 }

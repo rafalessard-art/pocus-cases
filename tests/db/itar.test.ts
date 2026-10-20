@@ -41,7 +41,7 @@ beforeAll(async () => {
   resident = await createUser('learner', { cohortId: block, name: 'Fictional Resident A' });
   otherResident = await createUser('learner', { cohortId: block, name: 'Fictional Resident B' });
   outsider = await createUser('learner', { cohortId: otherBlock });
-  reqIds = (await sql(`select id from public.evidence_requirements where course_id = $1 and cohort_id is null and archived_at is null order by sort`, [course])).map((r) => r.id);
+  reqIds = (await sql(`select id from public.evidence_requirements where course_id = $1 and cohort_id is null and archived_at is null and required order by sort`, [course])).map((r) => r.id);
 });
 afterAll(() => pool.end());
 
@@ -50,7 +50,7 @@ describe('requirements', () => {
     expect(reqIds.length).toBeGreaterThanOrEqual(4);
     const mine = await rpc(resident, 'my_evidence');
     const b = mine.find((x: any) => x.cohort.id === block);
-    expect(b.requirements.length).toBe(reqIds.length);
+    expect(b.requirements.filter((r: any) => r.required).length).toBe(reqIds.length);
   });
 
   it('supports block-specific requirements without code changes, and only admins edit them', async () => {

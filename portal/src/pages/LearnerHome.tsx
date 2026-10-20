@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Page } from '../components/Layout';
 import { Badge, Confirm, Empty, ErrorNote, Spinner, fmtDate, useLoad } from '../components/ui';
 import { isStaff, useAuth } from '../lib/auth';
+import { completion } from '../lib/requirements';
 import { rpc } from '../lib/supabase';
 
 export type MyExam = {
@@ -124,6 +125,9 @@ export function LearnerHome() {
   const done = required.filter((i: any) => i.completed_at).length;
   const active = (exams.data ?? []).filter((e) => e.state === 'available' || e.state === 'in_progress');
   const ev = useLoad(() => rpc<any[]>('my_evidence'), []);
+  const rq = useLoad(() => rpc<any[]>('my_requirements').catch(() => []), []);
+  const rqBlock = (rq.data ?? [])[0];
+  const rqDone = rqBlock ? completion(rqBlock.rotation.requirements) : null;
   const evReq = (ev.data ?? []).flatMap((b) => b.requirements.filter((r: any) => r.required));
   const evVerified = evReq.filter((r: any) => r.submissions[0]?.status === 'verified').length;
   const evReturned = evReq.filter((r: any) => ['clarification_requested', 'rejected'].includes(r.submissions[0]?.status)).length;
@@ -152,6 +156,17 @@ export function LearnerHome() {
           </div>
           <Link to="/exams" className="btn secondary">All examinations</Link>
         </div>
+        {rqDone && (
+          <div className="card" style={{ ['--accent' as any]: 'var(--petrol)' }} data-testid="home-requirements">
+            <p className="kicker">Rotation requirements</p>
+            <div className="stats">
+              <div className="stat"><b>{rqDone.done}/{rqDone.total}</b><span>complete</span></div>
+              <div className="stat"><b>{rqBlock.rotation.scans.verified_total}/{rqBlock.rotation.scans.target_total}</b><span>verified scans</span></div>
+            </div>
+            {rqBlock.rotation.requirements.some((r: any) => r.status === 'clarification_requested') && <p className="small"><Badge tone="warn">Action needed</Badge> faculty asked for clarification.</p>}
+            <Link to="/requirements" className="btn secondary">View requirements</Link>
+          </div>
+        )}
         {evReq.length > 0 && (
           <div className="card" style={{ ['--accent' as any]: 'var(--moss)' }}>
             <p className="kicker">Learning-case evidence</p>

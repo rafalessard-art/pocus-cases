@@ -23,6 +23,7 @@ Use **either** option.
 20261020000500_storage_and_grants.sql
 20261020000600_pocus_course.sql
 20261020000700_itar_preparation.sql
+20261020000800_rotation_requirements.sql
 ```
 
 **B — Supabase CLI.**

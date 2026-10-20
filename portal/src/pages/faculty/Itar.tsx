@@ -11,6 +11,9 @@ import {
   requirementState, type AttemptRule, type EpaEntry, type EpaReview, type ItarInput, type ItarSection, type Observation, type OverviewRow,
   type Requirement, type WsAttempt,
 } from '../../lib/itar';
+import {
+  REQ_LABEL, REQ_TONE, completion, requirementActions, scanDeltas, scanPct, type ReqStatus, type Rotation, type RotationReq,
+} from '../../lib/requirements';
 import { rpc, supabase } from '../../lib/supabase';
 
 type Cohort = { id: string; course_id: string; course: string; name: string; block_label: string | null; academic_year: string | null; start_date: string | null; end_date: string | null };
@@ -31,6 +34,8 @@ type Ws = {
   evaluation: EvalRow | null;
   roster: { id: string; name: string }[];
 };
+
+type RotRow = { learner_id: string; requirements: Pick<RotationReq, 'key' | 'kind' | 'title' | 'required' | 'status' | 'action' | 'detail'>[]; scans: { verified_total: number; target_total: number } };
 
 const today = () => new Date().toLocaleDateString('en-CA');
 
@@ -84,19 +89,33 @@ export function BlockOverview() {
   const { cohortId = '' } = useParams();
   const nav = useNavigate();
   const d = useLoad(() => rpc<{ cohort: Cohort; residents: OverviewRow[] }>('itar_block_overview', { p_cohort: cohortId }), [cohortId]);
+  const rq = useLoad(() => rpc<RotRow[]>('rotation_block_overview', { p_cohort: cohortId }), [cohortId]);
   const [onlyOpen, setOnlyOpen] = useState(false);
-  if (d.loading && !d.data) return <Spinner />;
+  if ((d.loading && !d.data) || (rq.loading && !rq.data && !rq.error)) return <Spinner />;
   if (d.error) return <div className="wrap"><ErrorNote error={d.error} /></div>;
   const { cohort, residents } = d.data!;
-  const rows = residents.map((r) => ({ r, a: attention(r) }));
+  const rotBy = new Map((rq.data ?? []).map((x) => [x.learner_id, x]));
+  const rows = residents.map((r) => {
+    const a = attention(r);
+    const x = rotBy.get(r.id);
+    const c = x ? completion(x.requirements) : null;
+    if (x && !a.done) {
+      const extra = requirementActions(x.requirements);
+      a.faculty.splice(Math.max(0, a.faculty.length - 1), 0, ...extra.faculty); // keep "Prepare/Approve ITAR" last
+      a.resident.push(...extra.resident);
+    }
+    return { r, a, x, c };
+  });
   const n = residents.length;
   const count = (f: (r: OverviewRow) => boolean) => residents.filter(f).length;
 
   function exportCsv() {
-    download(`${cohort.name.replace(/\W+/g, '_')}_ITAR_status.csv`, toCSV(rows.map(({ r, a }) => ({
+    download(`${cohort.name.replace(/\W+/g, '_')}_ITAR_status.csv`, toCSV(rows.map(({ r, a, x, c }) => ({
       resident: r.name, training_level: r.training_level ?? '', exam: r.exam.latest ? `${r.exam.latest.score_pct ?? ''}%` : 'outstanding',
       exam_passed: r.exam.latest?.passed ?? '', evidence_verified: `${r.evidence.verified}/${r.evidence.required}`, evidence_awaiting_review: r.evidence.awaiting_review,
       evidence_missing: r.evidence.required - r.evidence.submitted, epa_review: r.epa_status, observations: r.n_observations, itar: r.itar?.status ?? 'not started',
+      requirements_complete: c ? `${c.done}/${c.total}` : '', requirements_outstanding: x ? x.requirements.filter((q) => q.required && !['verified', 'not_applicable', 'not_yet_due'].includes(q.status)).map((q) => q.title).join('; ') : '',
+      scans_verified: x ? `${x.scans.verified_total}/${x.scans.target_total}` : '',
       faculty_actions: a.faculty.join('; '), resident_actions: a.resident.join('; '),
     }))));
   }
@@ -110,6 +129,7 @@ export function BlockOverview() {
           <div className="stat"><b>{count((r) => !!r.exam.latest)}/{n}</b><span>exams submitted</span></div>
           <div className="stat"><b>{count((r) => r.evidence.required > 0 && r.evidence.verified === r.evidence.required)}/{n}</b><span>cases all verified</span></div>
           <div className="stat"><b>{count((r) => r.epa_status === 'complete')}/{n}</b><span>EPA reviews done</span></div>
+          {rq.data && <div className="stat"><b>{rows.filter((x) => x.c && x.c.outstanding === 0).length}/{n}</b><span>requirements complete</span></div>}
           <div className="stat"><b>{count((r) => r.itar?.status === 'approved')}/{n}</b><span>ITARs approved</span></div>
         </div>
       </section>
@@ -121,11 +141,21 @@ export function BlockOverview() {
       {n > 0 && (
         <div className="tablewrap">
           <table className="data" data-testid="block-overview">
-            <thead><tr><th>Resident</th><th>Exam</th><th>Learning cases</th><th>EPA review</th><th className="num">Obs.</th><th>ITAR</th><th>Needs attention</th></tr></thead>
+            <thead><tr><th>Resident</th><th>Requirements</th><th>Scans</th><th>Exam</th><th>Learning cases</th><th>EPA review</th><th className="num">Obs.</th><th>ITAR</th><th>Needs attention</th></tr></thead>
             <tbody>
-              {rows.filter(({ a }) => !onlyOpen || !a.done).map(({ r, a }) => (
+              {rows.filter(({ a }) => !onlyOpen || !a.done).map(({ r, a, x, c }) => (
                 <tr key={r.id} className="clickable" onClick={() => nav(`/faculty/itar/${cohortId}/${r.id}`)} data-testid="overview-row">
                   <td><Link to={`/faculty/itar/${cohortId}/${r.id}`} onClick={(e) => e.stopPropagation()}>{r.name}</Link><div className="small muted">{r.training_level}</div></td>
+                  <td>
+                    {c ? <><strong>{c.done}/{c.total}</strong> {c.outstanding === 0 ? <Badge tone="ok">{c.notYetDue ? 'up to date' : 'complete'}</Badge> : null}
+                      {c.notYetDue > 0 && <div className="small muted">{c.notYetDue} not yet due</div>}
+                      {c.outstanding > 0 && <div className="small muted" style={{ maxWidth: 200 }}>Outstanding: {x!.requirements.filter((q) => q.required && !['verified', 'not_applicable', 'not_yet_due'].includes(q.status)).map((q) => q.title.replace(/^(Written|Logbook of reviewed) /, '').replace(/^POCUS /, '')).join(', ')}</div>}
+                    </> : '—'}
+                  </td>
+                  <td style={{ minWidth: 90 }}>
+                    {x ? <><div className="bar" aria-hidden><span style={{ width: `${x.scans.target_total ? Math.min(100, (100 * x.scans.verified_total) / x.scans.target_total) : 0}%` }} /></div>
+                      <span className="small">{x.scans.verified_total}/{x.scans.target_total}</span></> : '—'}
+                  </td>
                   <td>
                     {r.exam.latest ? (
                       <>
@@ -170,10 +200,13 @@ export function BlockOverview() {
 export function ItarWorkspace() {
   const { cohortId = '', learnerId = '' } = useParams();
   const ws = useLoad(() => rpc<Ws>('itar_workspace', { p_learner: learnerId, p_cohort: cohortId }), [cohortId, learnerId]);
+  const rot = useLoad(() => rpc<Rotation>('rotation_status', { p_learner: learnerId, p_cohort: cohortId }), [cohortId, learnerId]);
   const [sel, setSel] = useState<{ key: string; id: string | null } | null>(null);
-  if (ws.loading && !ws.data) return <Spinner />;
+  if ((ws.loading && !ws.data) || (rot.loading && !rot.data && !rot.error)) return <Spinner />;
   if (ws.error) return <div className="wrap"><ErrorNote error={ws.error} /></div>;
   const w = ws.data!;
+  const reload = () => { ws.reload(); rot.reload(); };
+  const rc = rot.data ? completion(rot.data.requirements) : null;
   const ev = w.evaluation;
   const locked = ev?.status === 'approved';
   const selected = sel && sel.key === `${cohortId}/${learnerId}` ? sel.id : ev?.attempt_id ?? null;
@@ -187,6 +220,7 @@ export function ItarWorkspace() {
   const chosen = chooseAttempt(w.attempts, selected);
 
   const steps = [
+    ...(rc ? [{ id: 'requirements', label: 'Requirements', ok: rc.outstanding === 0, detail: `${rc.done}/${rc.total} complete${rc.notYetDue ? ` · ${rc.notYetDue} not yet due` : ''}` }] : []),
     { id: 'exam', label: 'A · Exam', ok: !!chosen.attempt && chosen.attempt.grading_status === 'complete', detail: chosen.attempt?.score_pct != null ? pct(chosen.attempt.score_pct, 1) : w.exam_assigned ? 'outstanding' : 'none assigned' },
     { id: 'cases', label: 'B · Learning cases', ok: req.length > 0 && nVerified === req.length, detail: `${nVerified}/${req.length} verified` },
     { id: 'epa', label: 'C · EPA review', ok: w.epa_review?.status === 'complete', detail: w.epa_review?.status === 'complete' ? 'complete' : 'pending' },
@@ -214,12 +248,13 @@ export function ItarWorkspace() {
             </a>
           ))}
         </nav>
+        {rot.error ? <ErrorNote error={rot.error} /> : rot.data && <RequirementsSection w={w} rot={rot.data} reload={reload} setRot={rot.setData} />}
         <ExamSection w={w} chosen={chosen} locked={locked} onSelect={(id) => setSel({ key: `${cohortId}/${learnerId}`, id })} />
-        <CasesSection w={w} reload={ws.reload} />
-        <EpaSection key={`${learnerId}-${w.epa_review?.updated_at ?? 'new'}`} w={w} reload={ws.reload} />
-        <ObservationsSection w={w} reload={ws.reload} locked={locked} />
+        <CasesSection w={w} reload={reload} />
+        <EpaSection key={`${learnerId}-${w.epa_review?.updated_at ?? 'new'}`} w={w} reload={reload} />
+        <ObservationsSection w={w} reload={reload} locked={locked} />
       </div>
-      <DraftSection key={`${learnerId}-${ev?.id ?? 'new'}-${ev?.updated_at ?? ''}`} w={w} reload={ws.reload} selectedAttempt={selected} />
+      <DraftSection key={`${learnerId}-${ev?.id ?? 'new'}-${ev?.updated_at ?? ''}`} w={w} reload={reload} selectedAttempt={selected} rotation={rot.data ?? null} />
     </Page>
   );
 }
@@ -555,7 +590,7 @@ function ObservationsSection({ w, reload, locked }: { w: Ws; reload: () => void;
   );
 }
 
-function DraftSection({ w, reload, selectedAttempt }: { w: Ws; reload: () => void; selectedAttempt: string | null }) {
+function DraftSection({ w, reload, selectedAttempt, rotation }: { w: Ws; reload: () => void; selectedAttempt: string | null; rotation: Rotation | null }) {
   const ev = w.evaluation;
   const locked = ev?.status === 'approved';
   const [f, setF] = useState(() => ({
@@ -571,8 +606,8 @@ function DraftSection({ w, reload, selectedAttempt }: { w: Ws; reload: () => voi
     learnerName: w.learner.full_name || w.learner.email, trainingLevel: w.learner.training_level, rotation: w.cohort.course, blockName: w.cohort.name,
     blockStart: w.cohort.start_date, blockEnd: w.cohort.end_date, examAssigned: w.exam_assigned, attempts: w.attempts, selectedAttemptId: selectedAttempt,
     requirements: w.requirements, epa: w.epa_review, observations: w.observations.filter((o) => o.cohort_id === w.cohort.id),
-    strengths: f.strengths, areasForImprovement: f.areas, otherComments: f.other, today: today(),
-  }), [w, selectedAttempt, f.strengths, f.areas, f.other]);
+    strengths: f.strengths, areasForImprovement: f.areas, otherComments: f.other, today: today(), rotationReqs: rotation,
+  }), [w, selectedAttempt, f.strengths, f.areas, f.other, rotation]);
   const fp = fingerprint(input);
   const stale = f.sections.length > 0 && f.snapshot?.fingerprint && f.snapshot.fingerprint !== fp;
   const todo = outstanding(input);
@@ -588,6 +623,8 @@ function DraftSection({ w, reload, selectedAttempt }: { w: Ws; reload: () => voi
         evidence: w.requirements.map((r) => ({ requirement: r.title, state: requirementState(r), submission: latestSubmission(r)?.id ?? null, sha256: latestSubmission(r)?.sha256 ?? null })),
         epa: w.epa_review ? { status: w.epa_review.status, completed_at: w.epa_review.completed_at } : null,
         observations: input.observations.map((o) => o.id),
+        requirements: rotation ? rotation.requirements.map((r) => ({ key: r.key, status: r.status, verified_by: r.verified_by_name, verified_at: r.verified_at })) : null,
+        scans: rotation ? rotation.scans.categories.map((c) => ({ key: c.key, verified: c.verified, target: c.target, views_confirmed: c.views_confirmed })) : null,
       },
     });
     setMsg('Draft assembled from the evidence above. Edit any section before saving.');
@@ -745,3 +782,214 @@ function DraftSection({ w, reload, selectedAttempt }: { w: Ws; reload: () => voi
   );
 }
 
+
+// ---------------------------------------------------------------------------
+// Rotation requirements (completion tracker)
+// ---------------------------------------------------------------------------
+const SECTION_FOR: Partial<Record<RotationReq['kind'], string>> = { exam: '#exam', learning_cases: '#cases', epa: '#epa', scan_log: '#scans' };
+
+function RequirementsSection({ w, rot, reload, setRot }: { w: Ws; rot: Rotation; reload: () => void; setRot: (r: Rotation) => void }) {
+  const c = completion(rot.requirements);
+  return (
+    <section>
+      <SectionHead id="requirements" letter="✓" title="Rotation requirements">
+        <span className="small"><strong>{c.done}/{c.total}</strong> complete · <strong>{rot.scans.verified_total}/{rot.scans.target_total}</strong> verified scans</span>
+      </SectionHead>
+      <p className="small muted" style={{ marginTop: -4 }}>
+        Exam, learning cases and EPA statuses update automatically from the sections below. Completion is a checklist, not a competence rating.
+      </p>
+      <div className="tablewrap">
+        <table className="data" data-testid="requirements-table">
+          <thead><tr><th>Requirement</th><th>Status</th><th>Details</th><th>Verified</th><th>Action</th></tr></thead>
+          <tbody>
+            {rot.requirements.map((r) => <ReqRow key={r.id} r={r} w={w} setRot={setRot} />)}
+          </tbody>
+        </table>
+      </div>
+      <ScanLog w={w} rot={rot} setRot={setRot} reload={reload} />
+    </section>
+  );
+}
+
+function ReqRow({ r, w, setRot }: { r: RotationReq; w: Ws; setRot: (r: Rotation) => void }) {
+  const [msgFor, setMsgFor] = useState(false);
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<unknown>();
+  const canAct = w.me !== w.learner.id;
+
+  async function set(status: ReqStatus | 'clear', stage: string | null = null, note: string | null = null) {
+    setBusy(true);
+    setErr(undefined);
+    try {
+      setRot(await rpc<Rotation>('set_requirement_status', { p_requirement: r.id, p_learner: w.learner.id, p_cohort: w.cohort.id, p_status: status, p_stage: stage, p_note: note }));
+      setMsgFor(false);
+      setMessage('');
+    } catch (e) {
+      setErr(e);
+    }
+    setBusy(false);
+  }
+  function other(v: string) {
+    if (!v) return;
+    if (v === 'clarify') setMsgFor(true);
+    else if (v.startsWith('stage:')) set(r.status === 'not_started' ? 'in_progress' : (r.status as ReqStatus), v.slice(6));
+    else set(v as ReqStatus | 'clear');
+  }
+  const attest = r.kind === 'attestation';
+  return (
+    <tr data-testid={`req-${r.key}`}>
+      <td>
+        <strong>{r.title}</strong>{!r.required && <span className="small muted"> · optional</span>}
+        {r.description && <div className="small muted" style={{ maxWidth: 320 }}>{r.description}</div>}
+      </td>
+      <td><Badge tone={REQ_TONE[r.status]}>{REQ_LABEL[r.status]}</Badge>{r.override && <div className="small muted">set by faculty</div>}</td>
+      <td className="small">
+        {r.detail}
+        {r.resident_note && <div>Resident: “{r.resident_note}”</div>}
+        {r.faculty_message && <div className="muted">Message to resident: “{r.faculty_message}”</div>}
+        {r.extra?.evidence && <div className="muted">Optional upload: {r.extra.evidence.filename} ({r.extra.evidence.status})</div>}
+        {r.kind === 'exam' && r.extra?.pass_pct != null && <div className="muted">Rotation pass mark {Math.round(r.extra.pass_pct)}%</div>}
+      </td>
+      <td className="small">{r.verified_by_name ? <>{r.verified_by_name}<div className="muted">{fmtDate(r.verified_at, false)}</div></> : '—'}</td>
+      <td className="small">
+        {SECTION_FOR[r.kind] && <a href={SECTION_FOR[r.kind]} className="btn ghost small">{r.kind === 'scan_log' ? 'Attest scans ↓' : 'Open ↓'}</a>}
+        {canAct && attest && r.status !== 'verified' && (
+          <button className="btn small" disabled={busy} onClick={() => set('verified')} data-testid={`req-verify-${r.key}`}>Confirm complete</button>
+        )}
+        {canAct && (
+          <select aria-label={`More actions for ${r.title}`} value="" disabled={busy} onChange={(e) => other(e.target.value)} data-testid={`req-more-${r.key}`} style={{ marginLeft: 6, maxWidth: 170 }}>
+            <option value="">More…</option>
+            {attest && r.stages.map((s) => <option key={s.key} value={`stage:${s.key}`}>Stage: {s.label}</option>)}
+            {attest && r.status !== 'clarification_requested' && <option value="clarify">Needs clarification…</option>}
+            {attest && r.status === 'verified' && <option value="in_progress">Re-open (in progress)</option>}
+            <option value="not_yet_due">Not yet due</option>
+            <option value="not_applicable">Not applicable</option>
+            {(attest ? r.status !== 'not_started' : r.override) && <option value={attest ? 'not_started' : 'clear'}>{attest ? 'Reset to not started' : 'Clear (use automatic status)'}</option>}
+          </select>
+        )}
+        {msgFor && (
+          <div className="stack" style={{ marginTop: 8 }}>
+            <input type="text" maxLength={500} placeholder="Message to the resident (no patient details)" value={message} onChange={(e) => setMessage(e.target.value)} aria-label="Message to the resident" data-testid={`req-message-${r.key}`} />
+            <div className="row">
+              <button className="btn small" disabled={busy || !message.trim()} onClick={() => set('clarification_requested', null, message)}>Send</button>
+              <button className="btn ghost small" onClick={() => setMsgFor(false)}>Cancel</button>
+            </div>
+          </div>
+        )}
+        <ErrorNote error={err} />
+      </td>
+    </tr>
+  );
+}
+
+function ScanLog({ w, rot, setRot, reload }: { w: Ws; rot: Rotation; setRot: (r: Rotation) => void; reload: () => void }) {
+  const cats = rot.scans.categories;
+  const [totals, setTotals] = useState<Record<string, string>>({});
+  const [views, setViews] = useState<Record<string, boolean>>({});
+  const [reviewedOn, setReviewedOn] = useState(today());
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<unknown>();
+  const [msg, setMsg] = useState<string | null>(null);
+  const { entries, negative } = scanDeltas(cats, totals, views);
+  const pending = cats.some((c) => (c.reported ?? 0) > c.verified);
+  const canAct = w.me !== w.learner.id;
+  if (!cats.length) return null;
+
+  function acceptReported() {
+    setTotals(Object.fromEntries(cats.map((c) => [c.id, String(Math.max(c.verified, c.reported ?? 0))])));
+    setMsg(null);
+  }
+  async function record() {
+    setBusy(true);
+    setErr(undefined);
+    setMsg(null);
+    try {
+      const r = await rpc<Rotation>('attest_scans', {
+        p_learner: w.learner.id, p_cohort: w.cohort.id, p_entries: entries, p_reviewed_on: reviewedOn, p_note: note.trim(), p_correction: negative,
+      });
+      setRot(r);
+      setTotals({});
+      setViews({});
+      setNote('');
+      setMsg(`Recorded ${entries.length} categor${entries.length === 1 ? 'y' : 'ies'}${negative ? ' (correction)' : ''}.`);
+      reload();
+    } catch (e) {
+      setErr(e);
+    }
+    setBusy(false);
+  }
+
+  return (
+    <div className="panel stack" id="scans" style={{ marginTop: 16 }}>
+      <div className="row between">
+        <strong>Scan logbook — faculty-verified reviewed scans</strong>
+        <span className="small"><strong>{rot.scans.verified_total}/{rot.scans.target_total}</strong>{rot.scans.reported_total != null && <span className="muted"> · resident reports {rot.scans.reported_total}</span>}</span>
+      </div>
+      <p className="small muted" style={{ margin: 0 }}>
+        Review the studies in QPath (or another approved system), then record how many were reviewed and accepted. <strong>Counts only</strong> — never MRNs, names, dates of birth,
+        scan dates or locations. Only these faculty-verified numbers count toward the targets.
+      </p>
+      <div className="tablewrap">
+        <table className="data" data-testid="scan-table">
+          <thead><tr><th>Category</th><th className="num">Target</th><th>Progress</th><th className="num">Resident reports</th><th>Verified total</th><th>Required views covered</th></tr></thead>
+          <tbody>
+            {cats.map((c) => (
+              <tr key={c.id} data-testid={`scan-${c.key}`}>
+                <td><strong>{c.label}</strong>{c.views_note && <div className="small muted" style={{ maxWidth: 240 }}>{c.views_note}</div>}</td>
+                <td className="num">{c.target}</td>
+                <td style={{ minWidth: 130 }}>
+                  <div className="bar" aria-hidden><span style={{ width: `${scanPct(c)}%`, background: c.met ? 'var(--moss)' : undefined }} /></div>
+                  <span className="small">{c.verified}/{c.target}{c.met ? ' ✓' : ''}</span>
+                </td>
+                <td className="num">{c.reported ?? '—'}{(c.reported ?? 0) > c.verified && <div className="small" style={{ color: 'var(--warn-ink)' }}>+{(c.reported ?? 0) - c.verified} to review</div>}</td>
+                <td>
+                  <input type="number" min={0} max={2000} style={{ width: 80 }} disabled={!canAct} aria-label={`Verified total for ${c.label}`} data-testid={`scan-total-${c.key}`}
+                    value={totals[c.id] ?? String(c.verified)} onChange={(e) => setTotals({ ...totals, [c.id]: e.target.value })} />
+                </td>
+                <td>
+                  {c.views_note ? (
+                    <label className="check small"><input type="checkbox" disabled={!canAct} checked={views[c.id] ?? !!c.views_confirmed}
+                      onChange={(e) => setViews({ ...views, [c.id]: e.target.checked })} data-testid={`scan-views-${c.key}`} /> confirmed</label>
+                  ) : <span className="small muted">—</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {canAct && (
+        <>
+          <div className="row" style={{ alignItems: 'flex-end' }}>
+            {pending && <button className="btn secondary small" onClick={acceptReported} data-testid="scan-accept-reported">Fill in resident-reported counts</button>}
+            <label className="field" style={{ maxWidth: 170 }}>Reviewed on<input type="date" value={reviewedOn} max={today()} onChange={(e) => setReviewedOn(e.target.value)} /></label>
+            <label className="field" style={{ flex: 1, minWidth: 200 }}>{negative ? 'Reason for the correction (required)' : 'Note (optional, no patient details)'}
+              <input type="text" maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} data-testid="scan-note"
+                placeholder={negative ? 'e.g. two studies were entered twice' : 'e.g. reviewed in QPath with the resident'} />
+            </label>
+            <button className="btn" disabled={busy || !entries.length || (negative && !note.trim())} onClick={record} data-testid="scan-record">
+              {negative ? 'Record correction' : `Record attestation${entries.length ? ` (${entries.length})` : ''}`}
+            </button>
+          </div>
+          {msg && <div className="notice ok small" role="status">{msg}</div>}
+          <ErrorNote error={err} />
+        </>
+      )}
+      {rot.scans.history.length > 0 && (
+        <details className="disclosure">
+          <summary>Attestation history ({rot.scans.history.length})</summary>
+          <ul className="small">
+            {rot.scans.history.map((h) => (
+              <li key={h.batch_id}>
+                {fmtDate(h.created_at)} · {h.by ?? 'Faculty'} · reviewed {h.reviewed_on}{h.is_correction ? ' · correction' : ''}:{' '}
+                {h.entries.map((e) => `${e.category} ${e.delta > 0 ? '+' : ''}${e.delta}${e.views_confirmed != null ? (e.views_confirmed ? ', views ✓' : ', views ✗') : ''}`).join('; ')}
+                {h.note && <span className="muted"> — “{h.note}”</span>}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </div>
+  );
+}

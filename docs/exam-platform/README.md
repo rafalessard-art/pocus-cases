@@ -89,6 +89,24 @@ POCUS is simply the first row in `courses` (migration `…600_pocus_course.sql`)
   - Copy one section or the whole draft; download .txt; print/PDF; CSV. Exports are audit-logged.
   - The draft is flagged as stale when the evidence changes after it was generated.
 
+**Rotation requirements and completion tracking (Phase 3).** Seven mandatory activities are configured per rotation (Admin → ITAR setup), and a block can override any of them:
+1. C6 POCUS EPAs
+2. Brightspace learning cases
+3. TeachingMedicine modules
+4. Logbook of reviewed scans (102 across 6 categories)
+5. QPath mentor review and portfolio
+6. Written exam (rotation pass mark 75%)
+7. POCUS rounds
+
+The exam, Brightspace and EPA statuses are **calculated** from the records above, not re-entered. The scan logbook holds **faculty-attested counts per category only**:
+- Faculty review the images in QPath, then record verified totals for every category in one form. "Fill in resident-reported counts" makes this one click.
+- They also confirm the required views and add an optional non-identifying note.
+- Corrections need a reason, and the history is append-only.
+
+Resident-reported counts are shown separately and never count. TeachingMedicine, the QPath portfolio and rounds use submit → faculty confirm. Rounds has stages (planned → reviewed by faculty → presented). Faculty can mark any requirement "not yet due" or "not applicable".
+
+The resident sees a dashboard with progress bars. Faculty see a requirements table at the top of the ITAR workspace, with who verified each item and when. The block overview shows requirements and scans columns. The ITAR draft gains a "Rotation requirements — completion record" section. It states that scan numbers are a completion measure and not a competence assessment, and it assigns no rating. See [QPATH_AND_SCAN_LOG.md](QPATH_AND_SCAN_LOG.md).
+
 **Block overview (cohort dashboard).** Faculty → block card. It shows one row per resident: exam, evidence verified/awaiting/returned/missing, EPA, observations, ITAR status, and "needs attention", split into *you* vs *resident*. It has an "only needing attention" filter, CSV export, one click into each resident, and Previous/Next between residents.
 
 **Access.** Faculty see a resident's ITAR data only if they are an **evaluator of that resident's block**; admins see all. Learners never see EPA reviews, observations or drafts; they see only their own uploads and the reviewer's message.

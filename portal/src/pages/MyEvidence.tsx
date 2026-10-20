@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Page } from '../components/Layout';
 import { EvidencePreview } from '../components/EvidencePreview';
 import { Badge, Empty, ErrorNote, Spinner, fmtDate, useLoad } from '../components/ui';
@@ -15,7 +16,8 @@ export function MyEvidence() {
   if (d.loading) return <Spinner />;
   if (d.error) return <div className="wrap"><ErrorNote error={d.error} /></div>;
   return (
-    <Page kicker="Rotation requirements" title="Learning-case evidence" subtitle="Proof that you completed your required Brightspace learning cases">
+    <Page kicker="Rotation requirements" title="Learning-case evidence" subtitle="Proof that you completed your required Brightspace learning cases"
+      actions={<Link className="btn secondary" to="/requirements">← All requirements</Link>}>
       <div className="notice small" style={{ marginBottom: 18 }}>
         Upload a <strong>screenshot or PDF</strong> from Brightspace that shows your name, the case title and that it is complete. Files are private: only you and the
         faculty evaluating your block can open them. <strong>Do not upload anything that contains patient information.</strong>

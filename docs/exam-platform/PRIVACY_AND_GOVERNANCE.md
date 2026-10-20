@@ -27,6 +27,8 @@
 | EPA review (transcribed from Elentra by faculty) | `epa_reviews` | Evaluators of the block; admins. Never learners |
 | Categorised faculty observations | `faculty_notes` (with block) | Evaluators of the block; admins. Never learners |
 | ITAR drafts and approvals, with an evidence snapshot | `evaluations` | Evaluators of the block; admins. Never learners |
+| Rotation requirement status (status, stage, short resident note, short faculty message, who verified and when) | `requirement_status` | The resident (own); evaluators of the block; admins |
+| Reviewed-scan **counts** per category (no patient-level rows, images, MRNs, names, DOBs or scan dates/locations; short notes screened server-side for identifier patterns) | `scan_attestations` (faculty-attested), `scan_self_reports` (resident-reported, never counted) | Attestations: evaluators of the block, admins; the resident sees totals and history without notes. Self-reports: the resident and evaluators |
 | Audit events | `audit_log` | Admins |
 
 Not collected: student numbers, dates of birth, phone numbers, addresses, IP-based tracking or analytics cookies. Sign-in uses email codes, so there are no passwords to leak.

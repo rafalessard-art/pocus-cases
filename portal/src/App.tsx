@@ -27,6 +27,7 @@ const BlockOverview = lazy(() => import('./pages/faculty/Itar').then((m) => ({ d
 const ItarWorkspace = lazy(() => import('./pages/faculty/Itar').then((m) => ({ default: m.ItarWorkspace })));
 const ItarSetup = lazy(() => import('./pages/admin/ItarSetup').then((m) => ({ default: m.ItarSetup })));
 const MyEvidence = lazy(() => import('./pages/MyEvidence').then((m) => ({ default: m.MyEvidence })));
+const MyRequirements = lazy(() => import('./pages/Requirements').then((m) => ({ default: m.Requirements })));
 
 function RequireAuth({ role }: { role?: 'staff' | 'admin' }) {
   const { loading, session, profile } = useAuth();
@@ -72,6 +73,7 @@ export function App() {
           <Route path="/exams" element={<ExamsList />} />
           <Route path="/exams/result/:attemptId" element={<Result />} />
           <Route path="/evidence" element={<Suspense fallback={<Spinner />}><MyEvidence /></Suspense>} />
+          <Route path="/requirements" element={<Suspense fallback={<Spinner />}><MyRequirements /></Suspense>} />
           <Route element={<RequireAuth role="staff" />}>
             <Route path="/faculty" element={<FacultyDashboard />} />
             <Route path="/faculty/exams/:versionId" element={<ExamResults />} />
