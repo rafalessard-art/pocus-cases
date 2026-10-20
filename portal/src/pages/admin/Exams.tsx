@@ -351,7 +351,7 @@ function AddQuestions({ exclude, onAdd, onClose }: { exclude: string[]; onAdd: (
 function Assignments({ version }: { version: Version }) {
   const coh = useLoad(loadCohorts, []);
   const learners = useLoad(async () => {
-    const { data, error } = await supabase.from('profiles').select('id, full_name, email, role').eq('role', 'learner').eq('active', true).order('full_name');
+    const { data, error } = await supabase.from('profiles').select('id, full_name, email, role').eq('active', true).order('full_name');
     if (error) throw error;
     return data as any[];
   }, []);
@@ -386,7 +386,8 @@ function Assignments({ version }: { version: Version }) {
             <select value={target} onChange={(e) => setTarget(e.target.value)} data-testid="assign-target">
               <option value="">— choose cohort or learner —</option>
               <optgroup label="Cohorts">{(coh.data ?? []).filter((c) => !c.archived_at).map((c) => <option key={c.id} value={`c:${c.id}`}>{c.name}</option>)}</optgroup>
-              <optgroup label="Individual learners">{(learners.data ?? []).map((l) => <option key={l.id} value={`u:${l.id}`}>{l.full_name || l.email}</option>)}</optgroup>
+              <optgroup label="Individual learners">{(learners.data ?? []).filter((l) => l.role === 'learner').map((l) => <option key={l.id} value={`u:${l.id}`}>{l.full_name || l.email}</option>)}</optgroup>
+              <optgroup label="Faculty / admin (to preview the exam as a learner sees it)">{(learners.data ?? []).filter((l) => l.role !== 'learner').map((l) => <option key={l.id} value={`u:${l.id}`}>{l.full_name || l.email} — preview</option>)}</optgroup>
             </select>
           </label>
           <label className="field">Opens (optional)<input type="datetime-local" value={opens} onChange={(e) => setOpens(e.target.value)} /></label>
