@@ -40,7 +40,7 @@ An Airway POCUS case is an intentional "Coming soon" placeholder on the homepage
 | `.vercelignore` / `.gitignore` | Keep drafts, literature reviews, benchmarks, and `_backups/` out of the deploy. |
 | `design-system/` | `@pocus/design-system` — a React component library extracted from the site (Storybook + Vite). Not part of the deployed static site. |
 
-It is plain static HTML — no build step, no framework, no server code. Any folder that serves these files together is a working site. (The `design-system/` package is a separate, optional React build.)
+The public pages are plain static HTML — no framework, no server code. Any folder that serves these files together is a working site. (The `design-system/` package is a separate, optional React build; the `/app` portal is described below.)
 
 ## Adding a new case
 
@@ -49,6 +49,14 @@ It is plain static HTML — no build step, no framework, no server code. Any fol
 3. Add a `rewrite` and a `.html`→clean-URL `redirect` for it in `vercel.json`, matching the existing entries.
 4. Update the counts in the `index.html` masthead `.stats` block.
 5. Commit and push (see `DEPLOYMENT_GUIDE.md` for the GitHub + Vercel workflow).
+
+## Learner & faculty portal (`/app`)
+
+A sign-in-protected portal for the POCUS rotation: curriculum, end-of-block examinations with ultrasound loops, a media library, faculty results and end-of-block evaluation drafting. It is built with React + TypeScript (`portal/`) on Supabase (Postgres + Auth + Storage, Canada region); the database schema and security rules are in `supabase/migrations/`.
+
+- `npm run build` copies the static site above **unchanged** into `dist/` and builds the portal into `dist/app` (Vercel runs this automatically; see `vercel.json`).
+- Without Supabase settings the portal shows "not configured"; the public pages are unaffected.
+- Start here: [`docs/exam-platform/README.md`](docs/exam-platform/README.md) (architecture, deployment, media, ExamBuilder migration, privacy, testing).
 
 ## Hosting
 

@@ -1,10 +1,15 @@
 {
+  "buildCommand": "npm run build",
+  "installCommand": "npm ci",
+  "outputDirectory": "dist",
   "rewrites": [
     { "source": "/cases/glp1-gastric", "destination": "/GLP1_Gastric_Ultrasound_Learning_Case.html" },
     { "source": "/cases/diaphragm-first-rib", "destination": "/POCUS_Learning_Case_Diaphragm_FirstRibResection.html" },
     { "source": "/cases/onsd-pdph", "destination": "/POCUS_Learning_Case_ONSD_PDPH.html" },
     { "source": "/cases/vascular-access", "destination": "/POCUS_Learning_Case_VascularAccess.html" },
-    { "source": "/tools", "destination": "/tools.html" }
+    { "source": "/tools", "destination": "/tools.html" },
+    { "source": "/app", "destination": "/app/index.html" },
+    { "source": "/app/:path*", "destination": "/app/index.html" }
   ],
   "redirects": [
     { "source": "/GLP1_Gastric_Ultrasound_Learning_Case.html", "destination": "/cases/glp1-gastric", "permanent": false },
@@ -29,6 +34,25 @@
     {
       "source": "/(.*).html",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    },
+    {
+      "source": "/app(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=()" },
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; media-src 'self' blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+        }
+      ]
+    },
+    {
+      "source": "/app/assets/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
     }
   ]
 }

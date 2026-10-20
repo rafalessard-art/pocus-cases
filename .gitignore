@@ -17,3 +17,12 @@ VascularAccess_CaseQuestions_Draft.md
 
 # Local backups — never deploy
 _backups/
+
+# Portal / tooling build outputs and local secrets — never commit
+node_modules/
+dist/
+test-results/
+playwright-report/
+.env
+.env.*
+!.env.example

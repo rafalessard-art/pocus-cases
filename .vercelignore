@@ -1,2 +1,11 @@
 # Component library source — tracked in git, but not part of the deployed static site.
 design-system
+# Not needed to build the site (kept in git)
+tests
+docs
+supabase
+tools
+test-results
+playwright-report
+dist
+node_modules

@@ -1,5 +1,7 @@
 # Deployment Guide — POCUS Learning Case Series
 
+> **Update (October 2026):** the repository now also contains the sign-in portal at `/app`, which adds a build step (`npm run build`, configured in `vercel.json` — nothing to set in the Vercel dashboard). Connecting the portal's database is described in [`docs/exam-platform/DEPLOYMENT.md`](docs/exam-platform/DEPLOYMENT.md). The click-only workflow below for adding a static case still works.
+
 Your site is plain static HTML: three files that just need to be served together. There is no build step. The cleanest setup for a solo physician who adds a case now and then is **GitHub (stores the files) + Vercel (serves them, auto-redeploys on every change)**. Once connected, updating the site is: edit a file, commit, done.
 
 Everything below is click-only — no terminal required.
