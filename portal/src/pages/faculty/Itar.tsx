@@ -99,9 +99,10 @@ export function BlockOverview() {
     const a = attention(r);
     const x = rotBy.get(r.id);
     const c = x ? completion(x.requirements) : null;
-    if (x && !a.done) {
+    if (x) {
       const extra = requirementActions(x.requirements);
-      a.faculty.splice(Math.max(0, a.faculty.length - 1), 0, ...extra.faculty); // keep "Prepare/Approve ITAR" last
+      if (a.done && (extra.faculty.length || extra.resident.length)) a.done = false; // an approved ITAR never hides outstanding requirements
+      a.faculty.splice(a.faculty.length && !a.done ? a.faculty.length - 1 : a.faculty.length, 0, ...extra.faculty); // keep "Prepare/Approve ITAR" last
       a.resident.push(...extra.resident);
     }
     return { r, a, x, c };
@@ -149,7 +150,7 @@ export function BlockOverview() {
                   <td>
                     {c ? <><strong>{c.done}/{c.total}</strong> {c.outstanding === 0 ? <Badge tone="ok">{c.notYetDue ? 'up to date' : 'complete'}</Badge> : null}
                       {c.notYetDue > 0 && <div className="small muted">{c.notYetDue} not yet due</div>}
-                      {c.outstanding > 0 && <div className="small muted" style={{ maxWidth: 200 }}>Outstanding: {x!.requirements.filter((q) => q.required && !['verified', 'not_applicable', 'not_yet_due'].includes(q.status)).map((q) => q.title.replace(/^(Written|Logbook of reviewed) /, '').replace(/^POCUS /, '')).join(', ')}</div>}
+                      {c.outstanding > 0 && <div className="small muted" style={{ maxWidth: 200 }}>Outstanding: {x!.requirements.filter((q) => q.required && !['verified', 'not_applicable', 'not_yet_due'].includes(q.status)).map((q) => (q.kind === 'scan_log' ? 'scan logbook' : q.title.replace(/^Written /, '').replace(/^POCUS /, ''))).join(', ')}</div>}
                     </> : '—'}
                   </td>
                   <td style={{ minWidth: 90 }}>
@@ -802,7 +803,7 @@ function RequirementsSection({ w, rot, reload, setRot }: { w: Ws; rot: Rotation;
         <table className="data" data-testid="requirements-table">
           <thead><tr><th>Requirement</th><th>Status</th><th>Details</th><th>Verified</th><th>Action</th></tr></thead>
           <tbody>
-            {rot.requirements.map((r) => <ReqRow key={r.id} r={r} w={w} setRot={setRot} />)}
+            {rot.requirements.map((r) => <ReqRow key={r.id} r={r} w={w} setRot={setRot} lastScan={r.kind === 'scan_log' ? rot.scans.history[0] : undefined} />)}
           </tbody>
         </table>
       </div>
@@ -811,7 +812,7 @@ function RequirementsSection({ w, rot, reload, setRot }: { w: Ws; rot: Rotation;
   );
 }
 
-function ReqRow({ r, w, setRot }: { r: RotationReq; w: Ws; setRot: (r: Rotation) => void }) {
+function ReqRow({ r, w, setRot, lastScan }: { r: RotationReq; w: Ws; setRot: (r: Rotation) => void; lastScan?: Rotation['scans']['history'][number] }) {
   const [msgFor, setMsgFor] = useState(false);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -851,7 +852,10 @@ function ReqRow({ r, w, setRot }: { r: RotationReq; w: Ws; setRot: (r: Rotation)
         {r.extra?.evidence && <div className="muted">Optional upload: {r.extra.evidence.filename} ({r.extra.evidence.status})</div>}
         {r.kind === 'exam' && r.extra?.pass_pct != null && <div className="muted">Rotation pass mark {Math.round(r.extra.pass_pct)}%</div>}
       </td>
-      <td className="small">{r.verified_by_name ? <>{r.verified_by_name}<div className="muted">{fmtDate(r.verified_at, false)}</div></> : '—'}</td>
+      <td className="small">
+        {r.verified_by_name ? <>{r.verified_by_name}<div className="muted">{fmtDate(r.verified_at, false)}</div></>
+          : lastScan ? <><span className="muted">Last attested:</span> {lastScan.by}<div className="muted">{fmtDate(lastScan.created_at, false)}</div></> : '—'}
+      </td>
       <td className="small">
         {SECTION_FOR[r.kind] && <a href={SECTION_FOR[r.kind]} className="btn ghost small">{r.kind === 'scan_log' ? 'Attest scans ↓' : 'Open ↓'}</a>}
         {canAct && attest && r.status !== 'verified' && (

@@ -77,9 +77,12 @@ export function requirementsSection(rot: Rotation): { key: string; title: string
   const lines: string[] = [];
   lines.push(`Mandatory rotation activities complete: ${c.done} of ${c.total}${c.notYetDue ? ` (${c.notYetDue} not yet due)` : ''}.`);
   for (const r of rot.requirements.filter((x) => x.required)) {
-    const who = r.status === 'verified' || r.override
-      ? [r.verified_by_name && `by ${r.verified_by_name}`, r.verified_at && fmt(r.verified_at)].filter(Boolean).join(', ')
-      : '';
+    const last = r.kind === 'scan_log' && r.status !== 'verified' ? rot.scans.history[0] : undefined;
+    const who = last
+      ? [last.by && `by ${last.by}`, fmt(last.created_at)].filter(Boolean).join(', ')
+      : ['verified', 'not_yet_due', 'not_applicable'].includes(r.status) || r.override
+        ? [r.verified_by_name && `by ${r.verified_by_name}`, r.verified_at && fmt(r.verified_at)].filter(Boolean).join(', ')
+        : '';
     let body = REQ_LABEL[r.status];
     if (r.kind === 'scan_log') {
       body += ` — ${rot.scans.verified_total} of ${rot.scans.target_total} faculty-verified reviewed scans (${rot.scans.categories.map((x) => `${x.label} ${x.verified}/${x.target}${x.views_note && x.verified >= x.target && !x.views_confirmed ? ', views not confirmed' : ''}`).join('; ')})`;
@@ -88,7 +91,7 @@ export function requirementsSection(rot: Rotation): { key: string; title: string
     } else if (r.detail) {
       body += ` — ${r.detail}`;
     }
-    lines.push(`• ${r.title}: ${body}${who ? ` (${r.kind === 'scan_log' ? 'last attested ' : ''}${who})` : ''}.`);
+    lines.push(`• ${r.title}: ${body}${who ? ` (${r.kind === 'scan_log' ? 'last attested ' : r.status === 'verified' ? '' : 'set '}${who})` : ''}.`);
   }
   lines.push('Scan numbers record studies reviewed and accepted by faculty (counted in this portal; images reviewed in QPath or another approved system). They are a completion measure, not an assessment of scanning competence.');
   return { key: 'requirements', title: 'Rotation requirements — completion record', text: lines.join('\n') };

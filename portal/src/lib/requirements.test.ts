@@ -51,6 +51,8 @@ describe('ITAR section', () => {
     expect(s.text).toMatch(/• C6 POCUS EPAs: Complete — EPA review complete \(by Dr\. Faculty, October 20, 2026\)\./);
     expect(s.text).toMatch(/• Written POCUS examination: Complete — Score 80% — rotation pass mark 75% met \(by the portal \(automatic scoring\)/);
     expect(s.text).toMatch(/45 of 65 faculty-verified reviewed scans \(Airway 5\/5; Cardiac 40\/40, views not confirmed; Gastric 0\/20\)/);
+    const withHistory = requirementsSection({ ...rot, scans: { ...rot.scans, history: [{ batch_id: 'b', created_at: '2026-10-21T12:00:00Z', reviewed_on: '2026-10-21', is_correction: false, source: 'faculty_attestation', by: 'Dr. Faculty', note: '', entries: [] }] } });
+    expect(withHistory.text).toMatch(/Gastric 0\/20\) \(last attested by Dr\. Faculty, October 21, 2026\)\./);
   });
   it('keeps scan numbers separate from competence and never rates', () => {
     expect(s.text).toMatch(/completion measure, not an assessment of scanning competence/);
