@@ -10,7 +10,10 @@ export const supabaseAnonKey = anonKey ?? '';
 
 export const supabase: SupabaseClient = configured
   ? createClient(url!, anonKey!, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: 'pocus-portal-auth' },
+      // Sign-in works with either the 6-digit code or the emailed link. Implicit
+      // flow means the link works even when opened in a different browser or
+      // device from the one that requested it.
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'implicit', storageKey: 'pocus-portal-auth' },
     })
   : (null as unknown as SupabaseClient);
 

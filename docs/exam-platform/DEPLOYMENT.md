@@ -40,8 +40,8 @@ This creates every table with row-level security, the private `exam-media` bucke
 |---|---|
 | Authentication → Sign In / Providers → **Email** | Enabled. **Allow new users to sign up: ON.** Invited people need it for their first sign-in; the hook below blocks everyone else. Email OTP expiration: `900` seconds. Turn off every other provider (phone, OAuth, anonymous). |
 | Authentication → **Hooks** → *Before User Created* | Enable → type **Postgres** → schema `public` → function `hook_before_user_created`. |
-| Authentication → **Emails → Templates** → *Magic Link* **and** *Confirm signup* | Subject `Your POCUS Portal sign-in code`; body = contents of `supabase/templates/sign-in-code.html`. The template **must** contain `{{ .Token }}`: the portal signs people in with a 6-digit code, never a link, because hospital mail scanners pre-open links and burn them. |
-| Authentication → **URL Configuration** | Site URL `https://pocus-cases.vercel.app/app/` |
+| Authentication → **Emails → Templates** → *Magic Link* **and** *Confirm signup* (editable only after custom SMTP is configured; until then Supabase's default email contains a sign-in **link**, which the portal also accepts) | Subject `Your POCUS Portal sign-in code`; body = contents of `supabase/templates/sign-in-code.html`. The template **must** contain `{{ .Token }}`: the portal signs people in with a 6-digit code, never a link, because hospital mail scanners pre-open links and burn them. |
+| Authentication → **URL Configuration** | Site URL `https://pocus-cases.vercel.app/app/`; Redirect URLs `https://pocus-cases.vercel.app/app/**` and `https://pocus-cases-*-rafalessard-8465s-projects.vercel.app/app/**` (previews) — needed for the emailed sign-in link |
 | Authentication → **SMTP Settings** | **Required for real use.** Supabase's built-in sender is heavily rate-limited and only delivers to members of your Supabase team. Use an institutional SMTP relay (ask uOttawa/TOH IT) or a transactional email provider. Sender, for example, `POCUS Portal <no-reply@your-domain>`. |
 | Authentication → Rate limits | Defaults are fine; raise "emails sent per hour" if a whole cohort signs in at once. |
 

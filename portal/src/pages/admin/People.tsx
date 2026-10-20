@@ -62,10 +62,10 @@ function Invitations() {
   async function sendSignIn(email: string) {
     setSending(email);
     setErr(undefined);
-    const { error } = await sideClient().auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+    const { error } = await sideClient().auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: `${window.location.origin}/app/` } });
     setSending(null);
     if (error) setErr(error);
-    else setMsg(`Sign-in code emailed to ${email}.`);
+    else setMsg(`Sign-in email sent to ${email}.`);
   }
 
   const portal = `${window.location.origin}/app/login`;
@@ -112,7 +112,7 @@ function Invitations() {
                 <td>{i.revoked_at ? <Badge tone="bad">Revoked</Badge> : i.accepted_at ? <Badge tone="ok">Joined {fmtDate(i.accepted_at, false)}</Badge> : <Badge tone="info">Invited</Badge>}</td>
                 <td style={{ whiteSpace: 'nowrap' }}>
                   {!i.revoked_at && !i.accepted_at && (
-                    <button className="btn ghost small" disabled={sending === i.email} onClick={() => sendSignIn(i.email)}>{sending === i.email ? 'Sending…' : 'Email sign-in code'}</button>
+                    <button className="btn ghost small" disabled={sending === i.email} onClick={() => sendSignIn(i.email)}>{sending === i.email ? 'Sending…' : 'Email sign-in link'}</button>
                   )}
                   {!i.revoked_at && !i.accepted_at && (
                     <button className="btn ghost small" onClick={async () => { await supabase.from('invitations').update({ revoked_at: new Date().toISOString() }).eq('email', i.email); list.reload(); }}>Revoke</button>

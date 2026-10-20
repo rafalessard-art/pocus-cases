@@ -34,7 +34,10 @@ export function Login() {
       return;
     }
     setBusy(true);
-    const { error } = await supabase.auth.signInWithOtp({ email: addr, options: { shouldCreateUser: true } });
+    const { error } = await supabase.auth.signInWithOtp({
+      email: addr,
+      options: { shouldCreateUser: true, emailRedirectTo: `${window.location.origin}/app/` },
+    });
     setBusy(false);
     if (error) {
       setErr(
@@ -47,7 +50,7 @@ export function Login() {
       return;
     }
     setStage('code');
-    setInfo(`We sent a 6-digit sign-in code to ${addr}. It expires in 15 minutes.`);
+    setInfo(`We sent a sign-in email to ${addr}. Click the link in it, or enter the 6-digit code if the email shows one.`);
   }
 
   async function verify(e: FormEvent) {
@@ -66,6 +69,11 @@ export function Login() {
         <p className="kicker">POCUS Rotation Portal</p>
         <h1>Sign in</h1>
         <p className="muted">Curriculum, end-of-block examinations and faculty assessment. Access is by invitation.</p>
+        {/(^|&)error_description=/.test(window.location.hash.slice(1)) && (
+          <div className="notice error" role="alert">
+            That sign-in link is invalid or has expired (some email security scanners open links before you do). Request a new one below.
+          </div>
+        )}
         {noAccess && (
           <div className="notice warn" style={{ margin: '16px 0' }}>
             You are signed in as {session?.user.email}, but this account has no active portal access.{' '}
@@ -101,7 +109,7 @@ export function Login() {
                   autoFocus
                   aria-describedby="code-hint"
                 />
-                <span id="code-hint" className="hint">Check your inbox (and junk folder) for the code.</span>
+                <span id="code-hint" className="hint">Check your inbox (and junk folder). You can also simply click the sign-in link in the email.</span>
               </label>
               <button className="btn" disabled={busy || code.length < 6} type="submit">
                 {busy ? 'Verifying…' : 'Sign in'}

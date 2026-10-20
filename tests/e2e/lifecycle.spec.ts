@@ -50,7 +50,7 @@ async function signIn(page: Page, email: string) {
   await page.getByLabel('Institutional email').fill(email);
   const t = Date.now() - 1000;
   await page.getByRole('button', { name: 'Email me a sign-in code' }).click();
-  await expect(page.getByText(/We sent a 6-digit sign-in code/)).toBeVisible();
+  await expect(page.getByText(/We sent a sign-in email/)).toBeVisible();
   await page.getByLabel('Sign-in code').fill(await latestCode(email, t));
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
@@ -331,4 +331,30 @@ test('full examination lifecycle', async ({ page, context }) => {
     await shot(page, '13-learner-results');
     await a11y(page, 'learner results');
   });
+});
+
+test('an invited person can also sign in by clicking the emailed link', async ({ page }) => {
+  const email = `link-${RUN}@e2e.test`;
+  const db = new pg.Client({ connectionString: process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:5432/postgres' });
+  await db.connect();
+  await db.query(`insert into public.invitations (email, full_name, role) values ($1, 'Link Learner', 'learner')`, [email]);
+  await db.end();
+  await page.goto('/app/login');
+  await page.getByLabel('Institutional email').fill(email);
+  const t = Date.now() - 1000;
+  await page.getByRole('button', { name: 'Email me a sign-in code' }).click();
+  await expect(page.getByText(/We sent a sign-in email/)).toBeVisible();
+  let link: string | undefined;
+  for (let i = 0; i < 40 && !link; i++) {
+    const msgs = (await (await fetch(`${MAIL}?to=${encodeURIComponent(email)}`)).json()) as { text: string; at: number }[];
+    link = msgs.filter((m) => m.at >= t).pop()?.text.match(/https?:\/\/\S+verify\?token=[^\s\]]+/)?.[0];
+    if (!link) await new Promise((r) => setTimeout(r, 250));
+  }
+  expect(link).toBeTruthy();
+  // the local auth server omits its /auth/v1 prefix in links; hosted Supabase does not
+  const url = new URL(link!.replace(/&amp;/g, '&'));
+  if (!url.pathname.startsWith('/auth/v1')) url.pathname = '/auth/v1' + url.pathname;
+  await page.goto(url.toString());
+  await expect(page).toHaveURL(/\/app\/?#?$/);
+  await expect(page.getByRole('heading', { name: /Welcome, Link/ })).toBeVisible();
 });

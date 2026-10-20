@@ -28,7 +28,7 @@ function RequireAuth({ role }: { role?: 'staff' | 'admin' }) {
   const { loading, session, profile } = useAuth();
   const loc = useLocation();
   if (loading) return <Spinner />;
-  if (!session || !profile) return <Navigate to="/login" replace state={{ from: loc.pathname }} />;
+  if (!session || !profile) return <Navigate to={{ pathname: "/login", hash: loc.hash }} replace state={{ from: loc.pathname }} />;
   if (role === 'staff' && !isStaff(profile)) return <Navigate to="/" replace />;
   if (role === 'admin' && !isAdmin(profile)) return <Navigate to="/" replace />;
   return role ? <Suspense fallback={<Spinner />}><Outlet /></Suspense> : <Outlet />;
