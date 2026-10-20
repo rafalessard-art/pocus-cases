@@ -13,7 +13,7 @@ Nothing here touches production until you merge the `feature/exam-platform` bran
 
 Use **either** option.
 
-**A — no terminal.** Dashboard → SQL Editor. Paste and run each file in `supabase/migrations/`, **in filename order**:
+**A — no terminal (simplest).** Dashboard → SQL Editor → New query → paste the whole of **`docs/exam-platform/supabase-setup.sql`** → Run. It is every migration below in order plus the first-administrator invitation, and runs as one transaction (all or nothing). Or paste and run each file in `supabase/migrations/` **in filename order**:
 
 ```
 20261020000100_core.sql
@@ -64,6 +64,8 @@ Vercel → project `pocus-cases` → Settings → **Environment Variables**. Add
 |---|---|
 | `VITE_SUPABASE_URL` | Supabase → Project Settings → API → Project URL (`https://<ref>.supabase.co`) |
 | `VITE_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → `anon` / publishable key |
+
+For this project both values are already committed in `.env.production` (they are public by design), so the build works without dashboard settings. Vercel variables with the same names override the file.
 
 The anon key is designed to be public: it grants nothing beyond what RLS allows. **Never** put the `service_role` key or database password in Vercel, in the code or in the browser. The portal does not need them.
 
