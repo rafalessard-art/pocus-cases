@@ -2140,5 +2140,5 @@ where not exists (select 1 from public.curriculum_items ci where ci.course_id = 
 -- ===================== first administrator =====================
 -- Change the email if you want to sign in with your institutional address instead.
 insert into public.invitations (email, full_name, role)
-values ('rafa.lessard@gmail.com', 'Raphael Lessard', 'admin')
+values ('rlessard@toh.ca', 'Raphael Lessard', 'admin')
 on conflict (email) do update set role = 'admin', revoked_at = null;
