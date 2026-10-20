@@ -77,6 +77,22 @@ POCUS is simply the first row in `courses` (migration `…600_pocus_course.sql`)
 - Learner profile with domain and objective breakdown and faculty notes.
 - **Evaluation workspace.** It drafts deterministically from verified exam data plus faculty-typed observations. It never infers clinical, scanning or professional performance from scores, states that limit in the text, and requires explicit approval. Approved evaluations are locked and can be re-opened (audited). Print/PDF and CSV are available.
 
+**ITAR preparation workspace (Phase 2).** Faculty → rotation block → resident. One page brings together, for that resident and block:
+- **A. Exam performance**, pulled automatically: score, date, pass/fail and domains. The **most recent submitted attempt** is used by default. Faculty can pick another, and the draft states which attempt was used and why.
+- **B. Learning-case evidence (Brightspace).** Residents upload a screenshot or PDF per required case (Learner → *My evidence*) to the private `itar-evidence` bucket. Faculty preview it and mark it *verified*, *needs clarification* or *rejected*, with a message the resident sees. Re-uploads keep the full history. Requirements are configured in Admin → *ITAR setup*, any number per rotation or per block. They are seeded as drafts from the 4 required teaching cases and need confirming against the Brightspace course. A future official Brightspace import has a reserved `source` value and `external_ref` column, but is not built.
+- **C. EPA review (Elentra).** A faculty-entered form with EPA IDs, number of assessments, entrustment as recorded, strengths, areas for improvement, review date, and status *pending* / *complete*. Complete reviews are locked until re-opened.
+- **D. Direct faculty observations** by category (scanning, clinical judgement, technical, professionalism, communication, general), date and context. They are shown apart from exam scores and never derived from them.
+- **E. ITAR draft.** Built from a template into editable sections: rotation, exam, cases, EPA, observations, strengths, areas for improvement and outstanding requirements, and evidence sources and verification status.
+  - Faculty-judgement sections start as `[Faculty to complete…]` placeholders, and approval is blocked until they are replaced.
+  - It assigns no overall rating and makes no inference from exam scores.
+  - Save, approve (locks; audited) and re-open (audited).
+  - Copy one section or the whole draft; download .txt; print/PDF; CSV. Exports are audit-logged.
+  - The draft is flagged as stale when the evidence changes after it was generated.
+
+**Block overview (cohort dashboard).** Faculty → block card. It shows one row per resident: exam, evidence verified/awaiting/returned/missing, EPA, observations, ITAR status, and "needs attention", split into *you* vs *resident*. It has an "only needing attention" filter, CSV export, one click into each resident, and Previous/Next between residents.
+
+**Access.** Faculty see a resident's ITAR data only if they are an **evaluator of that resident's block**; admins see all. Learners never see EPA reviews, observations or drafts; they see only their own uploads and the reviewer's message.
+
 **Production-ready vs prototype**
 
 | Ready for a supervised pilot (after approvals) | Prototype / not yet built |
@@ -85,9 +101,9 @@ POCUS is simply the first row in `courses` (migration `…600_pocus_course.sql`)
 
 ## 4. Tests
 
-- **Unit (17):** autosave queue (offline, crash-restore, ordering), CSV, importer, evaluation drafting guardrails.
-- **Database (29):** permissions and secrecy for every role, invitation gating, versioning and immutability, autosave seq rule, timing and deadline, attempts and accommodations, partial-credit, short-answer and hotspot scoring, release policy, storage policy, evaluations.
-- **End-to-end (1 scenario, 15 steps):** the full demonstration lifecycle in a real browser against a Supabase-equivalent stack. It includes an interruption with a reload, offline autosave, video playback checks, a phone-width layout check and automated WCAG 2.1 AA checks (axe) on the main screens.
+- **Unit (27):** autosave queue (offline, crash-restore, ordering), CSV, importer, evaluation drafting guardrails, ITAR draft (attempt rule, verified-only evidence, no rating/inference, placeholders, sources, staleness), overview attention rules.
+- **Database (44):** the ITAR suite (13) covers evidence privacy and upload rules, block-scoped faculty access, review messages and audit, EPA locking, learner exclusion, one ITAR per resident per block, approval lock, and retention. The original suite (31): permissions and secrecy for every role, invitation gating, versioning and immutability, autosave seq rule, timing and deadline, attempts and accommodations, partial-credit, short-answer and hotspot scoring, release policy, storage policy, evaluations.
+- **End-to-end (2 tests; the main scenario now includes the 8-step ITAR workflow):** the full demonstration lifecycle in a real browser against a Supabase-equivalent stack. It includes an interruption with a reload, offline autosave, video playback checks, a phone-width layout check and automated WCAG 2.1 AA checks (axe) on the main screens.
 
 See [TESTING.md](TESTING.md).
 

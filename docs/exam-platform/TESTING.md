@@ -35,6 +35,6 @@ The development container could not pull Docker images, so it ran the real Supab
 - a small gateway emulating Kong's routing;
 - an SMTP catcher.
 
-Results: **17 unit, 29 database and the full end-to-end scenario passed.**
+Results: **27 unit, 44 database and both end-to-end tests passed** (the main scenario includes the ITAR workflow: evidence upload → preview → verify/clarify → re-upload → EPA review → observations → draft → edit → approve → copy/export → block overview). The local auth server's per-address email interval is set to 1 s (`GOTRUE_SMTP_MAX_FREQUENCY=1s`) because the scenario signs the same person in several times within a minute; hosted Supabase keeps its default.
 
 Playwright's bundled open-source Chromium cannot decode H.264, so the end-to-end test uses VP9/WebM versions of the EchoSimulator loops (`tests/e2e/fixtures`). H.264 MP4 playback should be confirmed in Safari, Chrome and Firefox on the preview deployment; this is part of the go-live checklist.

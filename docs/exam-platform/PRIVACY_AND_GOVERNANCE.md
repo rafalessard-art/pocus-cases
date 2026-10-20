@@ -23,9 +23,15 @@
 | Faculty notes, evaluations | `faculty_notes`, `evaluations` | Faculty for their cohorts; admins. Never learners in this version |
 | Curriculum completion (self-reported) | `curriculum_progress` | The learner; faculty for their cohorts |
 | De-identified ultrasound media + provenance | Storage `exam-media`, `media_assets` | Staff; learners only during an attempt (or a released full review) |
+| Learning-case completion evidence (resident-uploaded screenshots/PDFs; filename, SHA-256, review status, reviewer message) | Storage `itar-evidence`, `evidence_submissions` | The resident (own files and review message); faculty who are evaluators of that resident's block; admins |
+| EPA review (transcribed from Elentra by faculty) | `epa_reviews` | Evaluators of the block; admins. Never learners |
+| Categorised faculty observations | `faculty_notes` (with block) | Evaluators of the block; admins. Never learners |
+| ITAR drafts and approvals, with an evidence snapshot | `evaluations` | Evaluators of the block; admins. Never learners |
 | Audit events | `audit_log` | Admins |
 
 Not collected: student numbers, dates of birth, phone numbers, addresses, IP-based tracking or analytics cookies. Sign-in uses email codes, so there are no passwords to leak.
+
+**Evidence uploads:** residents are told to upload only Brightspace completion pages, and never anything with patient information. Admins can delete a file uploaded in error (audited, with a reason).
 
 ## 3. Hosting and residency
 
@@ -60,6 +66,8 @@ Not collected: student numbers, dates of birth, phone numbers, addresses, IP-bas
 | Faculty notes | Until the end of residency | Same |
 | Accounts | Deactivate at graduation; delete per policy | Admin → People; deletion via SQL |
 | Media | While in use; archive afterwards; delete when authorization lapses | Storage API by an admin with dashboard access |
+| Learning-case evidence **files** | Configurable: Admin → ITAR setup → "days after the block ends" (empty = keep until deleted). Set per records-retention policy | The admin screen lists files past the period; deletion removes the file and keeps the record, review history and SHA-256; each deletion is audit-logged with a reason |
+| EPA reviews, ITAR drafts and approvals | Per PGME evaluation-record policy (the official ITAR lives in the institution's system) | Rows are not deletable in the app; export, then delete by an admin with database access |
 | Audit log | ≥ 2 years | Database |
 
 **Backups:** Supabase Pro takes daily backups (Point-in-Time Recovery is an optional add-on). Also export results CSVs each block to the program's official records system. That system, not this portal, should hold the record of truth for evaluations.

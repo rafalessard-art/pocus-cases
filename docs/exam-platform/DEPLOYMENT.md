@@ -22,6 +22,7 @@ Use **either** option.
 20261020000400_assessment.sql
 20261020000500_storage_and_grants.sql
 20261020000600_pocus_course.sql
+20261020000700_itar_preparation.sql
 ```
 
 **B — Supabase CLI.**
@@ -32,7 +33,7 @@ npx supabase link --project-ref <your-project-ref>
 npx supabase db push          # applies supabase/migrations in order
 ```
 
-This creates every table with row-level security, the private `exam-media` bucket with its policies, the POCUS course with draft objectives, and curriculum links to the existing cases and tools.
+This creates every table with row-level security, the private `exam-media` and `itar-evidence` buckets with their policies, the POCUS course with draft objectives, and curriculum links to the existing cases and tools.
 
 ## 3. Authentication settings
 

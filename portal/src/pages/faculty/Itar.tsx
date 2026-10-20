@@ -33,6 +33,25 @@ type Ws = {
 };
 
 const today = () => new Date().toLocaleDateString('en-CA');
+
+/** Fallback copy through a hidden, selected textarea (works where navigator.clipboard is blocked). */
+function legacyCopy(text: string): boolean {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try {
+    ok = document.execCommand('copy');
+  } catch {
+    ok = false;
+  }
+  ta.remove();
+  return ok;
+}
 const dates = (c: { start_date: string | null; end_date: string | null }) => (c.start_date || c.end_date ? `${c.start_date ?? '—'} → ${c.end_date ?? '—'}` : 'Block dates not set');
 
 // ---------------------------------------------------------------------------
@@ -617,12 +636,19 @@ function DraftSection({ w, reload, selectedAttempt }: { w: Ws; reload: () => voi
     if (ev?.id) await rpc('log_itar_export', { p_evaluation: ev.id, p_format: format }).catch(() => {});
   }
   async function copy(text: string, format: 'copy_all' | 'copy_section', label: string) {
+    setErr(undefined);
+    let ok = false;
     try {
       await navigator.clipboard.writeText(text);
+      ok = true;
+    } catch {
+      ok = legacyCopy(text); // locked-down browsers often block the async clipboard API
+    }
+    if (ok) {
       setMsg(`${label} copied — paste it into the official ITAR.`);
       logExport(format);
-    } catch {
-      setErr(new Error('The browser blocked clipboard access. Select the text and copy it manually.'));
+    } else {
+      setErr(new Error('The browser blocked clipboard access. Use “Download .txt”, or select the text and copy it manually.'));
     }
   }
   const header = `ITAR preparation — ${name}${w.learner.training_level ? ` (${w.learner.training_level})` : ''}\n${w.cohort.course}, ${w.cohort.name} (${dates(w.cohort)})\nStatus: ${locked ? `approved by ${ev?.approved_by_name ?? 'faculty'} on ${fmtDate(ev?.approved_at)}` : 'DRAFT — not approved'}\n\n`;
