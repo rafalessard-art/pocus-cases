@@ -107,6 +107,8 @@ Resident-reported counts are shown separately and never count. TeachingMedicine,
 
 The resident sees a dashboard with progress bars. Faculty see a requirements table at the top of the ITAR workspace, with who verified each item and when. The block overview shows requirements and scans columns. The ITAR draft gains a "Rotation requirements — completion record" section. It states that scan numbers are a completion measure and not a competence assessment, and it assigns no rating. See [QPATH_AND_SCAN_LOG.md](QPATH_AND_SCAN_LOG.md).
 
+**Before the departmental demonstration:** see [VALIDATION_REPORT.md](VALIDATION_REPORT.md), [DEMO_SCRIPT.md](DEMO_SCRIPT.md), [DIRECTOR_DECISIONS.md](DIRECTOR_DECISIONS.md) and [DEPLOYMENT_READINESS.md](DEPLOYMENT_READINESS.md).
+
 **Block overview (cohort dashboard).** Faculty → block card. It shows one row per resident: exam, evidence verified/awaiting/returned/missing, EPA, observations, ITAR status, and "needs attention", split into *you* vs *resident*. It has an "only needing attention" filter, CSV export, one click into each resident, and Previous/Next between residents.
 
 **Access.** Faculty see a resident's ITAR data only if they are an **evaluator of that resident's block**; admins see all. Learners never see EPA reviews, observations or drafts; they see only their own uploads and the reviewer's message.

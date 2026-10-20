@@ -104,10 +104,15 @@ export function requirementsSection(rot: Rotation): { key: string; title: string
 }
 
 /** Actions for the block overview that are NOT already covered by exam/evidence/EPA columns. */
-export function requirementActions(reqs: Pick<RotationReq, 'kind' | 'title' | 'status' | 'action'>[]) {
+export function requirementActions(reqs: (Pick<RotationReq, 'kind' | 'title' | 'status' | 'action'> & { extra?: Record<string, any> })[]) {
   const faculty: string[] = [];
   const resident: string[] = [];
   for (const r of reqs) {
+    // an exam below the rotation pass mark needs a program decision (another attempt), not just resident effort
+    if (r.kind === 'exam' && (r as RotationReq).extra?.met === false && r.status === 'in_progress') {
+      faculty.push(`Exam below ${Math.round(Number((r as RotationReq).extra?.pass_pct ?? 75))}% — decide on re-attempt`);
+      continue;
+    }
     if (!['scan_log', 'attestation'].includes(r.kind) || !r.action) continue;
     const short = r.kind === 'scan_log' ? 'scan log' : r.title.replace(/^POCUS\s+/i, '').split(/\s+—|\s+\(/)[0];
     if (r.action === 'faculty') faculty.push(r.kind === 'scan_log' ? 'Attest scans' : `Confirm ${short}`);

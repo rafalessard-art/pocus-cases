@@ -79,6 +79,13 @@ describe('block overview actions', () => {
   });
 });
 
+describe('exam below the rotation pass mark', () => {
+  it('is a faculty decision (re-attempt), not a resident to-do', () => {
+    const r = req('Written POCUS examination', 'exam', 'in_progress', { action: 'resident', extra: { pass_pct: 75, met: false } });
+    expect(requirementActions([r])).toEqual({ faculty: ['Exam below 75% — decide on re-attempt'], resident: [] });
+  });
+});
+
 describe('scan form', () => {
   it('turns new verified totals into deltas; a lower total is a correction', () => {
     const cats = [cat('airway', 5, 2), cat('cardiac', 40, 10, { views_note: 'PLAX…', views_confirmed: null, met: false })];
