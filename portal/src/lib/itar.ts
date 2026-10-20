@@ -11,7 +11,7 @@
  * professionalism from exam scores, and never assigns an overall rating.
  * Placeholders in [square brackets] mark what faculty must write themselves.
  */
-import { outstandingRequirements, requirementsSection, type Rotation } from './requirements';
+import { outstandingRequirements, requirementsSection, rotationPassPct, type Rotation } from './requirements';
 import { domainHighlights, type ExamFacts } from './summary';
 
 export type EvidenceStatus = 'submitted' | 'verified' | 'clarification_requested' | 'rejected';
@@ -157,7 +157,10 @@ export function draftItar(i: ItarInput): ItarSection[] {
   } else if (e.gradingStatus !== 'complete' || e.scorePct == null) {
     exam.push(`The end-of-block written examination (${e.examTitle}, v${e.version}) was submitted on ${fmt(e.submittedAt)}; grading is not yet complete.`);
   } else {
-    const pass = e.passed == null || e.passThresholdPct == null ? '' : e.passed ? `, meeting the pass threshold of ${e.passThresholdPct}%` : `, below the pass threshold of ${e.passThresholdPct}%`;
+    const rp = rotationPassPct(i.rotationReqs);
+    const pass = rp != null
+      ? (e.scorePct >= rp ? `, meeting the rotation pass mark of ${rp}%` : `, below the rotation pass mark of ${rp}%`)
+      : e.passed == null || e.passThresholdPct == null ? '' : e.passed ? `, meeting the pass threshold of ${e.passThresholdPct}%` : `, below the pass threshold of ${e.passThresholdPct}%`;
     exam.push(`On the end-of-block written examination (${e.examTitle}, v${e.version}), submitted ${fmt(e.submittedAt)}, the score was ${e.scorePct.toFixed(1)}% (${e.scorePoints}/${e.maxPoints} points)${pass}.`);
     const { strong, weak } = domainHighlights(e.domains);
     if (strong.length) exam.push(`Performance was strongest in ${andList(strong.map((d) => `${d.label} (${Math.round(d.pct!)}%)`))}.`);

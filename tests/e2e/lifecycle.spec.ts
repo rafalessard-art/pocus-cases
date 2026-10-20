@@ -284,6 +284,11 @@ test('full examination lifecycle', async ({ page, context }) => {
     await expect(page.getByRole('heading', { name: 'Learning-case evidence' })).toBeVisible();
     await expect(page.getByText(cohortName)).toBeVisible();
     await expect(page.getByTestId('evidence-requirement')).toHaveCount(5); // 4 required cases + optional TeachingMedicine record
+    // a non-PDF/image file is refused before anything is stored
+    const first = page.getByTestId('evidence-requirement').filter({ hasText: CASES[0].title });
+    await first.getByTestId('evidence-file').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('fictional text file') });
+    await first.getByTestId('evidence-upload').click();
+    await expect(first.getByText(/Upload a PDF or an image/)).toBeVisible();
     for (const c of CASES) {
       const row = page.getByTestId('evidence-requirement').filter({ hasText: c.title });
       await row.getByTestId('evidence-file').setInputFiles(join(FIX, c.file));
@@ -382,7 +387,11 @@ test('full examination lifecycle', async ({ page, context }) => {
     await expect.poll(() => img.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBe(900);
     await shot(page, '12b-evidence-preview');
     await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
-    for (const t of ['Gastric Ultrasound', 'Diaphragm POCUS', 'Optic Nerve Sheath']) {
+    // verify straight from the preview (2 clicks: open, verify)
+    await evidenceRow('Gastric Ultrasound').getByTestId('preview-evidence').click();
+    await page.getByRole('dialog').getByTestId('verify-in-preview').click();
+    await expect(evidenceRow('Gastric Ultrasound').locator('.badge', { hasText: 'Verified' })).toBeVisible();
+    for (const t of ['Diaphragm POCUS', 'Optic Nerve Sheath']) {
       await evidenceRow(t).getByTestId('verify-evidence').click();
       await expect(evidenceRow(t).locator('.badge', { hasText: 'Verified' })).toBeVisible();
     }
@@ -446,6 +455,8 @@ test('full examination lifecycle', async ({ page, context }) => {
     await page.getByTestId('scan-accept-reported').click();
     for (const k of ['airway', 'cardiac', 'lung_pleura', 'abdominal_fast']) await page.getByTestId(`scan-views-${k}`).check();
     await page.getByTestId('scan-note').fill('MRN 1234567');
+    await expect(page.getByTestId('scan-record')).toBeDisabled(); // explicit review statement required
+    await page.getByTestId('scan-attest').check();
     await page.getByTestId('scan-record').click();
     await expect(page.getByText(/must not contain patient identifiers/)).toBeVisible();
     await page.getByTestId('scan-note').fill('Reviewed in QPath with the resident (fictional)');
@@ -529,11 +540,27 @@ test('full examination lifecycle', async ({ page, context }) => {
     const row = page.getByTestId('overview-row').filter({ hasText: 'Dr. Demo Resident' });
     await expect(row).toContainText('4/4');
     await expect(row).toContainText('approved');
-    await expect(row).toContainText('Complete');
+    await expect(row).toContainText('No action needed');
     await expect(row).toContainText('6/7');
     await expect(row).toContainText('102/102');
     await expect(page.locator('.stat', { hasText: 'ITARs approved' })).toContainText('1/1');
     await shot(page, '12e-block-complete');
+  });
+
+  await test.step('evidence added after approval is flagged; the approved version is preserved', async () => {
+    await page.getByTestId('overview-row').filter({ hasText: 'Dr. Demo Resident' }).click();
+    await page.getByTestId('obs-category').selectOption('clinical_judgement');
+    await page.getByTestId('obs-body').fill('Fictional: added after the ITAR was approved');
+    await page.getByTestId('obs-add').click();
+    await expect(page.getByTestId('itar-changed')).toContainText('Observations: Observation added');
+    await expect(page.getByTestId('section-strengths')).toBeDisabled(); // nothing changed silently
+    await page.getByTestId('itar-versions').locator('summary').first().click();
+    await expect(page.getByText('Version 1 · approved')).toBeVisible();
+    await shot(page, '12f-post-approval-flag');
+    await page.getByRole('link', { name: '← Block' }).click();
+    const row = page.getByTestId('overview-row').filter({ hasText: 'Dr. Demo Resident' });
+    await expect(row).toContainText('new evidence since approval');
+    await expect(row).toContainText('Review new evidence');
     await signOut(page);
   });
 

@@ -12,7 +12,7 @@ import {
   type Requirement, type WsAttempt,
 } from '../../lib/itar';
 import {
-  REQ_LABEL, REQ_TONE, completion, requirementActions, scanDeltas, scanPct, type ReqStatus, type Rotation, type RotationReq,
+  REQ_LABEL, REQ_TONE, completion, requirementActions, rotationPassPct, scanDeltas, scanPct, withSelectedAttempt, type ItarState, type ReqStatus, type Rotation, type RotationReq,
 } from '../../lib/requirements';
 import { rpc, supabase } from '../../lib/supabase';
 
@@ -35,7 +35,7 @@ type Ws = {
   roster: { id: string; name: string }[];
 };
 
-type RotRow = { learner_id: string; requirements: Pick<RotationReq, 'key' | 'kind' | 'title' | 'required' | 'status' | 'action' | 'detail'>[]; scans: { verified_total: number; target_total: number } };
+type RotRow = { learner_id: string; requirements: Pick<RotationReq, 'key' | 'kind' | 'title' | 'required' | 'status' | 'action' | 'detail' | 'extra'>[]; scans: { verified_total: number; target_total: number }; itar: ItarState | null };
 
 const today = () => new Date().toLocaleDateString('en-CA');
 
@@ -101,6 +101,7 @@ export function BlockOverview() {
     const c = x ? completion(x.requirements) : null;
     if (x) {
       const extra = requirementActions(x.requirements);
+      if ((x.itar?.changes_since_approval.length ?? 0) > 0) extra.faculty.push('Review new evidence (ITAR approved earlier)');
       if (a.done && (extra.faculty.length || extra.resident.length)) a.done = false; // an approved ITAR never hides outstanding requirements
       a.faculty.splice(a.faculty.length && !a.done ? a.faculty.length - 1 : a.faculty.length, 0, ...extra.faculty); // keep "Prepare/Approve ITAR" last
       a.resident.push(...extra.resident);
@@ -161,7 +162,17 @@ export function BlockOverview() {
                     {r.exam.latest ? (
                       <>
                         <strong>{r.exam.latest.score_pct != null ? pct(r.exam.latest.score_pct, 1) : '—'}</strong>{' '}
-                        {r.exam.latest.grading_status === 'pending_manual' ? <Badge tone="warn">needs grading</Badge> : r.exam.latest.passed == null ? null : r.exam.latest.passed ? <Badge tone="ok">pass</Badge> : <Badge tone="bad">below</Badge>}
+                        {(() => {
+                          const ex = x?.requirements.find((q) => q.kind === 'exam');
+                          const pp = ex?.extra?.pass_pct;
+                          if (r.exam.latest.grading_status === 'pending_manual') return <Badge tone="warn">needs grading</Badge>;
+                          if (ex && pp != null && r.exam.latest.score_pct != null) {
+                            const met = ex.status === 'verified';
+                            return <>{met ? <Badge tone="ok">≥ {Math.round(Number(pp))}%</Badge> : <Badge tone="bad">below {Math.round(Number(pp))}%</Badge>}
+                              {r.exam.n_attempts > 1 && ex.extra?.attempt_no && <div className="small muted">ITAR uses attempt {ex.extra.attempt_no}</div>}</>;
+                          }
+                          return r.exam.latest.passed == null ? null : r.exam.latest.passed ? <Badge tone="ok">pass</Badge> : <Badge tone="bad">below</Badge>;
+                        })()}
                         {r.exam.n_attempts > 1 && <div className="small muted">{r.exam.n_attempts} attempts</div>}
                       </>
                     ) : <Badge tone={r.exam.in_progress ? 'warn' : undefined}>{r.exam.in_progress ? 'in progress' : r.exam.assigned ? 'outstanding' : 'not assigned'}</Badge>}
@@ -176,9 +187,12 @@ export function BlockOverview() {
                   </td>
                   <td>{r.epa_status === 'complete' ? <Badge tone="ok">complete</Badge> : <Badge tone="warn">pending</Badge>}</td>
                   <td className="num">{r.n_observations}</td>
-                  <td>{!r.itar ? <Badge>not started</Badge> : r.itar.status === 'approved' ? <Badge tone="ok">approved</Badge> : <Badge tone="warn">draft</Badge>}</td>
+                  <td>
+                    {!r.itar ? <Badge>not started</Badge> : r.itar.status === 'approved' ? <Badge tone="ok">approved</Badge> : <Badge tone="warn">draft</Badge>}
+                    {(x?.itar?.changes_since_approval.length ?? 0) > 0 && <div><Badge tone="warn">new evidence since approval</Badge></div>}
+                  </td>
                   <td className="small">
-                    {a.done ? <span className="muted">Complete</span> : (
+                    {a.done ? <span className="muted">No action needed</span> : (
                       <>
                         {a.faculty.length > 0 && <div><strong>You:</strong> {a.faculty.join(' · ')}</div>}
                         {a.resident.length > 0 && <div className="muted">Resident: {a.resident.join(' · ')}</div>}
@@ -210,7 +224,7 @@ export function ItarWorkspace() {
   const rc = rot.data ? completion(rot.data.requirements) : null;
   const ev = w.evaluation;
   const locked = ev?.status === 'approved';
-  const selected = sel && sel.key === `${cohortId}/${learnerId}` ? sel.id : ev?.attempt_id ?? null;
+  const selected = sel && sel.key === `${cohortId}/${learnerId}` ? sel.id : ev?.attempt_rule === 'faculty_selected' ? ev.attempt_id : null;
   const name = w.learner.full_name || w.learner.email;
   const idx = w.roster.findIndex((r) => r.id === learnerId);
   const prev = idx > 0 ? w.roster[idx - 1] : null;
@@ -250,7 +264,7 @@ export function ItarWorkspace() {
           ))}
         </nav>
         {rot.error ? <ErrorNote error={rot.error} /> : rot.data && <RequirementsSection w={w} rot={rot.data} reload={reload} setRot={rot.setData} />}
-        <ExamSection w={w} chosen={chosen} locked={locked} onSelect={(id) => setSel({ key: `${cohortId}/${learnerId}`, id })} />
+        <ExamSection w={w} chosen={chosen} locked={locked} passPct={rotationPassPct(rot.data)} onSelect={(id) => setSel({ key: `${cohortId}/${learnerId}`, id })} />
         <CasesSection w={w} reload={reload} />
         <EpaSection key={`${learnerId}-${w.epa_review?.updated_at ?? 'new'}`} w={w} reload={reload} />
         <ObservationsSection w={w} reload={reload} locked={locked} />
@@ -269,7 +283,7 @@ function SectionHead({ id, letter, title, children }: { id: string; letter: stri
   );
 }
 
-function ExamSection({ w, chosen, locked, onSelect }: { w: Ws; chosen: ReturnType<typeof chooseAttempt>; locked: boolean; onSelect: (id: string | null) => void }) {
+function ExamSection({ w, chosen, locked, passPct, onSelect }: { w: Ws; chosen: ReturnType<typeof chooseAttempt>; locked: boolean; passPct: number | null; onSelect: (id: string | null) => void }) {
   const a = chosen.attempt;
   const facts = factsFrom(a);
   return (
@@ -311,7 +325,9 @@ function ExamSection({ w, chosen, locked, onSelect }: { w: Ws; chosen: ReturnTyp
                 </p>
                 <div className="stats">
                   <div className="stat"><b>{facts.scorePct != null ? pct(facts.scorePct, 1) : '—'}</b><span>score</span></div>
-                  {facts.passThresholdPct != null && <div className="stat"><b>{facts.passed == null ? '—' : facts.passed ? 'Pass' : 'Below'}</b><span>threshold {pct(facts.passThresholdPct)}</span></div>}
+                  {passPct != null && facts.scorePct != null ? (
+                    <div className="stat" data-testid="rotation-pass"><b>{facts.scorePct >= passPct ? 'Met' : 'Below'}</b><span>rotation pass mark {pct(passPct)}</span></div>
+                  ) : facts.passThresholdPct != null && <div className="stat"><b>{facts.passed == null ? '—' : facts.passed ? 'Pass' : 'Below'}</b><span>threshold {pct(facts.passThresholdPct)}</span></div>}
                 </div>
                 <DomainBars domains={facts.domains} />
                 <p className="small muted" style={{ marginBottom: 0 }}>Knowledge assessment only.</p>
@@ -432,7 +448,12 @@ function EvidenceRow({ r, w, reload }: { r: Requirement; w: Ws; reload: () => vo
         </div>
       )}
       <ErrorNote error={err} />
-      {view && <EvidencePreview {...view} onClose={() => setView(null)} />}
+      {view && (
+        <EvidencePreview {...view} onClose={() => setView(null)}
+          actions={last && view.path === last.storage_path && last.status !== 'verified' && !last.file_deleted_at && w.me !== w.learner.id
+            ? <button className="btn small" disabled={busy} data-testid="verify-in-preview" onClick={async () => { await decide('verified'); setView(null); }}>Verify</button>
+            : undefined} />
+      )}
     </div>
   );
 }
@@ -607,8 +628,10 @@ function DraftSection({ w, reload, selectedAttempt, rotation }: { w: Ws; reload:
     learnerName: w.learner.full_name || w.learner.email, trainingLevel: w.learner.training_level, rotation: w.cohort.course, blockName: w.cohort.name,
     blockStart: w.cohort.start_date, blockEnd: w.cohort.end_date, examAssigned: w.exam_assigned, attempts: w.attempts, selectedAttemptId: selectedAttempt,
     requirements: w.requirements, epa: w.epa_review, observations: w.observations.filter((o) => o.cohort_id === w.cohort.id),
-    strengths: f.strengths, areasForImprovement: f.areas, otherComments: f.other, today: today(), rotationReqs: rotation,
+    strengths: f.strengths, areasForImprovement: f.areas, otherComments: f.other, today: today(),
+    rotationReqs: rotation ? withSelectedAttempt(rotation, chooseAttempt(w.attempts, selectedAttempt).attempt, chooseAttempt(w.attempts, selectedAttempt).rule) : null,
   }), [w, selectedAttempt, f.strengths, f.areas, f.other, rotation]);
+  const changes = locked ? rotation?.itar?.changes_since_approval ?? [] : [];
   const fp = fingerprint(input);
   const stale = f.sections.length > 0 && f.snapshot?.fingerprint && f.snapshot.fingerprint !== fp;
   const todo = outstanding(input);
@@ -698,7 +721,16 @@ function DraftSection({ w, reload, selectedAttempt, rotation }: { w: Ws; reload:
         <SectionHead id="itar" letter="E" title="ITAR draft">
           {locked ? <Badge tone="ok">Approved {fmtDate(ev?.approved_at)}{ev?.approved_by_name ? ` · ${ev.approved_by_name}` : ''}</Badge> : ev ? <Badge tone="warn">Draft</Badge> : <Badge>Not started</Badge>}
         </SectionHead>
-        {locked && <div className="notice ok small" style={{ marginBottom: 12 }}>Approved and locked. Copy or export it into the official ITAR. Re-open to make changes (recorded in the audit log).</div>}
+        {locked && changes.length === 0 && <div className="notice ok small" style={{ marginBottom: 12 }}>Approved and locked. Copy or export it into the official ITAR. Re-open to make changes (recorded in the audit log).</div>}
+        {locked && changes.length > 0 && (
+          <div className="notice warn small" style={{ marginBottom: 12 }} data-testid="itar-changed">
+            <strong>New evidence since this ITAR was approved ({fmtDate(ev?.approved_at)}).</strong> The approved version is unchanged and preserved.
+            <ul style={{ margin: '6px 0' }}>{changes.map((c, i) => <li key={i}>{c.area}: {c.what} — {fmtDate(c.at)}</li>)}</ul>
+            If this affects the evaluation, start a revision: re-open, regenerate, review and approve again (a new version is kept alongside the original).
+            <div style={{ marginTop: 8 }}><button className="btn small" onClick={() => setConfirm('reopen')} data-testid="start-revision">Start a revision…</button></div>
+          </div>
+        )}
+        <VersionHistory evaluationId={ev?.id ?? null} count={rotation?.itar?.versions ?? 0} />
         {!locked && todo.length > 0 && (
           <div className="notice warn small" style={{ marginBottom: 12 }}>
             <strong>Outstanding:</strong> {todo.join(' · ')}. You can still prepare the draft; outstanding items are listed in it.
@@ -777,7 +809,7 @@ function DraftSection({ w, reload, selectedAttempt, rotation }: { w: Ws; reload:
       )}
       {confirm === 'reopen' && (
         <Confirm title="Re-open this ITAR draft?" confirmLabel="Re-open" onCancel={() => setConfirm(null)} onConfirm={reopen}
-          body={<p>The approval will be withdrawn (recorded in the audit log). Approve again after editing.</p>} />
+          body={<p>The current approval is withdrawn so you can edit (recorded in the audit log). The approved text is kept as a numbered version; approving again adds a new version.</p>} />
       )}
     </section>
   );
@@ -893,6 +925,7 @@ function ScanLog({ w, rot, setRot, reload }: { w: Ws; rot: Rotation; setRot: (r:
   const [views, setViews] = useState<Record<string, boolean>>({});
   const [reviewedOn, setReviewedOn] = useState(today());
   const [note, setNote] = useState('');
+  const [attested, setAttested] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<unknown>();
   const [msg, setMsg] = useState<string | null>(null);
@@ -911,12 +944,13 @@ function ScanLog({ w, rot, setRot, reload }: { w: Ws; rot: Rotation; setRot: (r:
     setMsg(null);
     try {
       const r = await rpc<Rotation>('attest_scans', {
-        p_learner: w.learner.id, p_cohort: w.cohort.id, p_entries: entries, p_reviewed_on: reviewedOn, p_note: note.trim(), p_correction: negative,
+        p_learner: w.learner.id, p_cohort: w.cohort.id, p_entries: entries, p_reviewed_on: reviewedOn, p_note: note.trim(), p_correction: negative, p_attested: attested,
       });
       setRot(r);
       setTotals({});
       setViews({});
       setNote('');
+      setAttested(false);
       setMsg(`Recorded ${entries.length} categor${entries.length === 1 ? 'y' : 'ies'}${negative ? ' (correction)' : ''}.`);
       reload();
     } catch (e) {
@@ -972,7 +1006,11 @@ function ScanLog({ w, rot, setRot, reload }: { w: Ws; rot: Rotation; setRot: (r:
               <input type="text" maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} data-testid="scan-note"
                 placeholder={negative ? 'e.g. two studies were entered twice' : 'e.g. reviewed in QPath with the resident'} />
             </label>
-            <button className="btn" disabled={busy || !entries.length || (negative && !note.trim())} onClick={record} data-testid="scan-record">
+            <label className="check small" style={{ flexBasis: '100%' }}>
+              <input type="checkbox" checked={attested} onChange={(e) => setAttested(e.target.checked)} data-testid="scan-attest" />{' '}
+              I reviewed these studies (images) in QPath or another approved system and accept them as meeting program requirements. This records completion, not competence.
+            </label>
+            <button className="btn" disabled={busy || !entries.length || !attested || (negative && !note.trim())} onClick={record} data-testid="scan-record">
               {negative ? 'Record correction' : `Record attestation${entries.length ? ` (${entries.length})` : ''}`}
             </button>
           </div>
@@ -995,5 +1033,33 @@ function ScanLog({ w, rot, setRot, reload }: { w: Ws; rot: Rotation; setRot: (r:
         </details>
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Approved ITAR versions (immutable)
+// ---------------------------------------------------------------------------
+function VersionHistory({ evaluationId, count }: { evaluationId: string | null; count: number }) {
+  const [open, setOpen] = useState(false);
+  const v = useLoad(async () => {
+    if (!open || !evaluationId) return [];
+    const { data, error } = await supabase.from('evaluation_versions').select('version, summary, approved_at, approved_by, profiles:approved_by(full_name)')
+      .eq('evaluation_id', evaluationId).order('version', { ascending: false });
+    if (error) throw error;
+    return data as any[];
+  }, [open, evaluationId]);
+  if (!evaluationId || count === 0) return null;
+  return (
+    <details className="disclosure" style={{ marginBottom: 12 }} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)} data-testid="itar-versions">
+      <summary>Approved versions ({count}) — preserved exactly as approved</summary>
+      {v.loading && <Spinner />}
+      <ErrorNote error={v.error} />
+      {(v.data ?? []).map((x) => (
+        <details key={x.version} className="disclosure" style={{ marginLeft: 12 }}>
+          <summary>Version {x.version} · approved {fmtDate(x.approved_at)}{x.profiles?.full_name ? ` by ${x.profiles.full_name}` : ''}</summary>
+          <div className="small" style={{ whiteSpace: 'pre-wrap' }}>{x.summary}</div>
+        </details>
+      ))}
+    </details>
   );
 }

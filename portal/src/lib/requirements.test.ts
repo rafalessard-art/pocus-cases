@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FORBIDDEN, draftItar, outstanding, type ItarInput } from './itar';
-import { completion, outstandingRequirements, requirementActions, requirementsSection, scanDeltas, type Rotation, type RotationReq, type ScanCategory } from './requirements';
+import { completion, outstandingRequirements, requirementActions, requirementsSection, scanDeltas, withSelectedAttempt, type Rotation, type RotationReq, type ScanCategory } from './requirements';
 
 const req = (key: string, kind: RotationReq['kind'], status: RotationReq['status'], extra: Partial<RotationReq> = {}): RotationReq => ({
   id: key, key, kind, title: key, description: '', required: true, resident_submits: kind === 'attestation', stages: [], evidence_requirement_id: null,
@@ -86,5 +86,29 @@ describe('scan form', () => {
     expect(scanDeltas(cats, {}, { cardiac: true })).toEqual({ entries: [{ category: 'cardiac', delta: 0, views_confirmed: true }], negative: false });
     expect(scanDeltas(cats, { airway: '1' }, {})).toEqual({ entries: [{ category: 'airway', delta: -1 }], negative: true });
     expect(scanDeltas(cats, { airway: '' }, {}).entries).toEqual([]);
+  });
+});
+
+describe('exam consistency between the requirements section and the exam section', () => {
+  const base: Rotation = { ...rot, requirements: rot.requirements.map((r) => (r.kind === 'exam' ? { ...r, extra: { pass_pct: 75 } } : r)) };
+  const att = (n: number, score: number) => ({ id: `a${n}`, exam_title: 'Exam', version: 1, attempt_no: n, status: 'submitted' as const, started_at: '2026-10-01',
+    submitted_at: `2026-10-0${n}T10:00:00Z`, score_points: score, max_points: 100, score_pct: score, passed: score >= 60, pass_threshold_pct: 60,
+    grading_status: 'complete', released: true, breakdown: { domains: [] } });
+
+  it('uses the attempt the ITAR uses, including a faculty selection, and the 75% rotation pass mark', () => {
+    const r1 = withSelectedAttempt(base, att(1, 80), 'faculty_selected').requirements.find((r) => r.kind === 'exam')!;
+    expect(r1).toMatchObject({ status: 'verified', detail: 'Score 80.0% (attempt 1, selected by faculty) — rotation pass mark 75% met' });
+    const r2 = withSelectedAttempt(base, att(2, 70), 'latest_submitted').requirements.find((r) => r.kind === 'exam')!;
+    expect(r2).toMatchObject({ status: 'in_progress', action: 'resident', detail: 'Score 70.0% (attempt 2) — below the rotation pass mark of 75%' });
+  });
+
+  it('the draft states the rotation pass mark (75%), not the exam version threshold (60%)', () => {
+    const input: ItarInput = {
+      learnerName: 'Fictional Resident', rotation: 'POCUS', blockName: 'Block 1', examAssigned: true, attempts: [att(1, 70)], requirements: [], epa: null,
+      observations: [], strengths: '', areasForImprovement: '', otherComments: '', today: '2026-10-20', rotationReqs: base,
+    };
+    const exam = draftItar(input).find((s) => s.key === 'exam')!.text;
+    expect(exam).toMatch(/below the rotation pass mark of 75%/);
+    expect(exam).not.toMatch(/60%/);
   });
 });

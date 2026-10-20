@@ -23,7 +23,12 @@ export type ScanBatch = {
   batch_id: string; created_at: string; reviewed_on: string; is_correction: boolean; source: string; by: string | null; note: string;
   entries: { category: string; delta: number; views_confirmed: boolean | null }[];
 };
+export type ItarState = {
+  status: 'draft' | 'approved'; approved_at: string | null; versions: number;
+  changes_since_approval: { area: string; what: string; at: string }[];
+};
 export type Rotation = {
+  itar?: ItarState | null;
   requirements: RotationReq[];
   scans: { categories: ScanCategory[]; verified_total: number; target_total: number; reported_total: number | null; history: ScanBatch[] };
 };
@@ -124,4 +129,41 @@ export function scanDeltas(cats: ScanCategory[], totals: Record<string, string>,
     if (delta < 0) negative = true;
   }
   return { entries, negative };
+}
+
+/**
+ * Make the exam requirement reflect the attempt the ITAR uses (the faculty's
+ * selection in the workspace, even before it is saved), so the requirements
+ * section and the exam section of the draft never disagree.
+ */
+export function withSelectedAttempt(
+  rot: Rotation,
+  a: { attempt_no: number; score_pct: number | string | null; grading_status: string; submitted_at: string | null } | null,
+  rule: 'latest_submitted' | 'faculty_selected' | 'none',
+): Rotation {
+  const i = rot.requirements.findIndex((r) => r.kind === 'exam');
+  if (i < 0 || !a || rot.requirements[i].override) return rot;
+  const r = rot.requirements[i];
+  const pass = r.extra?.pass_pct == null ? null : Number(r.extra.pass_pct);
+  const score = a.score_pct == null ? null : Number(a.score_pct);
+  const sel = rule === 'faculty_selected' ? ', selected by faculty' : '';
+  let next: RotationReq;
+  if (a.grading_status !== 'complete' || score == null) {
+    next = { ...r, status: 'submitted', action: 'faculty', detail: 'Submitted — grading in progress', verified_by_name: null, verified_at: null };
+  } else if (pass == null || score >= pass) {
+    next = { ...r, status: 'verified', action: null, detail: `Score ${score.toFixed(1)}% (attempt ${a.attempt_no}${sel})${pass == null ? '' : ` — rotation pass mark ${Math.round(pass)}% met`}`,
+      verified_by_name: 'the portal (automatic scoring)', verified_at: a.submitted_at, extra: { ...r.extra, score_pct: score, met: true } };
+  } else {
+    next = { ...r, status: 'in_progress', action: 'resident', detail: `Score ${score.toFixed(1)}% (attempt ${a.attempt_no}${sel}) — below the rotation pass mark of ${Math.round(pass)}%`,
+      verified_by_name: null, verified_at: null, extra: { ...r.extra, score_pct: score, met: false } };
+  }
+  const requirements = [...rot.requirements];
+  requirements[i] = next;
+  return { ...rot, requirements };
+}
+
+/** Rotation pass mark for the exam requirement, if configured. */
+export function rotationPassPct(rot: Rotation | null | undefined): number | null {
+  const v = rot?.requirements.find((r) => r.kind === 'exam')?.extra?.pass_pct;
+  return v == null ? null : Number(v);
 }

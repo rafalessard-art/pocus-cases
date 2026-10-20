@@ -61,7 +61,7 @@ describe('scan logbook (counts only)', () => {
   });
 
   it('faculty record several categories in one batch; the reviewer and date are kept', async () => {
-    const s = await rpc(faculty, 'attest_scans', {
+    const s = await rpc(faculty, 'attest_scans', { p_attested: true,
       p_learner: resident.id, p_cohort: block, p_reviewed_on: '2026-10-15', p_note: 'Reviewed in QPath with the resident',
       p_entries: [{ category: cats.airway, delta: 5, views_confirmed: true }, { category: cats.cardiac, delta: 12 }, { category: cats.gastric, delta: 20 }],
     });
@@ -76,20 +76,20 @@ describe('scan logbook (counts only)', () => {
   });
 
   it('a category with a views rule is complete only once faculty confirm the views', async () => {
-    let s = await rpc(faculty, 'attest_scans', { p_learner: resident.id, p_cohort: block, p_reviewed_on: '2026-10-16', p_entries: [{ category: cats.cardiac, delta: 28 }] });
+    let s = await rpc(faculty, 'attest_scans', { p_attested: true, p_learner: resident.id, p_cohort: block, p_reviewed_on: '2026-10-16', p_entries: [{ category: cats.cardiac, delta: 28 }] });
     expect(cat(s, 'cardiac')).toMatchObject({ verified: 40, met: false });
-    s = await rpc(faculty, 'attest_scans', { p_learner: resident.id, p_cohort: block, p_reviewed_on: '2026-10-16', p_entries: [{ category: cats.cardiac, delta: 0, views_confirmed: true }] });
+    s = await rpc(faculty, 'attest_scans', { p_attested: true, p_learner: resident.id, p_cohort: block, p_reviewed_on: '2026-10-16', p_entries: [{ category: cats.cardiac, delta: 0, views_confirmed: true }] });
     expect(cat(s, 'cardiac').met).toBe(true);
   });
 
   it('reductions need a correction with a reason, cannot go below zero, and are kept in the history', async () => {
-    await expect(rpc(faculty, 'attest_scans', { p_learner: resident.id, p_cohort: block, p_reviewed_on: '2026-10-16', p_entries: [{ category: cats.gastric, delta: -2 }] }))
+    await expect(rpc(faculty, 'attest_scans', { p_attested: true, p_learner: resident.id, p_cohort: block, p_reviewed_on: '2026-10-16', p_entries: [{ category: cats.gastric, delta: -2 }] }))
       .rejects.toThrow(/correction/);
-    await expect(rpc(faculty, 'attest_scans', { p_learner: resident.id, p_cohort: block, p_reviewed_on: '2026-10-16', p_correction: true, p_entries: [{ category: cats.gastric, delta: -2 }] }))
+    await expect(rpc(faculty, 'attest_scans', { p_attested: true, p_learner: resident.id, p_cohort: block, p_reviewed_on: '2026-10-16', p_correction: true, p_entries: [{ category: cats.gastric, delta: -2 }] }))
       .rejects.toThrow(/reason/);
-    await expect(rpc(faculty, 'attest_scans', { p_learner: resident.id, p_cohort: block, p_reviewed_on: '2026-10-16', p_correction: true, p_note: 'Entered twice', p_entries: [{ category: cats.dvt, delta: -1 }] }))
+    await expect(rpc(faculty, 'attest_scans', { p_attested: true, p_learner: resident.id, p_cohort: block, p_reviewed_on: '2026-10-16', p_correction: true, p_note: 'Entered twice', p_entries: [{ category: cats.dvt, delta: -1 }] }))
       .rejects.toThrow(/below zero/);
-    const s = await rpc(faculty, 'attest_scans', { p_learner: resident.id, p_cohort: block, p_reviewed_on: '2026-10-16', p_correction: true, p_note: 'Two studies entered twice', p_entries: [{ category: cats.gastric, delta: -2 }] });
+    const s = await rpc(faculty, 'attest_scans', { p_attested: true, p_learner: resident.id, p_cohort: block, p_reviewed_on: '2026-10-16', p_correction: true, p_note: 'Two studies entered twice', p_entries: [{ category: cats.gastric, delta: -2 }] });
     expect(cat(s, 'gastric')).toMatchObject({ verified: 18, met: false });
     expect(s.scans.history[0]).toMatchObject({ is_correction: true, note: 'Two studies entered twice' });
     expect((await sql(`select count(*)::int n from public.scan_attestations where learner_id = $1`, [resident.id]))[0].n).toBe(6);
@@ -97,15 +97,15 @@ describe('scan logbook (counts only)', () => {
 
   it('notes that look like patient identifiers are refused', async () => {
     for (const note of ['MRN 4481234', 'pt born 1961-03-04', 'DOB 03/04/61', 'Health card 1234-567-890']) {
-      await expect(rpc(faculty, 'attest_scans', { p_learner: resident.id, p_cohort: block, p_reviewed_on: '2026-10-16', p_note: note, p_entries: [{ category: cats.dvt, delta: 1 }] }))
+      await expect(rpc(faculty, 'attest_scans', { p_attested: true, p_learner: resident.id, p_cohort: block, p_reviewed_on: '2026-10-16', p_note: note, p_entries: [{ category: cats.dvt, delta: 1 }] }))
         .rejects.toThrow(/patient identifiers/);
     }
   });
 
   it('only evaluators of the block attest; never for themselves; never in the future; no direct writes', async () => {
-    await expect(rpc(otherFaculty, 'attest_scans', { p_learner: resident.id, p_cohort: block, p_reviewed_on: '2026-10-16', p_entries: [{ category: cats.dvt, delta: 1 }] })).rejects.toThrow();
-    await expect(rpc(resident, 'attest_scans', { p_learner: resident.id, p_cohort: block, p_reviewed_on: '2026-10-16', p_entries: [{ category: cats.dvt, delta: 1 }] })).rejects.toThrow();
-    await expect(rpc(faculty, 'attest_scans', { p_learner: resident.id, p_cohort: block, p_reviewed_on: '2999-01-01', p_entries: [{ category: cats.dvt, delta: 1 }] })).rejects.toThrow(/future/);
+    await expect(rpc(otherFaculty, 'attest_scans', { p_attested: true, p_learner: resident.id, p_cohort: block, p_reviewed_on: '2026-10-16', p_entries: [{ category: cats.dvt, delta: 1 }] })).rejects.toThrow();
+    await expect(rpc(resident, 'attest_scans', { p_attested: true, p_learner: resident.id, p_cohort: block, p_reviewed_on: '2026-10-16', p_entries: [{ category: cats.dvt, delta: 1 }] })).rejects.toThrow();
+    await expect(rpc(faculty, 'attest_scans', { p_attested: true, p_learner: resident.id, p_cohort: block, p_reviewed_on: '2999-01-01', p_entries: [{ category: cats.dvt, delta: 1 }] })).rejects.toThrow(/future/);
     await expect(as(faculty, (q) => q(`insert into public.scan_attestations (batch_id, learner_id, cohort_id, category_id, delta, reviewed_on) values (gen_random_uuid(), $1, $2, $3, 50, current_date)`,
       [resident.id, block, cats.lung_pleura]))).rejects.toThrow();
     await expect(as(resident, (q) => q(`update public.scan_self_reports set count = 999`))).rejects.toThrow();
