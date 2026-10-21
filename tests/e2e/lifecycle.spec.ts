@@ -538,6 +538,7 @@ test('full examination lifecycle', async ({ page, context }) => {
     await page.getByRole('button', { name: 'Approve and lock' }).click();
     await expect(page.locator('#itar').getByText(/^Approved/)).toBeVisible();
     await expect(page.getByTestId('iter-strengths')).toBeDisabled();
+    await expect(page.getByTestId('iter-outcome')).toHaveText('Yes, Fully');
   });
 
   await test.step('faculty copies each section into Elentra (transfer sheet and download)', async () => {

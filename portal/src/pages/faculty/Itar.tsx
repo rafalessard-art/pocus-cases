@@ -842,6 +842,10 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
     if (!iterMode || !T) {
       return <textarea rows={rows} value={s.text} disabled={locked} onChange={(e) => setSection(i, e.target.value)} aria-label={s.title} data-testid={`section-${s.key}`} />;
     }
+    // once approved, show the faculty selection as plain text (disabled controls are hard to read)
+    if (locked && (s.kind === 'outcome' || s.kind === 'basis' || s.kind === 'discussed')) {
+      return <div style={{ fontWeight: 600 }} data-testid={`iter-${s.kind}`}>{s.text}</div>;
+    }
     if (s.kind === 'outcome') {
       return (
         <fieldset style={{ border: 0, padding: 0, margin: 0 }} data-testid="iter-outcome">
