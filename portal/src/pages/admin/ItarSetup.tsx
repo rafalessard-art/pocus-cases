@@ -4,6 +4,8 @@ import { Badge, Confirm, Empty, ErrorNote, Spinner, fmtDate, useLoad } from '../
 import { cohorts as loadCohorts, pocusCourse } from '../../lib/content';
 import { deleteEvidenceFiles } from '../../lib/evidence';
 import { rpc, supabase } from '../../lib/supabase';
+import { categoryLabel } from '../../lib/itar';
+import { NARRATIVE_KEYS, parseTemplate, type IterTemplate } from '../../lib/iter';
 
 type Req = {
   id: string; course_id: string; cohort_id: string | null; kind: string; source: string; title: string; description: string; external_ref: string | null;
@@ -13,8 +15,9 @@ type Req = {
 /** Admin: what residents must upload per rotation/block, and how long evidence files are kept. */
 export function ItarSetup() {
   return (
-    <Page kicker="Administration" title="ITAR setup" subtitle="Rotation requirements, scan targets, learning-case evidence and evidence retention">
+    <Page kicker="Administration" title="ITAR setup" subtitle="Rotation requirements, scan targets, ITER export layout, learning-case evidence and evidence retention">
       <RotationConfig />
+      <IterTemplateConfig />
       <Requirements />
       <Retention />
     </Page>
@@ -355,5 +358,110 @@ function RotationConfig() {
       {msg && <p className="small" role="status">{msg}</p>}
       <ErrorNote error={err} />
     </section>
+  );
+}
+
+type TplRow = { id: string; course_id: string | null; name: string; status: 'draft' | 'confirmed'; definition: unknown; confirmed_at: string | null; updated_at: string };
+
+/** Admin: the ITER export layout (headings, options and where each section goes in Elentra). */
+function IterTemplateConfig() {
+  const list = useLoad(async () => {
+    const { data, error } = await supabase.from('iter_templates').select('*').order('course_id', { nullsFirst: false });
+    if (error) throw error;
+    return data as TplRow[];
+  }, []);
+  const row = list.data?.[0] ?? null;
+  return (
+    <section style={{ marginBottom: 30 }}>
+      <h2>ITER export template</h2>
+      <p className="small muted">
+        Controls the headings, options and Elentra destinations of the ITER-ready summary. It never adds ratings. The seeded layout is based on an elective ITER
+        example — the rotation director should confirm it matches the current POCUS block ITER.
+      </p>
+      {list.loading && !list.data ? <Spinner /> : list.error ? <ErrorNote error={list.error} /> : !row ? <Empty>No template configured.</Empty>
+        : <TemplateEditor key={`${row.id}-${row.updated_at}`} row={row} reload={list.reload} />}
+    </section>
+  );
+}
+
+function TemplateEditor({ row, reload }: { row: TplRow; reload: () => void }) {
+  const [name, setName] = useState(row.name);
+  const [t, setT] = useState<IterTemplate>(() => parseTemplate(row.definition));
+  const [confirmed, setConfirmed] = useState(row.status === 'confirmed');
+  const [err, setErr] = useState<unknown>();
+  const [msg, setMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const lines = (s: string) => s.split('\n').map((x) => x.trim()).filter(Boolean);
+
+  async function save() {
+    setBusy(true);
+    setErr(undefined);
+    setMsg(null);
+    const { error } = await supabase.from('iter_templates').update({ name: name.trim(), definition: t, status: confirmed ? 'confirmed' : 'draft' }).eq('id', row.id);
+    setBusy(false);
+    if (error) setErr(error);
+    else { setMsg('Template saved. New ITER-ready summaries use it; approved versions keep the layout they were approved with.'); reload(); }
+  }
+  const field = (label: string, value: string, set: (v: string) => void, testid?: string) => (
+    <label className="field">{label}<input type="text" value={value} onChange={(e) => set(e.target.value)} data-testid={testid} /></label>
+  );
+
+  return (
+    <div className="panel stack" data-testid="iter-template-editor">
+      <div className="row between">
+        <div>{row.status === 'confirmed' ? <Badge tone="ok">confirmed {fmtDate(row.confirmed_at)}</Badge> : <Badge tone="warn">draft — pending rotation director confirmation</Badge>}</div>
+        <span className="small muted">Rating scale shown to faculty (never filled in): {t.rating_scale.join(' · ')}</span>
+      </div>
+      <div className="formgrid">
+        {field('Template name', name, setName)}
+        {field('Form name', t.form_name, (v) => setT({ ...t, form_name: v }))}
+      </div>
+      <label className="field">Based on / note<textarea rows={2} value={t.based_on} onChange={(e) => setT({ ...t, based_on: e.target.value })} /></label>
+      <div className="formgrid">
+        {field('Evidence section heading', t.evidence.heading, (v) => setT({ ...t, evidence: { ...t.evidence, heading: v } }))}
+        {field('Evidence → where to paste', t.evidence.destination, (v) => setT({ ...t, evidence: { ...t.evidence, destination: v } }))}
+      </div>
+      <strong className="small">CanMEDS roles (headings exactly as on the form) and the observation categories that feed each</strong>
+      <div className="tablewrap">
+        <table className="data">
+          <thead><tr><th>Heading</th><th>Observation categories</th></tr></thead>
+          <tbody>
+            {t.roles.map((r, i) => (
+              <tr key={r.key}>
+                <td><input type="text" value={r.heading} aria-label={`Heading for ${r.key}`} onChange={(e) => setT({ ...t, roles: t.roles.map((x, j) => (j === i ? { ...x, heading: e.target.value } : x)) })} data-testid={`tpl-role-${r.key}`} /></td>
+                <td className="small">{r.categories.map((c) => categoryLabel(c)).join(', ') || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {field('Role → where to paste ({heading} is replaced)', t.role_destination, (v) => setT({ ...t, role_destination: v }))}
+      <div className="formgrid">
+        {field('Rotation objectives heading', t.outcome.heading, (v) => setT({ ...t, outcome: { ...t.outcome, heading: v } }))}
+        <label className="field">Rotation objectives options <span className="hint">one per line, as on the form</span>
+          <textarea rows={5} value={t.outcome.options.join('\n')} onChange={(e) => setT({ ...t, outcome: { ...t.outcome, options: lines(e.target.value) } })} data-testid="tpl-outcome-options" /></label>
+      </div>
+      <strong className="small">Narrative fields</strong>
+      {NARRATIVE_KEYS.map((k) => (
+        <div key={k} className="row" style={{ alignItems: 'flex-end' }}>
+          <div style={{ flex: 1 }}>{field(`Heading (${k})`, t.narrative[k].heading, (v) => setT({ ...t, narrative: { ...t.narrative, [k]: { ...t.narrative[k], heading: v } } }))}</div>
+          <label className="check small"><input type="checkbox" checked={t.narrative[k].required} onChange={(e) => setT({ ...t, narrative: { ...t.narrative, [k]: { ...t.narrative[k], required: e.target.checked } } })} /> required before approval</label>
+        </div>
+      ))}
+      <div className="formgrid">
+        {field('Basis of assessment heading', t.basis.heading, (v) => setT({ ...t, basis: { ...t.basis, heading: v } }))}
+        <label className="field">Basis options <span className="hint">one per line</span>
+          <textarea rows={6} value={t.basis.options.join('\n')} onChange={(e) => setT({ ...t, basis: { ...t.basis, options: lines(e.target.value) } })} /></label>
+        {field('Discussed-with-trainee heading', t.discussed.heading, (v) => setT({ ...t, discussed: { ...t.discussed, heading: v } }))}
+      </div>
+      <label className="check"><input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} data-testid="tpl-confirmed" />{' '}
+        The rotation director confirmed this layout matches the current POCUS block ITER.</label>
+      <div className="row">
+        <button className="btn small" disabled={busy || !name.trim() || !t.outcome.options.length} onClick={save} data-testid="tpl-save">Save template</button>
+        <span className="small muted">Editing a confirmed template returns it to draft unless you confirm again.</span>
+      </div>
+      {msg && <div className="notice ok small" role="status">{msg}</div>}
+      <ErrorNote error={err} />
+    </div>
   );
 }

@@ -10,7 +10,7 @@
 | Exam answers, scores, attempts | The resident (per release policy), block evaluators, admins | Postgres |
 | Brightspace completion screenshots/PDFs | The resident, block evaluators, admins | Supabase Storage, private bucket (ca-central-1) |
 | EPA verification: Elentra-review attestation and criteria decision | The resident (decision, reviewer and date only), block evaluators, admins | Postgres |
-| EPA notes and concerns, faculty observations, ITAR drafts and approved versions | Block evaluators and admins only, **never residents** | Postgres |
+| EPA notes, concerns, optional C6 counts and findings; faculty observations; ITAR/ITER drafts, ITER selections and approved versions | Block evaluators and admins only, **never residents** | Postgres |
 | Rotation requirement statuses; scan **counts** per category (no patient data) | The resident (own), block evaluators, admins | Postgres |
 | Audit log (approvals, verifications, exports, deletions) | Admins | Postgres |
 | Ultrasound teaching clips (de-identified/synthetic, with provenance) | Staff; residents during exams | Private Storage bucket |

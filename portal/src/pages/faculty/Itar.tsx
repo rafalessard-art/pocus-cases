@@ -14,13 +14,16 @@ import {
 import {
   REQ_LABEL, REQ_TONE, completion, requirementActions, rotationPassPct, scanDeltas, scanPct, withSelectedAttempt, type ItarState, type ReqStatus, type Rotation, type RotationReq,
 } from '../../lib/requirements';
+import {
+  applyFaculty, areaReminders, composeIter, draftIter, entrustmentText, isIterDraft, parseTemplate, suggestBasis, type IterFields, type IterTemplate, type NarrativeKey,
+} from '../../lib/iter';
 import { rpc, supabase } from '../../lib/supabase';
 
 type Cohort = { id: string; course_id: string; course: string; name: string; block_label: string | null; academic_year: string | null; start_date: string | null; end_date: string | null };
 type EvalRow = {
   id: string; status: 'draft' | 'approved'; attempt_id: string | null; attempt_rule: AttemptRule; itar_sections: ItarSection[]; summary: string;
   strengths: string; areas_for_improvement: string; observations: string; evidence_snapshot: any; generated_at: string | null;
-  approved_at: string | null; approved_by_name: string | null; updated_at: string;
+  approved_at: string | null; approved_by_name: string | null; updated_at: string; iter_fields?: IterFields;
 };
 type Ws = {
   me: string;
@@ -227,8 +230,9 @@ export function ItarWorkspace() {
   const { cohortId = '', learnerId = '' } = useParams();
   const ws = useLoad(() => rpc<Ws>('itar_workspace', { p_learner: learnerId, p_cohort: cohortId }), [cohortId, learnerId]);
   const rot = useLoad(() => rpc<Rotation>('rotation_status', { p_learner: learnerId, p_cohort: cohortId }), [cohortId, learnerId]);
+  const tpl = useLoad(() => rpc<TemplateRow | null>('iter_template_for', { p_cohort: cohortId }).catch(() => null), [cohortId]);
   const [sel, setSel] = useState<{ key: string; id: string | null } | null>(null);
-  if ((ws.loading && !ws.data) || (rot.loading && !rot.data && !rot.error)) return <Spinner />;
+  if ((ws.loading && !ws.data) || (rot.loading && !rot.data && !rot.error) || (tpl.loading && tpl.data === undefined)) return <Spinner />;
   if (ws.error) return <div className="wrap"><ErrorNote error={ws.error} /></div>;
   const w = ws.data!;
   const reload = () => { ws.reload(); rot.reload(); };
@@ -253,7 +257,7 @@ export function ItarWorkspace() {
     { id: 'cases', label: 'B · Learning cases', ok: req.length > 0 && nVerified === req.length, detail: `${nVerified}/${req.length} verified` },
     { id: 'epa', label: 'C · EPA review', ok: epaVerified(w.epa_review) && w.epa_review!.criteria_status === 'met', detail: epaVerified(w.epa_review) ? `criteria ${CRITERIA_LABEL[w.epa_review!.criteria_status!]}` : w.epa_review?.status === 'complete' ? 're-verify' : 'pending' },
     { id: 'observations', label: 'D · Observations', ok: blockObs.length > 0, detail: `${blockObs.length} recorded` },
-    { id: 'itar', label: 'E · ITAR draft', ok: locked, detail: locked ? 'approved' : ev ? 'draft' : 'not started' },
+    { id: 'itar', label: tpl.data ? 'E · ITER summary' : 'E · ITAR draft', ok: locked, detail: locked ? 'approved' : ev ? 'draft' : 'not started' },
   ];
 
   return (
@@ -280,9 +284,9 @@ export function ItarWorkspace() {
         <ExamSection w={w} chosen={chosen} locked={locked} passPct={rotationPassPct(rot.data)} onSelect={(id) => setSel({ key: `${cohortId}/${learnerId}`, id })} />
         <CasesSection w={w} reload={reload} />
         <EpaSection key={`${learnerId}-${w.epa_review?.updated_at ?? 'new'}`} w={w} reload={reload} />
-        <ObservationsSection w={w} reload={reload} locked={locked} />
+        <ObservationsSection w={w} reload={reload} locked={locked} template={tpl.data ? parseTemplate(tpl.data.definition) : null} />
       </div>
-      <DraftSection key={`${learnerId}-${ev?.id ?? 'new'}-${ev?.updated_at ?? ''}`} w={w} reload={reload} selectedAttempt={selected} rotation={rot.data ?? null} />
+      <DraftSection key={`${learnerId}-${ev?.id ?? 'new'}-${ev?.updated_at ?? ''}`} w={w} reload={reload} selectedAttempt={selected} rotation={rot.data ?? null} template={tpl.data ?? null} />
     </Page>
   );
 }
@@ -471,6 +475,7 @@ function EvidenceRow({ r, w, reload }: { r: Requirement; w: Ws; reload: () => vo
   );
 }
 
+const LEVELS = ['5', '4', '3', '2', '1'];
 const blankEntry = (): EpaEntry => ({ epa: '', title: '', n_assessments: null, entrustment: '', comment: '' });
 
 function EpaSection({ w, reload }: { w: Ws; reload: () => void }) {
@@ -487,12 +492,16 @@ function EpaSection({ w, reload }: { w: Ws; reload: () => void }) {
   const [f, setF] = useState(() => ({
     reviewed: false, decision: (r?.criteria_status ?? '') as '' | 'met' | 'partially_met' | 'outstanding', confirmed: false,
     strengths: r?.strengths ?? '', areas: r?.areas_for_improvement ?? '', concerns: r?.concerns ?? '',
+    n: r?.assessments_reviewed == null ? '' : String(r.assessments_reviewed), findings: r?.key_findings ?? '',
+    counts: Object.fromEntries(LEVELS.map((l) => [l, r?.entrustment_counts?.[l] ? String(r.entrustment_counts[l]) : ''])) as Record<string, string>,
   }));
+  const countSum = LEVELS.reduce((a, l) => a + (Number(f.counts[l]) || 0), 0);
+  const countsBad = countSum > 0 && (f.n === '' || countSum > Number(f.n));
   const [details, setDetails] = useState((r?.entries?.length ?? 0) > 0);
   const [entries, setEntries] = useState<EpaEntry[]>(r?.entries?.length ? r.entries : [blankEntry()]);
   const [err, setErr] = useState<unknown>();
   const [busy, setBusy] = useState(false);
-  const canSave = f.reviewed && !!f.decision && (f.decision !== 'met' || f.confirmed) && w.me !== w.learner.id;
+  const canSave = f.reviewed && !!f.decision && (f.decision !== 'met' || f.confirmed) && w.me !== w.learner.id && !countsBad;
 
   async function save() {
     setBusy(true);
@@ -501,6 +510,11 @@ function EpaSection({ w, reload }: { w: Ws; reload: () => void }) {
       await rpc('verify_epa', {
         p_learner: w.learner.id, p_cohort: w.cohort.id, p_reviewed: f.reviewed, p_criteria_status: f.decision,
         p_criteria_confirmed: f.decision === 'met' && f.confirmed, p_strengths: f.strengths, p_areas: f.areas, p_concerns: f.concerns,
+        p_details: {
+          assessments_reviewed: f.n === '' ? null : Math.max(0, Math.floor(Number(f.n))),
+          entrustment_counts: Object.fromEntries(LEVELS.filter((l) => Number(f.counts[l]) > 0).map((l) => [l, Math.floor(Number(f.counts[l]))])),
+          key_findings: f.findings,
+        },
         p_entries: details
           ? entries.filter((e) => e.epa.trim() || e.title?.trim() || e.entrustment?.trim() || e.comment?.trim())
             .map((e) => ({ ...e, n_assessments: e.n_assessments == null || (e.n_assessments as any) === '' ? null : Number(e.n_assessments) }))
@@ -530,6 +544,8 @@ function EpaSection({ w, reload }: { w: Ws; reload: () => void }) {
           {r!.criteria_snapshot && <div className="small muted">Criteria at the time: {r!.criteria_snapshot}</div>}
           {r!.strengths && <div className="small"><strong>Strengths:</strong> {r!.strengths}</div>}
           {r!.areas_for_improvement && <div className="small"><strong>Areas for improvement:</strong> {r!.areas_for_improvement}</div>}
+          {r!.assessments_reviewed != null && <div className="small"><strong>C6 assessments reviewed:</strong> {r!.assessments_reviewed}{entrustmentText(r!.entrustment_counts) ? ` — ${entrustmentText(r!.entrustment_counts)}` : ''}</div>}
+          {r!.key_findings && <div className="small"><strong>Findings:</strong> {r!.key_findings}</div>}
           {r!.concerns && <div className="notice warn small"><strong>Concerns:</strong> {r!.concerns} <span className="muted">(carried into the ITAR draft)</span></div>}
           {(r!.entries?.length ?? 0) > 0 && <div className="small muted">{r!.entries.length} optional EPA detail row(s) recorded.</div>}
           <div><button className="btn secondary small" onClick={() => setEditing(true)} data-testid="epa-update">Update verification</button></div>
@@ -557,6 +573,21 @@ function EpaSection({ w, reload }: { w: Ws; reload: () => void }) {
             <label className="check"><input type="checkbox" checked={f.confirmed} onChange={(e) => setF({ ...f, confirmed: e.target.checked })} data-testid="epa-criteria-confirmed" />{' '}
               I confirm the completion criteria above are met.</label>
           )}
+          <details className="disclosure" open={!!(f.n || f.findings)} data-testid="epa-c6-details">
+            <summary>Optional C6 details from Elentra — number reviewed, entrustment, findings</summary>
+            <p className="small muted" style={{ margin: '4px 0 8px' }}>Only if you have them in front of you. They appear once in the ITER evidence section and never decide whether the C6 criteria are met.</p>
+            <div className="row" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <label className="field" style={{ maxWidth: 190 }}>C6 POCUS assessments reviewed
+                <input type="number" min={0} max={500} value={f.n} onChange={(e) => setF({ ...f, n: e.target.value })} data-testid="epa-n-reviewed" /></label>
+              {LEVELS.map((l) => (
+                <label key={l} className="field" style={{ maxWidth: 92 }}>Level {l}{l === '5' ? <span className="hint">“did not need to be there”</span> : l === '1' ? <span className="hint">“I had to do”</span> : null}
+                  <input type="number" min={0} value={f.counts[l]} onChange={(e) => setF({ ...f, counts: { ...f.counts, [l]: e.target.value } })} aria-label={`Assessments at entrustment level ${l}`} data-testid={`epa-level-${l}`} /></label>
+              ))}
+            </div>
+            {countsBad && <p className="small" style={{ color: 'var(--bad-ink, #a33)' }}>The entrustment counts add up to more than the number of assessments reviewed.</p>}
+            <label className="field">Important findings <span className="hint">brief; no patient details</span>
+              <textarea rows={2} value={f.findings} maxLength={2000} onChange={(e) => setF({ ...f, findings: e.target.value })} data-testid="epa-findings" /></label>
+          </details>
           <details className="disclosure" open={!!(f.strengths || f.areas || f.concerns)}>
             <summary>Optional notes — strengths, areas for improvement, concerns</summary>
             <div className="formgrid">
@@ -599,7 +630,9 @@ function EpaSection({ w, reload }: { w: Ws; reload: () => void }) {
   );
 }
 
-function ObservationsSection({ w, reload, locked }: { w: Ws; reload: () => void; locked: boolean }) {
+function ObservationsSection({ w, reload, locked, template }: { w: Ws; reload: () => void; locked: boolean; template: IterTemplate | null }) {
+  const roleOf = (k: string) => template?.roles.find((r) => r.categories.includes(k))?.heading;
+  const catLabel = (k: string, label: string) => (roleOf(k) ? `${label} — ${roleOf(k)}` : template ? `${label} — no CanMEDS role` : label);
   const [f, setF] = useState({ category: 'scanning', observed_on: today(), context: '', body: '' });
   const [err, setErr] = useState<unknown>();
   const [busy, setBusy] = useState(false);
@@ -635,7 +668,7 @@ function ObservationsSection({ w, reload, locked }: { w: Ws; reload: () => void;
           {!block.length && <Empty>No observations recorded for this block yet.</Empty>}
           {CATEGORIES.filter((c) => block.some((o) => o.category === c.key)).map((c) => (
             <div key={c.key} className="panel">
-              <strong>{c.label}</strong>
+              <strong>{catLabel(c.key, c.label)}</strong>
               {block.filter((o) => o.category === c.key).map((o) => (
                 <div key={o.id} className="small" style={{ borderTop: '1px solid var(--rule-soft)', paddingTop: 8, marginTop: 8 }}>
                   <div style={{ whiteSpace: 'pre-wrap' }}>{o.body}</div>
@@ -656,9 +689,9 @@ function ObservationsSection({ w, reload, locked }: { w: Ws; reload: () => void;
         </div>
         <aside className="panel stack">
           <strong>Add an observation</strong>
-          <label className="field">Category
+          <label className="field">Category {template && <span className="hint">sets the CanMEDS role in the ITER summary</span>}
             <select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} data-testid="obs-category">
-              {CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+              {CATEGORIES.map((c) => <option key={c.key} value={c.key}>{catLabel(c.key, c.label)}</option>)}
             </select>
           </label>
           <label className="field">Observed on<input type="date" value={f.observed_on} onChange={(e) => setF({ ...f, observed_on: e.target.value })} /></label>
@@ -674,11 +707,25 @@ function ObservationsSection({ w, reload, locked }: { w: Ws; reload: () => void;
   );
 }
 
-function DraftSection({ w, reload, selectedAttempt, rotation }: { w: Ws; reload: () => void; selectedAttempt: string | null; rotation: Rotation | null }) {
+type TemplateRow = { name: string; status: 'draft' | 'confirmed'; confirmed_at: string | null; confirmed_by_name: string | null; definition: unknown };
+const KIND_LABEL: Record<NonNullable<ItarSection['kind']>, { label: string; tone?: 'ok' | 'warn' | 'info' }> = {
+  header: { label: 'Check' },
+  evidence: { label: 'Verified evidence — factual', tone: 'info' },
+  role: { label: 'Notes from your observations — rate in Elentra' },
+  outcome: { label: 'Your selection', tone: 'warn' },
+  narrative: { label: 'Your judgement', tone: 'warn' },
+  basis: { label: 'Your selection', tone: 'warn' },
+  discussed: { label: 'Your selection', tone: 'warn' },
+  record: { label: 'For your files' },
+};
+
+function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: Ws; reload: () => void; selectedAttempt: string | null; rotation: Rotation | null; template: TemplateRow | null }) {
   const ev = w.evaluation;
   const locked = ev?.status === 'approved';
+  const T = useMemo(() => (template ? parseTemplate(template.definition) : null), [template]);
   const [f, setF] = useState(() => ({
     strengths: ev?.strengths ?? '', areas: ev?.areas_for_improvement ?? '', other: ev?.observations ?? '',
+    iter: (ev?.iter_fields ?? {}) as IterFields,
     sections: (ev?.itar_sections ?? []) as ItarSection[], snapshot: ev?.evidence_snapshot ?? {}, generated_at: ev?.generated_at ?? null,
   }));
   const [err, setErr] = useState<unknown>();
@@ -693,19 +740,23 @@ function DraftSection({ w, reload, selectedAttempt, rotation }: { w: Ws; reload:
     strengths: f.strengths, areasForImprovement: f.areas, otherComments: f.other, today: today(),
     rotationReqs: rotation ? withSelectedAttempt(rotation, chooseAttempt(w.attempts, selectedAttempt).attempt, chooseAttempt(w.attempts, selectedAttempt).rule) : null,
   }), [w, selectedAttempt, f.strengths, f.areas, f.other, rotation]);
+  // ITER layout for new drafts when a template exists; drafts and approved versions keep the layout they were written in
+  const iterMode = f.sections.length ? isIterDraft(f.sections) : !!T;
   const changes = locked ? rotation?.itar?.changes_since_approval ?? [] : [];
   const fp = fingerprint(input);
   const stale = f.sections.length > 0 && f.snapshot?.fingerprint && f.snapshot.fingerprint !== fp;
   const todo = outstanding(input);
   const placeholders = f.sections.some((s) => /\[Faculty to complete/.test(s.text));
   const name = input.learnerName;
+  const compose = (s: ItarSection[]) => (isIterDraft(s) ? composeIter(s) : composeSummary(s));
 
   function generate() {
     const chosen = chooseAttempt(w.attempts, selectedAttempt);
+    const iter: IterFields = T && f.iter.basis === undefined ? { ...f.iter, basis: suggestBasis(input, T) } : f.iter;
     setF({
-      ...f, sections: draftItar(input), generated_at: new Date().toISOString(),
+      ...f, iter, sections: T ? draftIter(input, T, iter) : draftItar(input), generated_at: new Date().toISOString(),
       snapshot: {
-        fingerprint: fp, attempt_id: chosen.attempt?.id ?? null, attempt_rule: chosen.rule,
+        fingerprint: fp, attempt_id: chosen.attempt?.id ?? null, attempt_rule: chosen.rule, template: template ? { name: template.name, status: template.status } : null,
         evidence: w.requirements.map((r) => ({ requirement: r.title, state: requirementState(r), submission: latestSubmission(r)?.id ?? null, sha256: latestSubmission(r)?.sha256 ?? null })),
         epa: w.epa_review ? { status: w.epa_review.status, completed_at: w.epa_review.completed_at } : null,
         observations: input.observations.map((o) => o.id),
@@ -713,8 +764,14 @@ function DraftSection({ w, reload, selectedAttempt, rotation }: { w: Ws; reload:
         scans: rotation ? rotation.scans.categories.map((c) => ({ key: c.key, verified: c.verified, target: c.target, views_confirmed: c.views_confirmed })) : null,
       },
     });
-    setMsg('Draft assembled from the evidence above. Edit any section before saving.');
+    setMsg(T ? 'ITER-ready summary assembled from the evidence above. Complete your judgement sections, then save.' : 'Draft assembled from the evidence above. Edit any section before saving.');
     setConfirm(null);
+  }
+  /** Faculty fields re-render their own ITER sections immediately; evidence text is untouched. */
+  function setFaculty(patch: Partial<{ strengths: string; areas: string; iter: IterFields }>) {
+    const next = { ...f, ...patch };
+    const sections = T && isIterDraft(f.sections) ? applyFaculty(f.sections, T, next.iter, { strengths: next.strengths, areas: next.areas }) : f.sections;
+    setF({ ...next, sections });
   }
 
   async function save(approve = false) {
@@ -726,8 +783,8 @@ function DraftSection({ w, reload, selectedAttempt, rotation }: { w: Ws; reload:
       const body = {
         course_id: w.cohort.course_id, learner_id: w.learner.id, cohort_id: w.cohort.id, rotation_start: w.cohort.start_date, rotation_end: w.cohort.end_date,
         attempt_id: chosen.attempt?.id ?? null, attempt_rule: chosen.rule, exam_snapshot: factsFrom(chosen.attempt) ?? {},
-        evidence_snapshot: f.snapshot ?? {}, generated_at: f.generated_at, itar_sections: f.sections, summary: composeSummary(f.sections),
-        strengths: f.strengths, areas_for_improvement: f.areas, observations: f.other,
+        evidence_snapshot: f.snapshot ?? {}, generated_at: f.generated_at, itar_sections: f.sections, summary: compose(f.sections),
+        strengths: f.strengths, areas_for_improvement: f.areas, observations: f.other, iter_fields: f.iter,
       };
       let id = ev?.id;
       if (!id) {
@@ -768,22 +825,96 @@ function DraftSection({ w, reload, selectedAttempt, rotation }: { w: Ws; reload:
       ok = legacyCopy(text); // locked-down browsers often block the async clipboard API
     }
     if (ok) {
-      setMsg(`${label} copied — paste it into the official ITAR.`);
-      logExport(format);
+      setMsg(`${label} copied — paste it into ${iterMode ? 'Elentra' : 'the official ITAR'}.`);
+      logExport(iterMode ? `iter_${format}` : format);
     } else {
       setErr(new Error('The browser blocked clipboard access. Use “Download .txt”, or select the text and copy it manually.'));
     }
   }
-  const header = `ITAR preparation — ${name}${w.learner.training_level ? ` (${w.learner.training_level})` : ''}\n${w.cohort.course}, ${w.cohort.name} (${dates(w.cohort)})\nStatus: ${locked ? `approved by ${ev?.approved_by_name ?? 'faculty'} on ${fmtDate(ev?.approved_at)}` : 'DRAFT — not approved'}\n\n`;
+  const header = `${iterMode ? 'ITER-ready summary' : 'ITAR preparation'} — ${name}${w.learner.training_level ? ` (${w.learner.training_level})` : ''}\n${w.cohort.course}, ${w.cohort.name} (${dates(w.cohort)})\nStatus: ${locked ? `approved by ${ev?.approved_by_name ?? 'faculty'} on ${fmtDate(ev?.approved_at)}` : 'DRAFT — not approved'}\n${iterMode ? 'Copy each section into the Elentra ITER field shown after →. Ratings and the overall outcome are selected by faculty in Elentra; nothing is submitted automatically.\n' : ''}\n`;
   const setSection = (i: number, text: string) => setF({ ...f, sections: f.sections.map((s, j) => (j === i ? { ...s, text } : s)) });
+  const reminders = iterMode ? areaReminders(input, todo) : [];
+  const suggested = T ? suggestBasis(input, T) : [];
+  const fileBase = `${iterMode ? 'ITER' : 'ITAR'}_${name.replace(/\W+/g, '_')}_${w.cohort.name.replace(/\W+/g, '_')}`;
+
+  function body(s: ItarSection, i: number) {
+    const rows = Math.min(14, Math.max(3, s.text.split('\n').length + Math.ceil(s.text.length / 110)));
+    if (!iterMode || !T) {
+      return <textarea rows={rows} value={s.text} disabled={locked} onChange={(e) => setSection(i, e.target.value)} aria-label={s.title} data-testid={`section-${s.key}`} />;
+    }
+    if (s.kind === 'outcome') {
+      return (
+        <fieldset style={{ border: 0, padding: 0, margin: 0 }} data-testid="iter-outcome">
+          <legend className="sr-only">{s.title}</legend>
+          <div className="stack" style={{ gap: 4 }}>
+            {T.outcome.options.map((o) => (
+              <label key={o} className="check"><input type="radio" name="iter-outcome" checked={f.iter.outcome === o} disabled={locked}
+                onChange={() => setFaculty({ iter: { ...f.iter, outcome: o } })} /> {o}</label>
+            ))}
+            <label className="check muted"><input type="radio" name="iter-outcome" checked={!f.iter.outcome} disabled={locked}
+              onChange={() => setFaculty({ iter: { ...f.iter, outcome: null } })} /> Not selected here (select in Elentra)</label>
+          </div>
+        </fieldset>
+      );
+    }
+    if (s.kind === 'basis') {
+      const sel = f.iter.basis ?? [];
+      return (
+        <div className="stack" style={{ gap: 4 }} data-testid="iter-basis">
+          {T.basis.options.map((o) => (
+            <label key={o} className="check"><input type="checkbox" checked={sel.includes(o)} disabled={locked}
+              onChange={(e) => setFaculty({ iter: { ...f.iter, basis: e.target.checked ? T.basis.options.filter((x) => x === o || sel.includes(x)) : sel.filter((x) => x !== o) } })} /> {o}
+              {suggested.includes(o) && <span className="small muted"> — portal records support this</span>}</label>
+          ))}
+        </div>
+      );
+    }
+    if (s.kind === 'discussed') {
+      return (
+        <div className="row" data-testid="iter-discussed">
+          {([['yes', 'Yes'], ['no', 'No'], [null, 'Not recorded here']] as const).map(([v, l]) => (
+            <label key={l} className="check"><input type="radio" name="iter-discussed" checked={(f.iter.discussed ?? null) === v} disabled={locked}
+              onChange={() => setFaculty({ iter: { ...f.iter, discussed: v } })} /> {l}</label>
+          ))}
+        </div>
+      );
+    }
+    if (s.kind === 'narrative') {
+      const k = s.key.replace('iter_', '') as NarrativeKey;
+      const value = k === 'strengths' ? f.strengths : k === 'areas' ? f.areas : f.iter[k] ?? '';
+      const set = (v: string) => (k === 'strengths' ? setFaculty({ strengths: v }) : k === 'areas' ? setFaculty({ areas: v }) : setFaculty({ iter: { ...f.iter, [k]: v } }));
+      return (
+        <>
+          {k === 'areas' && reminders.length > 0 && !locked && (
+            <div className="notice warn small" style={{ marginBottom: 6 }} data-testid="iter-reminders">
+              <strong>To consider (not inserted automatically):</strong>
+              <ul style={{ margin: '4px 0 0' }}>{reminders.map((r) => <li key={r}>{r}</li>)}</ul>
+            </div>
+          )}
+          <textarea rows={3} value={value} disabled={locked} onChange={(e) => set(e.target.value)} aria-label={s.title}
+            placeholder={T.narrative[k].required ? 'Required — your own words' : 'Optional — or write it directly in Elentra'} data-testid={`iter-${k}`} />
+        </>
+      );
+    }
+    return <textarea rows={rows} value={s.text} disabled={locked} onChange={(e) => setSection(i, e.target.value)} aria-label={s.title} data-testid={`section-${s.key}`} />;
+  }
 
   return (
     <section>
       <div className="no-print">
-        <SectionHead id="itar" letter="E" title="ITAR draft">
+        <SectionHead id="itar" letter="E" title={iterMode ? 'ITER-ready summary' : 'ITAR draft'}>
           {locked ? <Badge tone="ok">Approved {fmtDate(ev?.approved_at)}{ev?.approved_by_name ? ` · ${ev.approved_by_name}` : ''}</Badge> : ev ? <Badge tone="warn">Draft</Badge> : <Badge>Not started</Badge>}
         </SectionHead>
-        {locked && changes.length === 0 && <div className="notice ok small" style={{ marginBottom: 12 }}>Approved and locked. Copy or export it into the official ITAR. Re-open to make changes (recorded in the audit log).</div>}
+        {template && iterMode && (
+          <p className="small muted" style={{ marginTop: -4 }} data-testid="iter-template">
+            Layout: <strong>{template.name}</strong>{' '}
+            {template.status === 'confirmed'
+              ? <Badge tone="ok">confirmed{template.confirmed_by_name ? ` by ${template.confirmed_by_name}` : ''}</Badge>
+              : <Badge tone="warn">draft — rotation director to confirm it matches the current POCUS block ITER</Badge>}
+            {' '}Ratings and the overall outcome are never filled in by the portal. Nothing is sent to Elentra.
+          </p>
+        )}
+        {locked && changes.length === 0 && <div className="notice ok small" style={{ marginBottom: 12 }}>Approved and locked. Copy each section into {iterMode ? 'Elentra' : 'the official ITAR'}. Re-open to make changes (recorded in the audit log).</div>}
         {locked && changes.length > 0 && (
           <div className="notice warn small" style={{ marginBottom: 12 }} data-testid="itar-changed">
             <strong>New evidence since this ITAR was approved ({fmtDate(ev?.approved_at)}).</strong> The approved version is unchanged and preserved.
@@ -798,35 +929,56 @@ function DraftSection({ w, reload, selectedAttempt, rotation }: { w: Ws; reload:
             <strong>Outstanding:</strong> {todo.join(' · ')}. You can still prepare the draft; outstanding items are listed in it.
           </div>
         )}
-        <div className="formgrid">
-          <label className="field">Strengths <span className="hint">your synthesis</span>
-            <textarea rows={3} value={f.strengths} disabled={locked} onChange={(e) => setF({ ...f, strengths: e.target.value })} data-testid="eval-strengths" />
-          </label>
-          <label className="field">Areas for improvement / learning plan
-            <textarea rows={3} value={f.areas} disabled={locked} onChange={(e) => setF({ ...f, areas: e.target.value })} data-testid="eval-areas" />
-          </label>
-          <label className="field">Additional comments <span className="hint">optional</span>
-            <textarea rows={3} value={f.other} disabled={locked} onChange={(e) => setF({ ...f, other: e.target.value })} />
-          </label>
-        </div>
+        {!iterMode && (
+          <div className="formgrid">
+            <label className="field">Strengths <span className="hint">your synthesis</span>
+              <textarea rows={3} value={f.strengths} disabled={locked} onChange={(e) => setF({ ...f, strengths: e.target.value })} data-testid="eval-strengths" />
+            </label>
+            <label className="field">Areas for improvement / learning plan
+              <textarea rows={3} value={f.areas} disabled={locked} onChange={(e) => setF({ ...f, areas: e.target.value })} data-testid="eval-areas" />
+            </label>
+            <label className="field">Additional comments <span className="hint">optional</span>
+              <textarea rows={3} value={f.other} disabled={locked} onChange={(e) => setF({ ...f, other: e.target.value })} />
+            </label>
+          </div>
+        )}
+        {!locked && f.sections.length > 0 && !iterMode && T && (
+          <div className="notice small" style={{ margin: '10px 0' }}>This draft uses the earlier ITAR layout. Regenerate it to switch to the ITER-ready layout (your strengths and areas text is kept).</div>
+        )}
         {!locked && (
           <div className="row" style={{ margin: '14px 0' }}>
             <button className="btn" onClick={() => (f.sections.length ? setConfirm('regenerate') : generate())} data-testid="generate-draft">
-              {f.sections.length ? 'Regenerate draft from evidence' : 'Generate ITAR draft from evidence'}
+              {f.sections.length ? 'Regenerate from evidence' : T ? 'Generate ITER-ready summary' : 'Generate ITAR draft from evidence'}
             </button>
             {stale && <span className="small" style={{ color: 'var(--warn-ink)' }}>Evidence has changed since this draft was generated.</span>}
           </div>
         )}
+        {iterMode && f.sections.length > 0 && (
+          <details className="disclosure" style={{ marginBottom: 10 }} data-testid="iter-howto">
+            <summary>How to transfer this into the Elentra ITER</summary>
+            <ol className="small" style={{ margin: '6px 0 0' }}>
+              <li>Open the resident's ITER in Elentra next to this page and check the resident, rotation and dates.</li>
+              <li>Read <em>{T?.evidence.heading ?? 'Verified rotation evidence'}</em> — it is factual and is the basis for your ratings.</li>
+              <li>For each CanMEDS role, select the ratings in Elentra yourself (or <em>Not assessed</em>); copy the notes into the role's comment box if the form has one.</li>
+              <li>Select the same <em>{T?.outcome.heading ?? 'rotation objectives'}</em> option in Elentra.</li>
+              <li>Copy each narrative section into the field with the same heading.</li>
+              <li>Tick the same <em>{T?.basis.heading ?? 'basis of assessment'}</em> boxes and the discussion answer, then submit in Elentra as usual.</li>
+            </ol>
+          </details>
+        )}
         {f.sections.length > 0 && (
           <div className="stack" data-testid="itar-sections">
             {f.sections.map((s, i) => (
-              <div key={s.key} className="panel">
-                <div className="row between" style={{ marginBottom: 6 }}>
-                  <strong>{s.title}</strong>
+              <div key={s.key} className="panel" data-testid={`iter-section-${s.key}`}>
+                <div className="row between" style={{ marginBottom: 4, alignItems: 'flex-start' }}>
+                  <div>
+                    <strong>{s.title}</strong>{' '}
+                    {s.kind && <Badge tone={KIND_LABEL[s.kind].tone}>{KIND_LABEL[s.kind].label}</Badge>}
+                  </div>
                   <button className="btn ghost small" onClick={() => copy(s.text, 'copy_section', s.title)} data-testid={`copy-${s.key}`}>Copy</button>
                 </div>
-                <textarea rows={Math.min(14, Math.max(3, s.text.split('\n').length + Math.ceil(s.text.length / 110)))} value={s.text} disabled={locked}
-                  onChange={(e) => setSection(i, e.target.value)} aria-label={s.title} data-testid={`section-${s.key}`} />
+                {s.dest && <div className="small muted" style={{ marginBottom: 6 }}>→ {s.dest}</div>}
+                {body(s, i)}
               </div>
             ))}
           </div>
@@ -836,10 +988,10 @@ function DraftSection({ w, reload, selectedAttempt, rotation }: { w: Ws; reload:
           {!locked && <button className="btn" disabled={busy || !f.sections.length || placeholders} onClick={() => setConfirm('approve')} data-testid="approve-eval"
             title={placeholders ? 'Replace the [Faculty to complete …] placeholders first' : undefined}>Approve…</button>}
           {locked && <button className="btn secondary" onClick={() => setConfirm('reopen')}>Re-open for editing</button>}
-          {f.sections.length > 0 && <button className="btn secondary" onClick={() => copy(composeSummary(f.sections), 'copy_all', 'Whole draft')} data-testid="copy-all">Copy all</button>}
-          {f.sections.length > 0 && <button className="btn secondary" onClick={() => { download(`ITAR_${name.replace(/\W+/g, '_')}_${w.cohort.name.replace(/\W+/g, '_')}.txt`, header + composeSummary(f.sections), 'text/plain;charset=utf-8'); logExport('text'); }} data-testid="export-text">Download .txt</button>}
+          {f.sections.length > 0 && <button className="btn secondary" onClick={() => copy(compose(f.sections), 'copy_all', iterMode ? 'Whole ITER-ready summary' : 'Whole draft')} data-testid="copy-all">{iterMode ? 'Copy all (with Elentra destinations)' : 'Copy all'}</button>}
+          {f.sections.length > 0 && <button className="btn secondary" onClick={() => { download(`${fileBase}.txt`, header + compose(f.sections), 'text/plain;charset=utf-8'); logExport(iterMode ? 'iter_text' : 'text'); }} data-testid="export-text">Download .txt</button>}
           {f.sections.length > 0 && <button className="btn secondary" onClick={() => { logExport('print'); window.print(); }}>Print / PDF</button>}
-          {f.sections.length > 0 && <button className="btn secondary" onClick={() => { download(`ITAR_${name.replace(/\W+/g, '_')}.csv`, toCSV([{ resident: name, block: w.cohort.name, status: ev?.status ?? 'draft', approved_at: ev?.approved_at ?? '', ...Object.fromEntries(f.sections.map((s) => [s.key, s.text])) }])); logExport('csv'); }}>CSV</button>}
+          {f.sections.length > 0 && <button className="btn secondary" onClick={() => { download(`${fileBase}.csv`, toCSV([{ resident: name, block: w.cohort.name, status: ev?.status ?? 'draft', approved_at: ev?.approved_at ?? '', ...Object.fromEntries(f.sections.map((s) => [s.title, s.text])) }])); logExport('csv'); }}>CSV</button>}
         </div>
         {placeholders && !locked && <p className="small muted">Replace the [Faculty to complete …] placeholders before approving.</p>}
         {msg && <div className="notice ok small" role="status" style={{ marginTop: 10 }}>{msg}</div>}
@@ -848,29 +1000,30 @@ function DraftSection({ w, reload, selectedAttempt, rotation }: { w: Ws; reload:
 
       {/* print view: only the draft */}
       <div className="print-only">
-        <h1 style={{ fontSize: 22 }}>ITAR preparation — {name}</h1>
+        <h1 style={{ fontSize: 22 }}>{iterMode ? 'ITER-ready summary' : 'ITAR preparation'} — {name}</h1>
         <p>{w.cohort.course}, {w.cohort.name} ({dates(w.cohort)}) · {locked ? `Approved by ${ev?.approved_by_name ?? 'faculty'} on ${fmtDate(ev?.approved_at)}` : 'DRAFT — not approved'}</p>
         {f.sections.map((s) => (
           <div key={s.key} style={{ breakInside: 'avoid', marginBottom: 12 }}>
-            <h3 style={{ marginBottom: 4 }}>{s.title}</h3>
+            <h3 style={{ marginBottom: 2 }}>{s.title}</h3>
+            {s.dest && <div style={{ fontSize: 11, color: '#555', marginBottom: 4 }}>→ {s.dest}</div>}
             <div style={{ whiteSpace: 'pre-wrap' }}>{s.text}</div>
           </div>
         ))}
       </div>
 
       {confirm === 'regenerate' && (
-        <Confirm title="Regenerate the draft?" confirmLabel="Replace draft text" onCancel={() => setConfirm(null)} onConfirm={generate}
-          body={<p>The section text will be rebuilt from the current evidence and your entries above. Edits you made directly in the sections will be replaced.</p>} />
+        <Confirm title="Regenerate from the evidence?" confirmLabel="Replace section text" onCancel={() => setConfirm(null)} onConfirm={generate}
+          body={<p>Evidence and observation sections are rebuilt from the current records{T ? ' in the ITER-ready layout' : ''}. Your strengths, areas, other narrative and selections are kept; edits you typed directly into evidence or observation sections are replaced.</p>} />
       )}
       {confirm === 'approve' && (
-        <Confirm title="Approve this ITAR draft?" confirmLabel="Approve and lock" onCancel={() => setConfirm(null)} onConfirm={() => save(true)}
+        <Confirm title={iterMode ? 'Approve this ITER-ready summary?' : 'Approve this ITAR draft?'} confirmLabel="Approve and lock" onCancel={() => setConfirm(null)} onConfirm={() => save(true)}
           body={<div className="stack small">
             <p>By approving, you confirm that you reviewed the evidence and this text, that it reflects your professional judgement, and that it contains no statement about clinical or technical performance that was not directly observed.</p>
-            <p>The overall rating is recorded by you in the official ITAR; this portal does not assign one.</p>
+            <p>{iterMode ? 'CanMEDS ratings and the overall rotation outcome are selected by you in Elentra; the portal assigns none and submits nothing.' : 'The overall rating is recorded by you in the official ITAR; this portal does not assign one.'}</p>
           </div>} />
       )}
       {confirm === 'reopen' && (
-        <Confirm title="Re-open this ITAR draft?" confirmLabel="Re-open" onCancel={() => setConfirm(null)} onConfirm={reopen}
+        <Confirm title="Re-open for editing?" confirmLabel="Re-open" onCancel={() => setConfirm(null)} onConfirm={reopen}
           body={<p>The current approval is withdrawn so you can edit (recorded in the audit log). The approved text is kept as a numbered version; approving again adds a new version.</p>} />
       )}
     </section>

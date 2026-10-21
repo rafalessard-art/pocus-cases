@@ -24,14 +24,17 @@
 | Curriculum completion (self-reported) | `curriculum_progress` | The learner; faculty for their cohorts |
 | De-identified ultrasound media + provenance | Storage `exam-media`, `media_assets` | Staff; learners only during an attempt (or a released full review) |
 | Learning-case completion evidence (resident-uploaded screenshots/PDFs; filename, SHA-256, review status, reviewer message) | Storage `itar-evidence`, `evidence_submissions` | The resident (own files and review message); faculty who are evaluators of that resident's block; admins |
-| EPA review (transcribed from Elentra by faculty) | `epa_reviews` | Evaluators of the block; admins. Never learners |
+| EPA verification: Elentra-review attestation, criteria decision, optional C6 counts (assessments reviewed, per entrustment level), optional findings and notes. No EPA forms are uploaded. | `epa_reviews` | Evaluators of the block; admins. Learners see only the criteria decision, reviewer and date |
 | Categorised faculty observations | `faculty_notes` (with block) | Evaluators of the block; admins. Never learners |
-| ITAR drafts and approvals, with an evidence snapshot | `evaluations` | Evaluators of the block; admins. Never learners |
+| ITAR/ITER drafts and approvals, faculty ITER selections (rotation objectives, basis of assessment, discussed with trainee) and narrative, evidence snapshot; immutable approved versions | `evaluations`, `evaluation_versions` | Evaluators of the block; admins. Never learners |
+| ITER export template (headings and options only; no learner data) | `iter_templates` | Staff read; admins edit |
 | Rotation requirement status (status, stage, short resident note, short faculty message, who verified and when) | `requirement_status` | The resident (own); evaluators of the block; admins |
 | Reviewed-scan **counts** per category (no patient-level rows, images, MRNs, names, DOBs or scan dates/locations; short notes screened server-side for identifier patterns) | `scan_attestations` (faculty-attested), `scan_self_reports` (resident-reported, never counted) | Attestations: evaluators of the block, admins; the resident sees totals and history without notes. Self-reports: the resident and evaluators |
 | Audit events | `audit_log` | Admins |
 
 Not collected: student numbers, dates of birth, phone numbers, addresses, IP-based tracking or analytics cookies. Sign-in uses email codes, so there are no passwords to leak.
+
+**Institutional assessment records:** real ITERs and EPA forms are never uploaded to the portal or used as test data; the ITER-ready layout was built from the form's structure, and tests use a fictional example.
 
 **Evidence uploads:** residents are told to upload only Brightspace completion pages, and never anything with patient information. Admins can delete a file uploaded in error (audited, with a reason).
 

@@ -27,6 +27,7 @@ Use **either** option.
 20261020000900_validation_fixes.sql
 20261020001000_scan_totals.sql
 20261020001100_epa_verification.sql
+20261020001200_iter_export.sql
 ```
 
 **B — Supabase CLI.**

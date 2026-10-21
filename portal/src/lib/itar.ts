@@ -30,18 +30,25 @@ export type EpaReview = {
   /** streamlined verification (migration 11) */
   reviewed_in_elentra?: boolean; criteria_status?: 'met' | 'partially_met' | 'outstanding' | null; criteria_confirmed?: boolean;
   criteria_snapshot?: string; concerns?: string;
+  /** optional C6 details (migration 12): never decide the requirement */
+  assessments_reviewed?: number | null; entrustment_counts?: Record<string, number>; key_findings?: string;
 };
 export const CRITERIA_LABEL = { met: 'met', partially_met: 'partially met', outstanding: 'outstanding' } as const;
 /** A completed review under the streamlined form (older completed reviews lack a criteria decision). */
 export const epaVerified = (e: EpaReview | null | undefined) => !!e && e.status === 'complete' && !!e.criteria_status;
-export type Category = 'scanning' | 'clinical_judgement' | 'technical' | 'professionalism' | 'communication' | 'general';
+export type Category = 'scanning' | 'clinical_judgement' | 'technical' | 'professionalism' | 'communication' | 'general'
+  | 'manager' | 'scholar' | 'collaborator' | 'health_advocate';
 export type Observation = { id: string; category: Category; observed_on: string | null; context?: string; body: string; author?: string | null; created_at: string };
 export type WsAttempt = {
   id: string; exam_title: string; version: number; attempt_no: number; status: 'in_progress' | 'submitted'; started_at: string;
   submitted_at: string | null; score_points: number | null; max_points: number | null; score_pct: number | null; passed: boolean | null;
   pass_threshold_pct: number | null; grading_status: string; released: boolean; breakdown?: { domains: any[] } | null;
 };
-export type ItarSection = { key: string; title: string; text: string };
+export type ItarSection = {
+  key: string; title: string; text: string;
+  /** ITER-ready sections (iter.ts): what kind of content, and where it goes in Elentra */
+  kind?: 'header' | 'evidence' | 'role' | 'outcome' | 'narrative' | 'basis' | 'discussed' | 'record'; dest?: string;
+};
 export type AttemptRule = 'latest_submitted' | 'faculty_selected' | 'none';
 
 export const CATEGORIES: { key: Category; label: string; core: boolean }[] = [
@@ -50,6 +57,10 @@ export const CATEGORIES: { key: Category; label: string; core: boolean }[] = [
   { key: 'technical', label: 'Technical performance', core: true },
   { key: 'professionalism', label: 'Professionalism', core: true },
   { key: 'communication', label: 'Communication', core: false },
+  { key: 'collaborator', label: 'Collaboration', core: false },
+  { key: 'manager', label: 'Management / leadership', core: false },
+  { key: 'scholar', label: 'Scholarship / teaching', core: false },
+  { key: 'health_advocate', label: 'Health advocacy', core: false },
   { key: 'general', label: 'General', core: false },
 ];
 export const categoryLabel = (k: string) => CATEGORIES.find((c) => c.key === k)?.label ?? k;
@@ -66,12 +77,12 @@ export const TONE: Record<EvidenceStatus | 'missing', 'ok' | 'warn' | 'bad' | 'i
   verified: 'ok', submitted: 'info', clarification_requested: 'warn', rejected: 'bad', missing: undefined,
 };
 
-const fmt = (d?: string | null) => (d ? new Date(d.length === 10 ? `${d}T12:00:00` : d).toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' }) : '');
-const sentence = (s: string) => {
+export const fmt = (d?: string | null) => (d ? new Date(d.length === 10 ? `${d}T12:00:00` : d).toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' }) : '');
+export const sentence = (s: string) => {
   const t = s.trim();
   return /[.!?:][)"”’]?$/.test(t) ? t : `${t}.`;
 };
-const andList = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
+export const andList = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
 
 /** Latest uploaded submission decides a requirement's state. */
 export function latestSubmission(r: Requirement): Submission | null {

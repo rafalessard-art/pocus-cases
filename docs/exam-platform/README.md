@@ -121,6 +121,16 @@ The resident sees a dashboard with progress bars. Faculty see a requirements tab
 
 Residents never need faculty screens. Excel logbooks are not uploaded; see QPATH_AND_SCAN_LOG.md for the aggregate-template assessment.
 
+**ITER-ready export (Phase 6).** The ITAR draft is now generated in the layout of the University of Ottawa Anesthesiology ITER ([ITER_EXPORT.md](ITER_EXPORT.md)). It has:
+- one factual *verified rotation evidence* section (requirements, exam with the attempt used, scans by category, Brightspace, C6 EPA review — EPA information appears only there);
+- the seven CanMEDS roles, with notes **only** from faculty observations recorded under each role;
+- the official rotation-objectives options and the four narrative fields;
+- basis of assessment and "discussed with trainee".
+
+Each section shows where it goes in Elentra and has its own Copy button; *Copy all* and *Download .txt* give a transfer sheet. The portal never selects CanMEDS ratings or the outcome and submits nothing to Elentra.
+
+The template is configurable (Admin → ITAR setup) and stays *draft* until the director confirms the POCUS block form. The C6 verification gains optional fields: assessments reviewed, entrustment counts and findings. They never decide the requirement. Approved versions keep the layout they were approved with.
+
 **Before the departmental demonstration:** see [VALIDATION_REPORT.md](VALIDATION_REPORT.md), [DEMO_SCRIPT.md](DEMO_SCRIPT.md), [DIRECTOR_DECISIONS.md](DIRECTOR_DECISIONS.md) and [DEPLOYMENT_READINESS.md](DEPLOYMENT_READINESS.md).
 
 **Block overview (cohort dashboard).** Faculty → block card. It shows one row per resident: exam, evidence verified/awaiting/returned/missing, EPA, observations, ITAR status, and "needs attention", split into *you* vs *resident*. It has an "only needing attention" filter, CSV export, one click into each resident, and Previous/Next between residents.
@@ -135,8 +145,8 @@ Residents never need faculty screens. Excel logbooks are not uploaded; see QPATH
 
 ## 4. Tests
 
-- **Unit (41):** autosave queue (offline, crash-restore, ordering), CSV, importer, evaluation drafting guardrails, ITAR draft (attempt rule, verified-only evidence, no rating/inference, placeholders, sources, staleness), overview attention rules.
-- **Database (71):** the ITAR suite (13) covers evidence privacy and upload rules, block-scoped faculty access, review messages and audit, EPA locking, learner exclusion, one ITAR per resident per block, approval lock, and retention. The original suite (31): permissions and secrecy for every role, invitation gating, versioning and immutability, autosave seq rule, timing and deadline, attempts and accommodations, partial-credit, short-answer and hotspot scoring, release policy, storage policy, evaluations.
+- **Unit (52):** autosave queue (offline, crash-restore, ordering), CSV, importer, evaluation drafting guardrails, ITAR draft (attempt rule, verified-only evidence, no rating/inference, placeholders, sources, staleness), overview attention rules.
+- **Database (79):** the ITAR suite (13) covers evidence privacy and upload rules, block-scoped faculty access, review messages and audit, EPA locking, learner exclusion, one ITAR per resident per block, approval lock, and retention. The original suite (31): permissions and secrecy for every role, invitation gating, versioning and immutability, autosave seq rule, timing and deadline, attempts and accommodations, partial-credit, short-answer and hotspot scoring, release policy, storage policy, evaluations.
 - **End-to-end (2 tests; the main scenario now includes the 8-step ITAR workflow):** the full demonstration lifecycle in a real browser against a Supabase-equivalent stack. It includes an interruption with a reload, offline autosave, video playback checks, a phone-width layout check and automated WCAG 2.1 AA checks (axe) on the main screens.
 
 See [TESTING.md](TESTING.md).
