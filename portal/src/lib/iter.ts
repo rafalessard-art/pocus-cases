@@ -21,7 +21,7 @@
  */
 import {
   CATEGORIES, CRITERIA_LABEL, STATUS_LABEL, andList, chooseAttempt, epaVerified, factsFrom, fmt, latestSubmission, requirementState, sentence,
-  type EpaReview, type ItarInput, type ItarSection, type Observation,
+  type EpaReview, type ItarInput, type ItarSection, type Observation, type Requirement,
 } from './itar';
 import { REQ_LABEL, completion, rotationPassPct, type RotationReq } from './requirements';
 import { domainHighlights } from './summary';
@@ -44,6 +44,10 @@ export type IterTemplate = {
 export type IterFields = {
   outcome?: string | null;
   basis?: string[];
+  /** set when the faculty member ticks or unticks a basis option; nothing is pre-ticked for them */
+  basis_confirmed?: boolean;
+  /** the last automatic drafts, so a refresh replaces only text the faculty member has not edited */
+  auto?: Partial<Record<'overall' | 'strengths' | 'areas' | 'recommendations', string>>;
   discussed?: 'yes' | 'no' | null;
   overall?: string;
   recommendations?: string;
@@ -143,6 +147,10 @@ function examEvidence(i: ItarInput): string {
   const pass = rp != null ? ` — rotation pass mark ${rp}% ${e.scorePct >= rp ? 'met' : 'not met'}` : '';
   const used = `attempt ${e.attemptNo} of ${n} submitted (${rule === 'faculty_selected' ? 'selected by the evaluating faculty member' : 'most recent submitted attempt'})`;
   const parts = [`${e.scorePct.toFixed(1)}% (${e.scorePoints}/${e.maxPoints} points) on ${e.examTitle} v${e.version}, ${used}, submitted ${fmt(e.submittedAt)}${pass}.`];
+  if (n > 1) {
+    const all = i.attempts.filter((a) => a.status === 'submitted').sort((a, b) => a.attempt_no - b.attempt_no);
+    parts.push(`All attempts: ${all.map((a) => `#${a.attempt_no} ${a.score_pct == null ? 'not graded' : `${Number(a.score_pct).toFixed(1)}%`} (${fmt(a.submitted_at)})`).join('; ')}.`);
+  }
   const { strong, weak } = domainHighlights(e.domains);
   if (strong.length) parts.push(`Strongest domains: ${andList(strong.map((d) => `${d.label} ${Math.round(d.pct!)}%`))}.`);
   if (weak.length) parts.push(`Domains to review: ${andList(weak.map((d) => `${d.label} ${Math.round(d.pct!)}%`))}.`);
@@ -155,7 +163,11 @@ function casesEvidence(i: ItarInput): string {
   if (!req.length) return 'none configured.';
   const v = req.filter((r) => requirementState(r) === 'verified');
   const rest = req.filter((r) => requirementState(r) !== 'verified');
-  return `${v.length} of ${req.length} verified by faculty from completion evidence uploaded by the resident${v.length ? ` (${v.map((r) => r.title).join('; ')})` : ''}.`
+  const who = (r: Requirement) => {
+    const l = latestSubmission(r);
+    return [l?.reviewer_name, l?.reviewed_at && fmt(l.reviewed_at)].filter(Boolean).join(', ');
+  };
+  return `${v.length} of ${req.length} verified by faculty from completion evidence uploaded by the resident${v.length ? ` (${v.map((r) => `${r.title}${who(r) ? ` — ${who(r)}` : ''}`).join('; ')})` : ''}.`
     + (rest.length ? ` Not yet verified: ${rest.map((r) => `${r.title} (${STATUS_LABEL[requirementState(r)].toLowerCase()})`).join('; ')}.` : '');
 }
 
@@ -163,7 +175,9 @@ function scansEvidence(i: ItarInput): string {
   const s = i.rotationReqs!.scans;
   const raw = (s.reviewed_total ?? 0) > s.verified_total ? `, ${s.reviewed_total} reviewed in total` : '';
   const cats = s.categories.map((c) => `${c.label} ${c.verified}/${c.target}${c.views_note && c.verified >= c.target && !c.views_confirmed ? ' (views not confirmed)' : ''}`).join('; ');
-  return `${s.verified_total} of ${s.target_total} faculty-verified reviewed scans${raw} (${cats}). Images reviewed in QPath or another approved system; a completion measure, not an assessment of scanning competence.`;
+  const last = s.history[0];
+  const by = last ? ` Last attested by ${last.by ?? 'faculty'}, ${fmt(last.created_at)}.` : '';
+  return `${s.verified_total} of ${s.target_total} faculty-verified reviewed scans${raw} (${cats}).${by} Images reviewed in QPath or another approved system; a completion measure, not an assessment of scanning competence.`;
 }
 
 function attestationEvidence(r: RotationReq): string {
@@ -210,6 +224,109 @@ export function observationNotes(observations: Observation[]): string {
 }
 
 // ---------------------------------------------------------------------------
+// ITER Quick Copy: concise drafts of the One45 narrative fields
+// ---------------------------------------------------------------------------
+// Drafted ONLY from verified portal facts and faculty-entered text (EPA review
+// notes, faculty observations). Nothing here rates the resident, judges whether
+// the rotation objectives were met, or adds praise. Where the portal holds no
+// faculty feedback to draft from, the field is left for faculty.
+export type Drafts = Record<NarrativeKey, string>;
+
+const shortTitle = (r: Pick<RotationReq, 'kind' | 'title'>) =>
+  r.kind === 'learning_cases' ? 'Brightspace learning cases'
+    : r.kind === 'scan_log' ? 'scan logbook'
+      : r.kind === 'exam' ? 'written examination'
+        : r.kind === 'epa' ? 'C6 POCUS EPAs'
+          : r.title.replace(/ online skills modules/i, ' modules').replace(/ mentor review and ultrasound portfolio/i, ' portfolio review');
+const clip = (t: string, n = 180) => {
+  const x = t.trim().replace(/\s+/g, ' ').replace(/[.;]+$/, '');
+  return x.length > n ? `${x.slice(0, n - 1).trimEnd()}…` : x;
+};
+
+export function quickDrafts(i: ItarInput): Drafts {
+  const rot = i.rotationReqs;
+  const { attempt } = chooseAttempt(i.attempts, i.selectedAttemptId);
+  const e = factsFrom(attempt);
+  const rp = rotationPassPct(rot);
+  const epa = epaVerified(i.epa) ? i.epa! : null;
+
+  // Overall explanation: a short factual synthesis
+  const overall: string[] = [];
+  const open = rot?.requirements.filter((r) => r.required && !['verified', 'not_applicable', 'not_yet_due'].includes(r.status)) ?? [];
+  if (rot?.requirements.length) {
+    const c = completion(rot.requirements);
+    const extras = rot.requirements.filter((r) => r.required && r.status === 'verified' && r.kind === 'attestation').map(shortTitle);
+    if (c.outstanding === 0) {
+      overall.push(`Completed ${c.done === c.total ? `all ${c.total}` : `${c.done} of ${c.total}`} required POCUS rotation activities${c.notYetDue ? ` (${c.notYetDue} not yet due)` : ''}${extras.length ? `, including ${andList(extras)}` : ''}.`);
+    } else {
+      overall.push(`Completed ${c.done} of ${c.total} required POCUS rotation activities; still to complete: ${andList(open.map(shortTitle))}.`);
+    }
+  }
+  if (e && e.gradingStatus === 'complete' && e.scorePct != null) {
+    overall.push(`Written examination: ${Math.round(e.scorePct * 10) / 10}%${rp != null ? ` (${e.scorePct >= rp ? 'rotation pass mark' : 'below the rotation pass mark of'} ${rp}%)` : ''}.`);
+  } else if (i.examAssigned) {
+    overall.push('Written examination not yet completed.');
+  }
+  const cases = i.requirements.filter((r) => r.required);
+  if (cases.length && !rot?.requirements.length) {
+    overall.push(`Brightspace learning cases: ${cases.filter((r) => requirementState(r) === 'verified').length} of ${cases.length} verified.`);
+  }
+  if (rot && rot.scans.target_total > 0) {
+    const short = rot.scans.categories.filter((c) => !c.met);
+    overall.push(`Scanning: ${rot.scans.verified_total} of ${rot.scans.target_total} required faculty-verified studies${short.length ? `; below target in ${andList(short.map((c) => `${c.label.toLowerCase()} (${c.verified}/${c.target})`))}` : ', meeting every category target'}.`);
+  }
+  if (epa) {
+    const n = epa.assessments_reviewed;
+    const top = Number(epa.entrustment_counts?.['5'] ?? 0);
+    overall.push(`C6 POCUS EPAs: criteria ${epa.criteria_status === 'outstanding' ? 'not yet met' : CRITERIA_LABEL[epa.criteria_status!]} on faculty review of the Elentra assessments${n != null ? ` (${n} reviewed${top ? `; ${top} at the highest entrustment level` : ''})` : ''}.`);
+    if (epa.key_findings?.trim()) overall.push(`EPA review findings: ${clip(epa.key_findings)}.`);
+  }
+  if (i.observations.length) {
+    const chrono = [...i.observations].sort((a, b) => (a.observed_on || a.created_at).localeCompare(b.observed_on || b.created_at));
+    overall.push(`Faculty observations: ${chrono.slice(0, 4).map((o) => clip(o.body, 160)).join('; ')}.`);
+  }
+
+  // Strengths: only documented feedback (EPA review notes)
+  const strengths: string[] = [];
+  if (epa?.strengths.trim()) {
+    strengths.push(sentence(epa.strengths));
+    if (e && e.gradingStatus === 'complete') {
+      const { strong } = domainHighlights(e.domains);
+      if (strong.length) strengths.push(`Highest written examination scores: ${andList(strong.map((d) => `${d.label} (${Math.round(d.pct!)}%)`))}.`);
+    }
+  }
+
+  // Areas needing improvement: documented feedback and factual gaps
+  const areas: string[] = [];
+  if (epa?.areas_for_improvement.trim()) areas.push(sentence(epa.areas_for_improvement));
+  if (epa?.concerns?.trim()) areas.push(`Concern noted on review of the EPA assessments: ${sentence(epa.concerns!)}`);
+  let weak: { label: string; pct: number | null }[] = [];
+  if (e && e.gradingStatus === 'complete') weak = domainHighlights(e.domains).weak;
+  if (weak.length) areas.push(`Written examination domains to review: ${andList(weak.map((d) => `${d.label} (${Math.round(d.pct!)}%)`))}.`);
+
+  // Recommendations: only what follows directly from the record
+  const recs: string[] = [];
+  if (open.length) recs.push('Complete the remaining rotation requirements.');
+  if (weak.length) recs.push(`Review ${andList(weak.map((d) => d.label))}.`);
+
+  return { overall: overall.join(' '), strengths: strengths.join(' '), areas: areas.join(' '), recommendations: recs.join(' ') };
+}
+
+/**
+ * Refresh the drafted narrative fields. A field is replaced by the new draft
+ * only if it is empty or still exactly the previous draft; anything the
+ * faculty member wrote or edited is kept.
+ */
+export function refreshDrafts(cur: Drafts, prevAuto: Partial<Drafts> | undefined, next: Drafts): { values: Drafts; auto: Drafts } {
+  const values = { ...cur };
+  for (const k of NARRATIVE_KEYS) {
+    const v = cur[k] ?? '';
+    if (!v.trim() || (prevAuto?.[k] != null && v === prevAuto[k])) values[k] = next[k];
+  }
+  return { values, auto: next };
+}
+
+// ---------------------------------------------------------------------------
 // Faculty-only sections
 // ---------------------------------------------------------------------------
 export type FacultyText = { strengths: string; areas: string };
@@ -219,6 +336,9 @@ const PLACEHOLDER: Record<'strengths' | 'areas', string> = {
   areas: '[Faculty to complete: summary of areas needing improvement.]',
 };
 const OPTIONAL_BLANK = 'Not completed in the portal (optional) — write it in One45 if needed.';
+export const BASIS_PROMPT = '[Faculty to confirm: basis of assessment.]';
+/** Text that must be replaced before a draft can be approved. */
+export const NEEDS_FACULTY = /\[Faculty to (complete|confirm)/;
 
 export function facultyText(key: string, t: IterTemplate, f: IterFields, x: FacultyText): string | null {
   switch (key) {
@@ -237,8 +357,8 @@ export function facultyText(key: string, t: IterTemplate, f: IterFields, x: Facu
       return v ? sentence(v) : t.narrative[k].required ? PLACEHOLDER[k] : OPTIONAL_BLANK;
     }
     case 'iter_basis': {
-      const sel = (f.basis ?? []).filter((b) => t.basis.options.includes(b));
-      return sel.length ? sel.join('; ') : 'Not recorded in the portal — tick in One45.';
+      const sel = f.basis_confirmed ? (f.basis ?? []).filter((b) => t.basis.options.includes(b)) : [];
+      return sel.length ? sel.join('; ') : BASIS_PROMPT;
     }
     case 'iter_discussed':
       return f.discussed === 'yes' ? 'Yes' : f.discussed === 'no' ? 'No' : 'Not recorded in the portal — select in One45.';
@@ -255,78 +375,75 @@ export function applyFaculty(sections: ItarSection[], t: IterTemplate, f: IterFi
   });
 }
 
-/** What the portal can point to for each basis option (a suggestion; faculty decide what to tick). */
-export function suggestBasis(i: ItarInput, t: IterTemplate): string[] {
-  const has = (re: RegExp) => t.basis.options.filter((o) => re.test(o));
+/**
+ * What the portal holds for each basis-of-assessment option. Shown beside the
+ * boxes as information only — nothing is ticked automatically. EPA verification,
+ * retrospective image review and the written exam are never treated as formal
+ * direct observation.
+ */
+export function basisHints(i: ItarInput, t: IterTemplate): Record<string, string> {
   const { attempt } = chooseAttempt(i.attempts, i.selectedAttemptId);
-  const out: string[] = [];
-  if (i.observations.length) out.push(...has(/^informal observation$/i));
-  if (epaVerified(i.epa) && (i.epa!.assessments_reviewed ?? 1) > 0) out.push(...has(/^formal direct observation$/i));
-  if (attempt && attempt.grading_status === 'complete') out.push(...has(/^written exam/i));
-  const otherEvidence = i.requirements.some((r) => requirementState(r) === 'verified')
-    || (i.rotationReqs?.scans.verified_total ?? 0) > 0
-    || (i.rotationReqs?.requirements ?? []).some((r) => r.kind === 'attestation' && r.status === 'verified');
-  if (otherEvidence) out.push(...has(/^other$/i));
-  return t.basis.options.filter((o) => out.includes(o)); // template order
-}
-
-/** Reminders shown next to the "areas needing improvement" box — never inserted into the text. */
-export function areaReminders(i: ItarInput, outstandingItems: string[]): string[] {
-  const r: string[] = [];
-  if (epaVerified(i.epa) && i.epa!.concerns?.trim()) r.push(`EPA concern recorded: ${sentence(i.epa!.concerns!)}`);
-  if (outstandingItems.length) r.push(`Outstanding: ${outstandingItems.join('; ')}.`);
-  const { attempt } = chooseAttempt(i.attempts, i.selectedAttemptId);
-  const e = factsFrom(attempt);
-  if (e && e.gradingStatus === 'complete') {
-    const { weak } = domainHighlights(e.domains);
-    if (weak.length) r.push(`Exam domains to review: ${weak.map((d) => `${d.label} ${Math.round(d.pct!)}%`).join(', ')}.`);
+  const n = i.observations.length;
+  const out: Record<string, string> = {};
+  for (const o of t.basis.options) {
+    if (/^informal observation$/i.test(o)) out[o] = n ? `${n} faculty observation${n === 1 ? '' : 's'} recorded in the portal` : 'No faculty observations recorded in the portal';
+    else if (/^formal direct observation$/i.test(o)) out[o] = 'Only if you or a colleague formally observed the resident. EPA verification, image review in QPath and the written exam do not count on their own.';
+    else if (/^written exam/i.test(o)) out[o] = attempt && attempt.grading_status === 'complete' ? 'End-of-block written examination on record' : 'No graded written examination on record';
+    else if (/^other$/i.test(o)) out[o] = 'For example: image review in QPath, Brightspace cases, TeachingMedicine, rounds presentation';
+    else out[o] = 'Not recorded in the portal';
   }
-  return r;
+  return out;
 }
 
 // ---------------------------------------------------------------------------
-// The ITER-ready summary
+// The ITER-ready draft: Quick Copy fields + Full Evidence Record
 // ---------------------------------------------------------------------------
+/** Sections that go into One45 (the Quick Copy view). Everything else is the evidence record. */
+export const QUICK_KINDS: ItarSection['kind'][] = ['outcome', 'narrative', 'basis', 'discussed'];
+export const quickSections = (s: ItarSection[]) => s.filter((x) => QUICK_KINDS.includes(x.kind));
+export const evidenceSections = (s: ItarSection[]) => s.filter((x) => !QUICK_KINDS.includes(x.kind));
+
 export function draftIter(i: ItarInput, t: IterTemplate, f: IterFields): ItarSection[] {
   const x: FacultyText = { strengths: i.strengths, areas: i.areasForImprovement };
   const S: ItarSection[] = [];
-  const dates = i.blockStart || i.blockEnd ? `, ${fmt(i.blockStart) || '—'} to ${fmt(i.blockEnd) || '—'}` : '';
-  S.push({ key: 'iter_header', kind: 'header', title: 'Resident and rotation',
-    text: `${i.learnerName}${i.trainingLevel ? ` (${i.trainingLevel})` : ''} — ${i.rotation}, ${i.blockName}${dates}.`,
-    dest: 'Check that the One45 ITER is for the same resident, rotation and dates.' });
-  S.push({ key: 'iter_evidence', kind: 'evidence', title: t.evidence.heading, text: iterEvidence(i), dest: t.evidence.destination });
-
-  if (i.observations.length) {
-    S.push({ key: 'iter_observations', kind: 'observations', title: 'Faculty observations', text: observationNotes(i.observations),
-      dest: 'Reference — use in your own words in “Overall explanation of performance” or the summaries below, if relevant.' });
-  }
-
   const fac = (key: string, kind: ItarSection['kind'], title: string, dest: string) =>
     S.push({ key, kind, title, text: facultyText(key, t, f, x)!, dest });
+
+  // One45 fields (Quick Copy), in form order
   fac('iter_outcome', 'outcome', t.outcome.heading, t.outcome.destination);
   for (const k of NARRATIVE_KEYS) fac(`iter_${k}`, 'narrative', t.narrative[k].heading, t.narrative_destination.replace('{heading}', t.narrative[k].heading));
   fac('iter_basis', 'basis', t.basis.heading, t.basis.destination);
   fac('iter_discussed', 'discussed', t.discussed.heading, t.discussed.destination);
 
-  // portal record (sources)
+  // Full Evidence Record
+  const dates = i.blockStart || i.blockEnd ? `, ${fmt(i.blockStart) || '—'} to ${fmt(i.blockEnd) || '—'}` : '';
+  S.push({ key: 'iter_header', kind: 'header', title: 'Resident and rotation',
+    text: `${i.learnerName}${i.trainingLevel ? ` (${i.trainingLevel})` : ''} — ${i.rotation}, ${i.blockName}${dates}.`,
+    dest: 'Check that the One45 ITER is for the same resident, rotation and dates.' });
+  S.push({ key: 'iter_evidence', kind: 'evidence', title: t.evidence.heading, text: iterEvidence(i), dest: t.evidence.destination });
+  if (i.observations.length) {
+    S.push({ key: 'iter_observations', kind: 'observations', title: 'Faculty observations', text: observationNotes(i.observations),
+      dest: 'Reference — summarised in the drafted overall explanation.' });
+  }
   const { attempt } = chooseAttempt(i.attempts, i.selectedAttemptId);
   const e = factsFrom(attempt);
   const req = i.requirements.filter((r) => r.required);
   const reviewers = [...new Set(req.filter((r) => requirementState(r) === 'verified').map((r) => latestSubmission(r)?.reviewer_name).filter(Boolean))] as string[];
   const authors = [...new Set(i.observations.map((o) => o.author).filter(Boolean))] as string[];
-  S.push({ key: 'iter_record', kind: 'record', title: 'Portal record', dest: 'For your files — not an ITER field.',
+  S.push({ key: 'iter_record', kind: 'record', title: 'Evidence sources and verification', dest: 'For your files — not an ITER field.',
     text: [
       `Prepared in the POCUS Portal on ${fmt(i.today)} using the template “${t.form_name}” (${t.based_on})`,
       e ? `Written examination: portal record, ${e.examTitle} v${e.version}, attempt ${e.attemptNo}.` : 'Written examination: no submitted attempt on record.',
       `Learning cases: screenshots/PDFs uploaded by the resident, not retrieved from Brightspace${reviewers.length ? `; verified by ${andList(reviewers)}` : ''}.`,
       'EPA review: faculty attestation that the Elentra assessments were reviewed; no EPA data is retrieved from Elentra automatically.',
       `Faculty observations: ${i.observations.length}${authors.length ? ` (${andList(authors)})` : ''}.`,
+      'Drafted text in the One45 fields comes only from these records and faculty-entered notes, and is reviewed and edited by the supervising faculty member.',
       'The portal assigns no rating and no overall outcome; both are the supervising faculty member\'s judgement, entered and submitted in One45. Approval in the portal is a draft approval, not a One45 submission.',
     ].join('\n') });
   return S;
 }
 
-/** Plain-text transfer sheet: every section with its One45 destination, in form order. */
+/** Plain-text transfer sheet: every section with its One45 destination, in the order given. */
 export function composeIter(sections: ItarSection[]): string {
   return sections.map((s) => `${s.title.toUpperCase()}${s.dest ? `\n→ ${s.dest}` : ''}\n${s.text.trim()}`).join('\n\n');
 }

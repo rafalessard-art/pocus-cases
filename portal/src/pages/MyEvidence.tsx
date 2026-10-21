@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { Page } from '../components/Layout';
 import { EvidencePreview } from '../components/EvidencePreview';
 import { Badge, Empty, ErrorNote, Spinner, fmtDate, useLoad } from '../components/ui';
@@ -48,6 +48,12 @@ function BlockCard({ b, reload }: { b: Block; reload: () => void }) {
 
 function RequirementRow({ r, cohortId, reload }: { r: Requirement; cohortId: string; reload: () => void }) {
   const state = requirementState(r);
+  const loc = useLocation();
+  const target = loc.hash === `#case-${r.id}`;
+  useEffect(() => {
+    // deep link from "Your next steps" / curriculum: bring this case into view
+    if (target) setTimeout(() => document.getElementById(`case-${r.id}`)?.scrollIntoView({ block: 'center' }), 60);
+  }, [target, r.id]);
   const last = latestSubmission(r);
   const [file, setFile] = useState<File | null>(null);
   const [note, setNote] = useState('');
@@ -74,7 +80,7 @@ function RequirementRow({ r, cohortId, reload }: { r: Requirement; cohortId: str
   }
 
   return (
-    <div className="panel" data-testid="evidence-requirement">
+    <div className="panel" id={`case-${r.id}`} data-testid="evidence-requirement" style={target ? { outline: '2px solid var(--petrol)', outlineOffset: 2 } : undefined}>
       <div className="row between">
         <strong>{r.title}</strong>
         <Badge tone={TONE[state]}>{STATUS_LABEL[state]}</Badge>

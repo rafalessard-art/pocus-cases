@@ -11,7 +11,7 @@
  * professionalism from exam scores, and never assigns an overall rating.
  * Placeholders in [square brackets] mark what faculty must write themselves.
  */
-import { outstandingRequirements, requirementsSection, rotationPassPct, type Rotation } from './requirements';
+import { outstandingRequirements, requirementsSection, rotationPassPct, type CaseState, type Rotation } from './requirements';
 import { domainHighlights, type ExamFacts } from './summary';
 
 export type EvidenceStatus = 'submitted' | 'verified' | 'clarification_requested' | 'rejected';
@@ -85,6 +85,10 @@ export function latestSubmission(r: Requirement): Submission | null {
 }
 export function requirementState(r: Requirement): EvidenceStatus | 'missing' {
   return latestSubmission(r)?.status ?? 'missing';
+}
+/** Required learning cases with the state of the resident's latest upload (for next steps and the curriculum). */
+export function caseStates(reqs: Requirement[]): CaseState[] {
+  return reqs.filter((r) => r.required).map((r) => ({ id: r.id, title: r.title, state: requirementState(r) }));
 }
 
 /**

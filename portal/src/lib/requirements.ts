@@ -186,7 +186,10 @@ export function rotationPassPct(rot: Rotation | null | undefined): number | null
 // ---------------------------------------------------------------------------
 export type NextStep = { key: string; label: string; detail?: string; to?: string; cta?: string; tone?: 'warn' | 'info' };
 
-export function residentNextSteps(rot: Rotation, openExam = false): { todo: NextStep[]; waiting: NextStep[] } {
+/** A required Brightspace learning case and the state of the resident's latest upload (from my_evidence). */
+export type CaseState = { id: string; title: string; state: 'missing' | 'submitted' | 'verified' | 'clarification_requested' | 'rejected' };
+
+export function residentNextSteps(rot: Rotation, openExam = false, cases?: CaseState[]): { todo: NextStep[]; waiting: NextStep[] } {
   const todo: NextStep[] = [];
   const waiting: NextStep[] = [];
   for (const r of rot.requirements.filter((x) => x.required)) {
@@ -194,6 +197,18 @@ export function residentNextSteps(rot: Rotation, openExam = false): { todo: Next
     const anchor = `/requirements#req-${r.key}`;
     if (r.kind === 'learning_cases') {
       const e = r.extra ?? {};
+      if (cases?.length) {
+        // name each case, with a direct link to its upload
+        for (const c of cases.filter((x) => x.state === 'clarification_requested' || x.state === 'rejected')) {
+          todo.push({ key: `case-${c.id}`, label: `Re-upload Brightspace completion: ${c.title} (returned by faculty)`, to: `/evidence#case-${c.id}`, cta: 'Re-upload', tone: 'warn' });
+        }
+        for (const c of cases.filter((x) => x.state === 'missing')) {
+          todo.push({ key: `case-${c.id}`, label: `Upload Brightspace completion: ${c.title}`, to: `/evidence#case-${c.id}`, cta: 'Upload' });
+        }
+        const awaiting = cases.filter((x) => x.state === 'submitted').length;
+        if (awaiting) waiting.push({ key: `${r.key}-awaiting`, label: `${awaiting} learning-case upload${awaiting === 1 ? '' : 's'} awaiting faculty review` });
+        continue;
+      }
       if (e.returned > 0) todo.push({ key: `${r.key}-returned`, label: `Re-upload ${e.returned} learning case${e.returned === 1 ? '' : 's'} returned by faculty`, to: '/evidence', cta: 'Open evidence', tone: 'warn' });
       if (e.missing > 0) todo.push({ key: `${r.key}-missing`, label: `Upload Brightspace completion for ${e.missing} learning case${e.missing === 1 ? '' : 's'}`, to: '/evidence', cta: 'Upload' });
       if (e.awaiting > 0) waiting.push({ key: `${r.key}-awaiting`, label: `${e.awaiting} learning-case upload${e.awaiting === 1 ? '' : 's'} awaiting faculty review` });

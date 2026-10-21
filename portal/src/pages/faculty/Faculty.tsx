@@ -5,7 +5,7 @@ import { Badge, DomainBars, Empty, ErrorNote, Spinner, fmtDate, pct, useLoad } f
 import { download, toCSV } from '../../lib/csv';
 import { cohorts as loadCohorts, pocusCourse } from '../../lib/content';
 import { rpc, supabase } from '../../lib/supabase';
-import { BlocksPanel } from './Itar';
+import { BlocksPanel, FacultyTasks } from './Itar';
 
 const LETTERS = 'ABCDEFGHIJKLMNOP';
 
@@ -28,14 +28,15 @@ export function FacultyDashboard() {
   }, []);
   const [q, setQ] = useState('');
   return (
-    <Page kicker="Faculty" title="Faculty dashboard" subtitle="Results, grading and end-of-block evaluations for your learners">
-      <p className="seclabel" style={{ marginTop: 0 }}>ITAR preparation — rotation blocks</p>
+    <Page kicker="Faculty" title="Faculty dashboard" subtitle="What needs your attention, rotation blocks, results and grading">
+      <FacultyTasks />
+      <p className="seclabel">ITER preparation — rotation blocks</p>
       <BlocksPanel />
       <p className="seclabel">Examinations and grading</p>
       <div className="grid two">
         <section className="card" style={{ ['--accent' as any]: 'var(--clay)' }}>
-          <h3>Needs attention</h3>
-          {todo.loading ? <Spinner /> : !(todo.data ?? []).length ? <p className="small muted">Nothing waiting — all submitted attempts are graded and released.</p> : (
+          <h3>Grading and result release</h3>
+          {todo.loading ? <Spinner /> : !(todo.data ?? []).length ? <p className="small muted">All submitted attempts are graded and released.</p> : (
             <ul className="small" style={{ paddingLeft: 18 }}>
               {(todo.data ?? []).map((a) => (
                 <li key={a.id}>

@@ -282,7 +282,10 @@ test('full examination lifecycle', async ({ page, context }) => {
     await page.goto('/app/');
     // the resident home leads with requirements, next steps and the two main actions
     await expect(page.getByTestId('next-steps')).toContainText('0/7');
-    await expect(page.getByTestId('todo-list')).toContainText('Upload Brightspace completion for 4 learning cases');
+    // each remaining Brightspace case is named, with its own upload link; the curriculum card agrees with it
+    await expect(page.getByTestId('todo-list')).toContainText('Upload Brightspace completion: Gastric Ultrasound & the Patient on a GLP-1 Receptor Agonist');
+    await expect(page.getByTestId('todo-list').getByRole('link', { name: 'Upload' })).toHaveCount(4);
+    await expect(page.getByTestId('curriculum-cases')).toContainText('0/4');
     await page.getByTestId('cta-upload').click();
     await expect(page.getByRole('heading', { name: 'Learning-case evidence' })).toBeVisible();
     await expect(page.getByText(cohortName)).toBeVisible();
@@ -362,14 +365,20 @@ test('full examination lifecycle', async ({ page, context }) => {
 
   await test.step('block overview lists the resident and what needs attention', async () => {
     await page.goto('/app/faculty');
+    // the dashboard lists real faculty tasks across blocks, linking to the right workspace section
+    const task = page.getByTestId('faculty-task').filter({ hasText: 'Dr. Demo Resident' });
+    await expect(task).toContainText('Review evidence (4)');
+    await expect(task).toContainText('Prepare ITER draft');
+    await expect(task.getByRole('link', { name: 'Review evidence (4)' })).toHaveAttribute('href', /\/app\/faculty\/itar\/.+#cases$/);
+    await shot(page, '12-faculty-dashboard');
     await page.getByTestId('block-card').filter({ hasText: cohortName }).click();
     await expect(page.getByRole('heading', { name: cohortName })).toBeVisible();
     const row = page.getByTestId('overview-row').filter({ hasText: 'Dr. Demo Resident' });
-    await expect(row).toContainText('100.0%');
-    await expect(row).toContainText('0/4');
-    await expect(row).toContainText('4 to review');
+    await expect(row).toContainText('100%');
     await expect(row).toContainText('not started');
-    await expect(row).toContainText('Review evidence (4)');
+    await expect(row.getByTestId('overview-todo')).toContainText('Review evidence (4)');
+    await row.getByTestId('overview-todo').locator('summary').click();
+    await expect(row.getByRole('link', { name: 'Review evidence (4)' })).toHaveAttribute('href', /#cases$/);
     await shot(page, '12a-block-overview');
     await a11y(page, 'block overview');
     await row.click();
@@ -407,9 +416,17 @@ test('full examination lifecycle', async ({ page, context }) => {
 
   await test.step('resident sees the faculty message and uploads a replacement', async () => {
     await signIn(page, LEARNER);
-    await expect(page.getByTestId('todo-list')).toContainText('Re-upload 1 learning case returned by faculty');
+    await expect(page.getByTestId('todo-list')).toContainText('Re-upload Brightspace completion: Systematic Peripheral Vascular Access (returned by faculty)');
     await expect(page.getByText('Action needed').first()).toBeVisible();
-    await page.goto('/app/evidence');
+    await expect(page.getByTestId('curriculum-cases')).toContainText('3/4');
+    // the curriculum shows the same cases with their verification status (no separate self-ticks)
+    await page.goto('/app/curriculum');
+    await expect(page.getByTestId('curriculum-case-status')).toHaveCount(4);
+    await expect(page.getByTestId('curriculum-case-status').filter({ hasText: 'Verified' })).toHaveCount(3);
+    await page.goto('/app/');
+    // straight from the next step to that case's upload
+    await page.getByTestId('todo-list').getByRole('link', { name: 'Re-upload' }).click();
+    await expect(page).toHaveURL(/\/app\/evidence#case-/);
     const row = page.getByTestId('evidence-requirement').filter({ hasText: 'Peripheral Vascular Access' });
     await expect(row.getByText(/does not show the completion date clearly/)).toBeVisible();
     await expect(page.getByText('3 of 4')).toBeVisible();
@@ -492,47 +509,60 @@ test('full examination lifecycle', async ({ page, context }) => {
     await a11y(page, 'ITAR workspace');
   });
 
-  await test.step('the ITER-ready summary is assembled from the evidence, completed by faculty and approved', async () => {
+  await test.step('ITER Quick Copy: concise One45 fields drafted from the evidence, reviewed and edited by faculty, approved', async () => {
     await expect(page.getByTestId('iter-template')).toContainText('The rotation director still needs to confirm it matches the current POCUS block ITER');
     await page.getByTestId('generate-draft').click();
-    const ev = page.getByTestId('section-iter_evidence');
-    await expect(ev).toHaveValue(/^Completion and assessment records verified in the POCUS portal\. They are not ratings and do not by themselves establish competence\./);
-    await expect(ev).toHaveValue(/Rotation requirements complete: 6 of 7 \(1 not yet due\)/);
-    await expect(ev).toHaveValue(/Written POCUS examination — complete: 100\.0% .*attempt 1 of 1 submitted \(most recent submitted attempt\).* — rotation pass mark 75% met\. .*Knowledge assessment only\./);
-    await expect(ev).toHaveValue(/Brightspace learning cases — complete: 4 of 4 verified by faculty/);
-    await expect(ev).toHaveValue(/102 of 102 faculty-verified reviewed scans.*not an assessment of scanning competence/);
-    await expect(ev).toHaveValue(/Dr\. Demo Faculty reviewed the resident's C6 POCUS EPA assessments in Elentra on [^;]+; 4 C6 POCUS assessments reviewed, entrustment level 5 × 3, level 4 × 1/);
-    await expect(ev).toHaveValue(/C6 criteria met \(confirmed by the reviewing faculty member\); the criteria are a draft pending rotation director approval\./);
-    await expect(ev).toHaveValue(/does not by itself determine whether the C6 requirement is met/);
-    await expect(ev).toHaveValue(/Faculty-identified findings: Fictional: reliable gastric antrum views/);
-    await expect(ev).toHaveValue(/Strengths noted in the EPA assessments: Fictional data: clear communication/);
-    await expect(ev).toHaveValue(/POCUS rounds presentation — not yet due\./);
-    // no CanMEDS role sections; this block's observations appear once, as reference
-    await expect(page.getByTestId('itar-sections')).not.toContainText(/Medical Expert|Communicator|Health Advocate|CanMEDS/);
-    await expect(page.getByTestId('section-iter_observations')).toHaveValue(/^Practical scanning skills:\n• Fictional: obtained PLAX and A4C views independently/);
-    await expect(page.getByTestId('section-iter_observations')).toHaveValue(/Professionalism:\n• Fictional: prepared for every session/);
-    await expect(page.getByTestId('section-iter_observations')).not.toHaveValue(/Engaged well in the scanning sessions/);
+    // Quick Copy is the default view: the One45 fields only
+    await expect(page.getByTestId('view-quick')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByTestId('itar-sections')).not.toContainText('Verified rotation evidence');
+    const overall = page.getByTestId('iter-overall');
+    await expect(overall).toHaveValue(/^Completed 6 of 7 required POCUS rotation activities \(1 not yet due\), including TeachingMedicine modules and QPath portfolio review\. Written examination: 100% \(rotation pass mark 75%\)\. Scanning: 102 of 102 required faculty-verified studies, meeting every category target\. C6 POCUS EPAs: criteria met on faculty review of the Elentra assessments \(4 reviewed; 3 at the highest entrustment level\)\./);
+    await expect(overall).toHaveValue(/Faculty observations: .*Fictional: obtained PLAX and A4C views independently/);
+    await expect(overall).not.toHaveValue(/Engaged well in the scanning sessions/); // not tied to this block
+    await expect(page.getByTestId('drafted-overall')).toBeVisible();
+    // strengths only from documented EPA feedback; nothing to draft areas from → left for faculty
+    await expect(page.getByTestId('iter-strengths')).toHaveValue('Fictional data: clear communication of findings to the team. Highest written examination scores: Cardiac / echocardiography (100%).');
+    await expect(page.getByTestId('iter-areas')).toHaveValue('');
+    await expect(page.getByTestId('iter-areas')).toHaveAttribute('placeholder', /no faculty feedback to draft this from/);
     for (const o of ['No, due to other reasons', 'Yes, Partially', 'Yes, Fully']) await expect(page.getByTestId('iter-outcome').getByLabel(o)).not.toBeChecked();
-    // basis of assessment: suggested from portal records, faculty can change it
-    for (const o of ['Informal observation', 'Formal direct observation', 'Written examination', 'Other']) await expect(page.getByTestId('iter-basis').getByLabel(o)).toBeChecked();
-    await expect(page.getByTestId('iter-basis').getByLabel('OSCE')).not.toBeChecked();
-    await expect(page.getByTestId('iter-reminders')).toContainText('POCUS rounds presentation: not yet due');
-    // faculty judgement is never filled in for them
+    // basis of assessment: nothing ticked for the faculty member; EPA verification is not "formal direct observation"
+    for (const o of ['Informal observation', 'Formal direct observation', 'Written examination', 'Oral examination', 'OSCE', 'Other']) {
+      await expect(page.getByTestId('iter-basis').getByRole('checkbox', { name: new RegExp(`^${o}`) })).not.toBeChecked();
+    }
+    await expect(page.getByTestId('iter-basis')).toContainText('EPA verification, image review in QPath and the written exam do not count on their own');
+    await expect(page.getByTestId('itar-sections')).not.toContainText(/Medical Expert|Communicator|Health Advocate|CanMEDS/);
     await expect(page.getByTestId('approve-eval')).toBeDisabled();
-    await page.getByTestId('iter-strengths').fill('Fictional: consistent, careful image acquisition');
+    // the Full Evidence Record stays available, separately
+    await page.getByTestId('view-evidence').click();
+    const ev = page.getByTestId('section-iter_evidence');
+    await expect(ev).toContainText('Rotation requirements complete: 6 of 7 (1 not yet due)');
+    await expect(ev).toContainText(/Written POCUS examination — complete: 100\.0% .*attempt 1 of 1 submitted \(most recent submitted attempt\)/);
+    await expect(ev).toContainText(/Brightspace learning cases — complete: 4 of 4 verified by faculty/);
+    await expect(ev).toContainText(/102 of 102 faculty-verified reviewed scans.*Last attested by Dr\. Demo Faculty/);
+    await expect(ev).toContainText(/4 C6 POCUS assessments reviewed, entrustment level 5 × 3, level 4 × 1/);
+    await expect(ev).toContainText('does not by itself determine whether the C6 requirement is met');
+    await expect(page.getByTestId('section-iter_observations')).toContainText('Practical scanning skills:');
+    await expect(page.getByTestId('section-iter_record')).toContainText('Approval in the portal is a draft approval, not a One45 submission.');
+    await shot(page, '12c2-full-evidence-record');
+    await page.getByTestId('view-quick').click();
+    // faculty review and edit the qualitative assessment
+    await page.getByTestId('iter-strengths').fill('Fictional: consistent, careful image acquisition; clear communication of findings to the team');
     await page.getByTestId('iter-areas').fill('Fictional: practise lung ultrasound in more patients');
-    await page.getByTestId('iter-overall').fill('Fictional: steady, safe progress across the block');
     await page.getByTestId('iter-outcome').getByLabel('Yes, Fully').check();
+    await page.getByTestId('iter-basis').getByRole('checkbox', { name: /^Informal observation/ }).check();
+    await page.getByTestId('iter-basis').getByRole('checkbox', { name: /^Written examination/ }).check();
     await page.getByTestId('iter-discussed').getByLabel('Yes', { exact: true }).check();
     await expect(page.getByTestId('approve-eval')).toBeEnabled();
     await page.getByTestId('save-eval').click();
     await expect(page.locator('#itar .badge', { hasText: 'Draft' })).toBeVisible();
     // saved: survives a full reload
     await page.reload();
-    await expect(page.getByTestId('iter-strengths')).toHaveValue('Fictional: consistent, careful image acquisition');
+    await expect(page.getByTestId('iter-strengths')).toHaveValue(/^Fictional: consistent, careful image acquisition/);
+    await expect(page.getByTestId('iter-overall')).toHaveValue(/^Completed 6 of 7 required/);
+    await expect(page.getByTestId('iter-basis').getByRole('checkbox', { name: /^Written examination/ })).toBeChecked();
     await expect(page.getByTestId('iter-outcome').getByLabel('Yes, Fully')).toBeChecked();
-    await shot(page, '12c-iter-draft');
-    await a11y(page, 'ITER-ready summary');
+    await shot(page, '12c-iter-quick-copy');
+    await a11y(page, 'ITER Quick Copy');
     await page.getByTestId('approve-eval').click();
     await expect(page.getByRole('dialog')).toContainText('it does not submit the ITER');
     await page.getByRole('button', { name: 'Approve draft', exact: true }).click();
@@ -540,26 +570,30 @@ test('full examination lifecycle', async ({ page, context }) => {
     await expect(page.getByTestId('ready-for-one45')).toContainText('This does not submit the ITER');
     await expect(page.getByTestId('iter-strengths')).toBeDisabled();
     await expect(page.getByTestId('iter-outcome')).toHaveText('Yes, Fully');
+    await expect(page.getByTestId('iter-basis')).toHaveText('Informal observation; Written examination');
   });
 
-  await test.step('faculty copies each section into the One45 ITER (transfer sheet and download)', async () => {
+  await test.step('faculty copies each One45 field (and the whole set); the full evidence record remains available', async () => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await page.getByTestId('copy-iter_strengths').click();
     await expect(page.getByText('Summary of strengths copied — paste it into the ITER in One45.')).toBeVisible();
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('Fictional: consistent, careful image acquisition.');
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('Fictional: consistent, careful image acquisition; clear communication of findings to the team.');
     await page.getByTestId('copy-all').click();
     const clip = await page.evaluate(() => navigator.clipboard.readText());
-    expect(clip).toContain('FACULTY OBSERVATIONS\n→ Reference');
-    expect(clip).not.toMatch(/MEDICAL EXPERT|CanMEDS/);
-    expect(clip).toContain('OVERALL ROTATION OBJECTIVES\n→ One45 ITER → rotation objectives: select the same option.\nYes, Fully');
+    expect(clip).toMatch(/^OVERALL ROTATION OBJECTIVES\n→ One45 ITER → rotation objectives: select the same option\.\nYes, Fully/);
+    expect(clip).toContain('BASIS OF ASSESSMENT\n→ One45 ITER → basis of assessment: tick the same boxes.\nInformal observation; Written examination');
     expect(clip).toContain('PERFORMANCE DISCUSSED WITH THE TRAINEE\n→ One45 ITER → select Yes or No.\nYes');
+    expect(clip).not.toMatch(/VERIFIED ROTATION EVIDENCE|FACULTY OBSERVATIONS|MEDICAL EXPERT|CanMEDS/); // Quick Copy = One45 fields only
     const [dl] = await Promise.all([page.waitForEvent('download'), page.getByTestId('export-text').click()]);
     const txt = await (await import('node:fs/promises')).readFile((await dl.path())!, 'utf8');
-    expect(txt).toContain('ITER-ready summary — Dr. Demo Resident');
+    expect(txt).toContain('ITER Quick Copy — Dr. Demo Resident');
     expect(txt).toMatch(/Status: draft approved by Dr\. Demo Faculty on .* — ready for One45 \(not submitted\)/);
-    expect(txt).toContain('PORTAL RECORD');
+    expect(txt).toContain('SUMMARY OF AREAS NEEDING IMPROVEMENT');
     expect(txt).not.toMatch(/Meets expectations|Above expectations|Outstanding\b/);
     await shot(page, '12d-iter-approved');
+    await page.getByTestId('view-evidence').click();
+    await expect(page.getByTestId('iter-section-iter_record')).toContainText('Evidence sources and verification');
+    await page.getByTestId('view-quick').click();
     // verification, EPA completion, approval and export are all in the audit log
     const db = new pg.Client({ connectionString: process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:5432/postgres' });
     await db.connect();
@@ -568,19 +602,18 @@ test('full examination lifecycle', async ({ page, context }) => {
         where p.email = $1 and action in ('evidence_verified','evidence_clarification_requested','epa_review_completed','evaluation_approved','itar_exported')
         group by action order by action`, [ADMIN]);
     const fmts = await db.query(`select details ->> 'format' f from public.audit_log where action = 'itar_exported' order by id`);
-    const ver = await db.query(`select version, iter_fields ->> 'outcome' outcome from public.evaluation_versions order by version`);
+    const ver = await db.query(`select version, iter_fields ->> 'outcome' outcome, iter_fields -> 'basis_confirmed' confirmed from public.evaluation_versions order by version`);
     await db.end();
     expect(Object.fromEntries(rows.map((r) => [r.action, r.n]))).toEqual({
       epa_review_completed: 1, evaluation_approved: 1, evidence_clarification_requested: 1, evidence_verified: 4, itar_exported: 3,
     });
     expect(fmts.rows.map((r) => r.f)).toEqual(['iter_copy_section', 'iter_copy_all', 'iter_text']);
-    expect(ver.rows).toEqual([{ version: 1, outcome: 'Yes, Fully' }]);
+    expect(ver.rows).toEqual([{ version: 1, outcome: 'Yes, Fully', confirmed: true }]);
   });
 
   await test.step('the block overview shows the resident complete', async () => {
     await page.getByRole('link', { name: '← Block' }).click();
     const row = page.getByTestId('overview-row').filter({ hasText: 'Dr. Demo Resident' });
-    await expect(row).toContainText('4/4');
     await expect(row).toContainText('draft approved — ready for One45');
     await expect(row).toContainText('No action needed');
     await expect(row).toContainText('6/7');
@@ -603,6 +636,8 @@ test('full examination lifecycle', async ({ page, context }) => {
     const row = page.getByTestId('overview-row').filter({ hasText: 'Dr. Demo Resident' });
     await expect(row).toContainText('new evidence since draft approval');
     await expect(row).toContainText('Review new evidence');
+    await page.goto('/app/faculty');
+    await expect(page.getByTestId('faculty-task').filter({ hasText: 'Dr. Demo Resident' })).toContainText('Review new evidence (draft approved earlier)');
     await signOut(page);
   });
 

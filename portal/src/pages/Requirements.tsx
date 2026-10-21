@@ -6,12 +6,14 @@ import { Badge, Empty, ErrorNote, Spinner, fmtDate, useLoad } from '../component
 import { useAuth } from '../lib/auth';
 import { REQ_LABEL, REQ_TONE, completion, scanPct, type Rotation, type RotationReq } from '../lib/requirements';
 import { rpc } from '../lib/supabase';
+import { caseStates, type Requirement } from '../lib/itar';
 
 type Block = { cohort: { id: string; name: string; start_date: string | null; end_date: string | null; course: string }; rotation: Rotation };
 
 /** Resident view: every mandatory rotation activity, what is verified and what is still needed. */
 export function Requirements() {
   const d = useLoad(() => rpc<Block[]>('my_requirements'), []);
+  const ev = useLoad(() => rpc<{ cohort: { id: string }; requirements: Requirement[] }[]>('my_evidence').catch(() => []), []);
   if (d.loading && !d.data) return <Spinner />;
   if (d.error) return <div className="wrap"><ErrorNote error={d.error} /></div>;
   return (
@@ -21,12 +23,12 @@ export function Requirements() {
         verify them. Never enter patient details (names, MRNs, dates of birth) anywhere in the portal.
       </div>
       {!(d.data ?? []).length && <Empty>You are not in a rotation block yet. Your program administrator adds you to one.</Empty>}
-      {(d.data ?? []).map((b) => <BlockReqs key={b.cohort.id} b={b} onChange={(rot) => d.setData((d.data ?? []).map((x) => (x.cohort.id === b.cohort.id ? { ...x, rotation: rot } : x)))} />)}
+      {(d.data ?? []).map((b) => <BlockReqs key={b.cohort.id} b={b} cases={caseStates((ev.data ?? []).find((x) => x.cohort.id === b.cohort.id)?.requirements ?? [])} onChange={(rot) => d.setData((d.data ?? []).map((x) => (x.cohort.id === b.cohort.id ? { ...x, rotation: rot } : x)))} />)}
     </Page>
   );
 }
 
-function BlockReqs({ b, onChange }: { b: Block; onChange: (r: Rotation) => void }) {
+function BlockReqs({ b, onChange, cases }: { b: Block; onChange: (r: Rotation) => void; cases: ReturnType<typeof caseStates> }) {
   const c = completion(b.rotation.requirements);
   const loc = useLocation();
   useEffect(() => {
@@ -36,7 +38,7 @@ function BlockReqs({ b, onChange }: { b: Block; onChange: (r: Rotation) => void 
   }, [loc.hash]);
   return (
     <section style={{ marginBottom: 30 }}>
-      <NextSteps rotation={b.rotation} compact />
+      <NextSteps rotation={b.rotation} compact cases={cases} />
       <p className="seclabel">{b.cohort.course} · {b.cohort.name}</p>
       <div className="row between" style={{ marginBottom: 12 }}>
         <span className="small muted">{b.cohort.start_date || b.cohort.end_date ? `${b.cohort.start_date ?? '—'} → ${b.cohort.end_date ?? '—'}` : ''}</span>

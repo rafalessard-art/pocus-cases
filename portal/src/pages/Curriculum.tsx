@@ -1,8 +1,12 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Page } from '../components/Layout';
 import { Badge, ErrorNote, Spinner, useLoad } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { rpc, supabase } from '../lib/supabase';
+import { STATUS_LABEL, TONE, caseStates, type Requirement } from '../lib/itar';
+
+const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
 type Item = {
   id: string; section: string; kind: string; title: string; description: string; url: string | null;
@@ -18,6 +22,9 @@ export function Curriculum() {
   const { profile } = useAuth();
   const { data, error, loading, setData } = useLoad(() => rpc<any>('my_curriculum', { p_course_slug: 'pocus' }), []);
   const [busy, setBusy] = useState<string | null>(null);
+  const ev = useLoad(() => rpc<{ cohort: { id: string }; requirements: Requirement[] }[]>('my_evidence').catch(() => []), []);
+  // the required teaching cases ARE the Brightspace learning cases: their completion comes from verified uploads
+  const caseByTitle = new Map(caseStates((ev.data ?? [])[0]?.requirements ?? []).map((c) => [norm(c.title), c]));
 
   async function toggle(item: Item) {
     if (!profile) return;
@@ -38,6 +45,12 @@ export function Curriculum() {
 
   return (
     <Page kicker="POCUS Rotation" title="Curriculum" subtitle={data.course.description}>
+      {caseByTitle.size > 0 && (
+        <div className="notice small" style={{ marginBottom: 16 }} data-testid="curriculum-cases-note">
+          The <strong>required teaching cases</strong> are your Brightspace learning cases. Complete each one in Brightspace, then upload proof under
+          {' '}<Link to="/evidence">Learning-case evidence</Link>; it counts as complete once faculty verify it. Interactive tools are optional.
+        </div>
+      )}
       <div className="split">
         <div>
           {sections.map((s) => (
@@ -57,10 +70,23 @@ export function Curriculum() {
                       </h3>
                       {i.description && <p className="small muted" style={{ margin: 0 }}>{i.description}</p>}
                     </div>
-                    <label className="check">
-                      <input type="checkbox" checked={!!i.completed_at} disabled={busy === i.id} onChange={() => toggle(i)} />
-                      Completed
-                    </label>
+                    {(() => {
+                      const c = caseByTitle.get(norm(i.title));
+                      if (c) {
+                        return (
+                          <div className="stack" style={{ alignItems: 'flex-end', gap: 6 }} data-testid="curriculum-case-status">
+                            <Badge tone={TONE[c.state]}>{c.state === 'missing' ? 'Upload needed' : STATUS_LABEL[c.state]}</Badge>
+                            {c.state !== 'verified' && c.state !== 'submitted' && <Link className="btn secondary small" to={`/evidence#case-${c.id}`}>{c.state === 'missing' ? 'Upload proof' : 'Re-upload'}</Link>}
+                          </div>
+                        );
+                      }
+                      return (
+                        <label className="check">
+                          <input type="checkbox" checked={!!i.completed_at} disabled={busy === i.id} onChange={() => toggle(i)} />
+                          Completed
+                        </label>
+                      );
+                    })()}
                   </div>
                 ))}
               </div>

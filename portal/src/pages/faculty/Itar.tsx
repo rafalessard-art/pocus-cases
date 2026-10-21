@@ -1,5 +1,5 @@
-import { useMemo, useState, type ReactNode } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Page } from '../../components/Layout';
 import { EvidencePreview } from '../../components/EvidencePreview';
 import { Badge, Confirm, DomainBars, Empty, ErrorNote, Spinner, fmtDate, pct, useLoad } from '../../components/ui';
@@ -7,16 +7,18 @@ import { isAdmin, useAuth } from '../../lib/auth';
 import { download, toCSV } from '../../lib/csv';
 import { deleteEvidenceFiles } from '../../lib/evidence';
 import {
-  CATEGORIES, CRITERIA_LABEL, epaVerified, STATUS_LABEL, TONE, attention, chooseAttempt, composeSummary, draftItar, factsFrom, fingerprint, latestSubmission, outstanding,
+  CATEGORIES, CRITERIA_LABEL, epaVerified, STATUS_LABEL, TONE, chooseAttempt, composeSummary, draftItar, factsFrom, fingerprint, latestSubmission, outstanding,
   requirementState, type AttemptRule, type EpaEntry, type EpaReview, type ItarInput, type ItarSection, type Observation, type OverviewRow,
   type Requirement, type WsAttempt,
 } from '../../lib/itar';
 import {
-  REQ_LABEL, REQ_TONE, completion, requirementActions, rotationPassPct, scanDeltas, scanPct, withSelectedAttempt, type ItarState, type ReqStatus, type Rotation, type RotationReq,
+  REQ_LABEL, REQ_TONE, completion, rotationPassPct, scanDeltas, scanPct, withSelectedAttempt, type ReqStatus, type Rotation, type RotationReq,
 } from '../../lib/requirements';
 import {
-  applyFaculty, areaReminders, composeIter, draftIter, entrustmentText, isIterDraft, parseTemplate, suggestBasis, type IterFields, type NarrativeKey,
+  NEEDS_FACULTY, QUICK_KINDS, applyFaculty, basisHints, composeIter, draftIter, entrustmentText, evidenceSections, isIterDraft, parseTemplate, quickDrafts,
+  quickSections, refreshDrafts, type IterFields, type NarrativeKey,
 } from '../../lib/iter';
+import { openRequirements, residentTasks, type RotRow } from '../../lib/overview';
 import { rpc, supabase } from '../../lib/supabase';
 
 type Cohort = { id: string; course_id: string; course: string; name: string; block_label: string | null; academic_year: string | null; start_date: string | null; end_date: string | null };
@@ -38,7 +40,6 @@ type Ws = {
   roster: { id: string; name: string }[];
 };
 
-type RotRow = { learner_id: string; requirements: Pick<RotationReq, 'key' | 'kind' | 'title' | 'required' | 'status' | 'action' | 'detail' | 'extra'>[]; scans: { verified_total: number; target_total: number }; itar: ItarState | null };
 
 const today = () => new Date().toLocaleDateString('en-CA');
 
@@ -99,117 +100,102 @@ export function BlockOverview() {
   const { cohort, residents } = d.data!;
   const rotBy = new Map((rq.data ?? []).map((x) => [x.learner_id, x]));
   const rows = residents.map((r) => {
-    const a = attention(r);
-    const x = rotBy.get(r.id);
-    const c = x ? completion(x.requirements) : null;
-    if (x) {
-      const extra = requirementActions(x.requirements);
-      if ((x.itar?.changes_since_approval.length ?? 0) > 0) extra.faculty.push('Review new evidence (draft approved earlier)');
-      if (a.done && (extra.faculty.length || extra.resident.length)) a.done = false; // an approved ITAR never hides outstanding requirements
-      a.faculty.splice(a.faculty.length && !a.done ? a.faculty.length - 1 : a.faculty.length, 0, ...extra.faculty); // keep "Prepare/Approve ITAR" last
-      a.resident.push(...extra.resident);
-    }
-    return { r, a, x, c };
+    const x = rotBy.get(r.id) ?? null;
+    return { r, x, t: residentTasks(r, x), open: openRequirements(x) };
   });
   const n = residents.length;
   const count = (f: (r: OverviewRow) => boolean) => residents.filter(f).length;
 
   function exportCsv() {
-    download(`${cohort.name.replace(/\W+/g, '_')}_ITAR_status.csv`, toCSV(rows.map(({ r, a, x, c }) => ({
-      resident: r.name, training_level: r.training_level ?? '', exam: r.exam.latest ? `${r.exam.latest.score_pct ?? ''}%` : 'outstanding',
-      exam_passed: r.exam.latest?.passed ?? '', evidence_verified: `${r.evidence.verified}/${r.evidence.required}`, evidence_awaiting_review: r.evidence.awaiting_review,
-      evidence_missing: r.evidence.required - r.evidence.submitted, epa_review: r.epa_status, observations: r.n_observations, itar: r.itar?.status ?? 'not started',
-      requirements_complete: c ? `${c.done}/${c.total}` : '', requirements_outstanding: x ? x.requirements.filter((q) => q.required && !['verified', 'not_applicable', 'not_yet_due'].includes(q.status)).map((q) => q.title).join('; ') : '',
+    download(`${cohort.name.replace(/\W+/g, '_')}_ITER_status.csv`, toCSV(rows.map(({ r, x, t, open }) => ({
+      resident: r.name, training_level: r.training_level ?? '',
+      requirements_complete: t.completion ? `${t.completion.done}/${t.completion.total}` : '', requirements_open: open.join('; '),
       scans_verified: x ? `${x.scans.verified_total}/${x.scans.target_total}` : '',
-      faculty_actions: a.faculty.join('; '), resident_actions: a.resident.join('; '),
+      exam: r.exam.latest ? `${r.exam.latest.score_pct ?? ''}%` : 'outstanding',
+      epa: (x?.requirements.find((q) => q.kind === 'epa')?.extra?.criteria_status as string | undefined) ?? r.epa_status,
+      evidence_verified: `${r.evidence.verified}/${r.evidence.required}`, evidence_awaiting_review: r.evidence.awaiting_review,
+      iter: r.itar?.status === 'approved' ? 'draft approved — ready for One45' : r.itar ? 'draft' : 'not started',
+      faculty_tasks: t.faculty.map((f) => f.label).join('; '), resident_tasks: t.resident.join('; '),
     }))));
   }
 
   return (
-    <Page kicker={`ITAR preparation · ${cohort.course}`} title={cohort.name} subtitle={dates(cohort)}
-      actions={<><Link className="btn secondary" to="/faculty">← Dashboard</Link><button className="btn secondary" onClick={exportCsv}>Export CSV</button></>}>
+    <Page kicker={`ITER preparation · ${cohort.course}`} title={cohort.name} subtitle={dates(cohort)}
+      actions={<><Link className="btn secondary" to="/faculty">← Dashboard</Link><button className="btn secondary" onClick={exportCsv}>Export CSV</button><button className="btn secondary" onClick={() => window.print()}>Print</button></>}>
       <section className="card flat" style={{ marginBottom: 18 }}>
         <div className="stats">
           <div className="stat"><b>{n}</b><span>residents</span></div>
+          {rq.data && <div className="stat"><b>{rows.filter((x) => x.t.completion && x.t.completion.outstanding === 0).length}/{n}</b><span>requirements complete</span></div>}
           <div className="stat"><b>{count((r) => !!r.exam.latest)}/{n}</b><span>exams submitted</span></div>
-          <div className="stat"><b>{count((r) => r.evidence.required > 0 && r.evidence.verified === r.evidence.required)}/{n}</b><span>cases all verified</span></div>
           <div className="stat"><b>{rq.data ? rows.filter((x) => x.x?.requirements.find((q) => q.kind === 'epa')?.status === 'verified').length : count((r) => r.epa_status === 'complete')}/{n}</b><span>EPA criteria met</span></div>
-          {rq.data && <div className="stat"><b>{rows.filter((x) => x.c && x.c.outstanding === 0).length}/{n}</b><span>requirements complete</span></div>}
           <div className="stat"><b>{count((r) => r.itar?.status === 'approved')}/{n}</b><span>Drafts approved · ready for One45</span></div>
         </div>
       </section>
-      <div className="row between" style={{ marginBottom: 10 }}>
+      <div className="row between no-print" style={{ marginBottom: 10 }}>
         <label className="check"><input type="checkbox" checked={onlyOpen} onChange={(e) => setOnlyOpen(e.target.checked)} /> Only residents needing attention</label>
-        <span className="small muted">Click a row to open the resident's ITAR workspace.</span>
+        <span className="small muted">Click a row to open the resident's workspace.</span>
       </div>
       {!n && <Empty>No residents in this block yet.</Empty>}
       {n > 0 && (
         <div className="tablewrap">
-          <table className="data" data-testid="block-overview">
-            <thead><tr><th>Resident</th><th>Requirements</th><th>Scans</th><th>Exam</th><th>Learning cases</th><th>EPA review</th><th className="num">Obs.</th><th>ITAR</th><th>Needs attention</th></tr></thead>
+          <table className="data stackable" data-testid="block-overview">
+            <thead><tr><th>Resident</th><th>Requirements</th><th>Scans</th><th>Exam</th><th>EPA</th><th>ITER</th><th>To do</th></tr></thead>
             <tbody>
-              {rows.filter(({ a }) => !onlyOpen || !a.done).map(({ r, a, x, c }) => (
+              {rows.filter(({ t }) => !onlyOpen || !t.done).map(({ r, x, t, open }) => (
                 <tr key={r.id} className="clickable" onClick={() => nav(`/faculty/itar/${cohortId}/${r.id}`)} data-testid="overview-row">
-                  <td><Link to={`/faculty/itar/${cohortId}/${r.id}`} onClick={(e) => e.stopPropagation()}>{r.name}</Link><div className="small muted">{r.training_level}</div></td>
-                  <td>
-                    {c ? <><strong>{c.done}/{c.total}</strong> {c.outstanding === 0 ? <Badge tone="ok">{c.notYetDue ? 'up to date' : 'complete'}</Badge> : null}
-                      {c.notYetDue > 0 && <div className="small muted">{c.notYetDue} not yet due</div>}
-                      {c.outstanding > 0 && <div className="small muted" style={{ maxWidth: 200 }}>Outstanding: {x!.requirements.filter((q) => q.required && !['verified', 'not_applicable', 'not_yet_due'].includes(q.status)).map((q) => (q.kind === 'scan_log' ? 'scan logbook' : q.title.replace(/^Written /, '').replace(/^POCUS /, ''))).join(', ')}</div>}
-                    </> : '—'}
+                  <td data-label="Resident"><Link to={`/faculty/itar/${cohortId}/${r.id}`} onClick={(e) => e.stopPropagation()}><strong>{r.name}</strong></Link>
+                    {r.training_level && <span className="small muted"> · {r.training_level}</span>}</td>
+                  <td data-label="Requirements">
+                    {t.completion ? <><strong>{t.completion.done}/{t.completion.total}</strong>{' '}
+                      {t.completion.outstanding === 0 ? <Badge tone="ok">{t.completion.notYetDue ? 'up to date' : 'complete'}</Badge> : <span className="small muted">{t.completion.outstanding} open</span>}</> : '—'}
                   </td>
-                  <td style={{ minWidth: 90 }}>
-                    {x ? <><div className="bar" aria-hidden><span style={{ width: `${x.scans.target_total ? Math.min(100, (100 * x.scans.verified_total) / x.scans.target_total) : 0}%` }} /></div>
-                      <span className="small">{x.scans.verified_total}/{x.scans.target_total}</span></> : '—'}
+                  <td data-label="Scans" className="nowrap">
+                    {x ? <><span className="small"><strong>{x.scans.verified_total}</strong>/{x.scans.target_total}</span>
+                      <div className="bar" aria-hidden style={{ maxWidth: 90 }}><span style={{ width: `${x.scans.target_total ? Math.min(100, (100 * x.scans.verified_total) / x.scans.target_total) : 0}%` }} /></div></> : '—'}
                   </td>
-                  <td>
+                  <td data-label="Exam" className="nowrap">
                     {r.exam.latest ? (
                       <>
-                        <strong>{r.exam.latest.score_pct != null ? pct(r.exam.latest.score_pct, 1) : '—'}</strong>{' '}
+                        <strong>{r.exam.latest.score_pct != null ? pct(r.exam.latest.score_pct, 0) : '—'}</strong>{' '}
                         {(() => {
                           const ex = x?.requirements.find((q) => q.kind === 'exam');
                           const pp = ex?.extra?.pass_pct;
                           if (r.exam.latest.grading_status === 'pending_manual') return <Badge tone="warn">needs grading</Badge>;
-                          if (ex && pp != null && r.exam.latest.score_pct != null) {
-                            const met = ex.status === 'verified';
-                            return <>{met ? <Badge tone="ok">≥ {Math.round(Number(pp))}%</Badge> : <Badge tone="bad">below {Math.round(Number(pp))}%</Badge>}
-                              {r.exam.n_attempts > 1 && ex.extra?.attempt_no && <div className="small muted">ITAR uses attempt {ex.extra.attempt_no}</div>}</>;
-                          }
+                          if (ex && pp != null && r.exam.latest.score_pct != null) return ex.status === 'verified' ? <Badge tone="ok">≥ {Math.round(Number(pp))}%</Badge> : <Badge tone="bad">below {Math.round(Number(pp))}%</Badge>;
                           return r.exam.latest.passed == null ? null : r.exam.latest.passed ? <Badge tone="ok">pass</Badge> : <Badge tone="bad">below</Badge>;
                         })()}
-                        {r.exam.n_attempts > 1 && <div className="small muted">{r.exam.n_attempts} attempts</div>}
                       </>
-                    ) : <Badge tone={r.exam.in_progress ? 'warn' : undefined}>{r.exam.in_progress ? 'in progress' : r.exam.assigned ? 'outstanding' : 'not assigned'}</Badge>}
+                    ) : <span className="small muted">{r.exam.in_progress ? 'in progress' : r.exam.assigned ? 'not taken' : 'not assigned'}</span>}
                   </td>
-                  <td>
-                    <strong>{r.evidence.verified}/{r.evidence.required}</strong> verified
-                    <div className="chips" style={{ marginTop: 4 }}>
-                      {r.evidence.awaiting_review > 0 && <Badge tone="info">{r.evidence.awaiting_review} to review</Badge>}
-                      {r.evidence.clarification + r.evidence.rejected > 0 && <Badge tone="warn">{r.evidence.clarification + r.evidence.rejected} returned</Badge>}
-                      {r.evidence.required - r.evidence.submitted > 0 && <Badge>{r.evidence.required - r.evidence.submitted} missing</Badge>}
-                    </div>
-                  </td>
-                  <td>
+                  <td data-label="EPA">
                     {(() => {
                       const q = x?.requirements.find((y) => y.kind === 'epa');
                       const cs = q?.extra?.criteria_status as string | undefined;
                       const b = q?.status === 'not_applicable' || q?.status === 'not_yet_due' ? <Badge>{REQ_LABEL[q.status]}</Badge>
                         : cs === 'met' ? <Badge tone="ok">criteria met</Badge>
                         : cs === 'partially_met' ? <Badge tone="warn">partially met</Badge>
-                        : cs === 'outstanding' ? <Badge tone="bad">outstanding</Badge>
-                        : <Badge tone="warn">{r.epa_status === 'complete' ? 're-verify' : 'pending'}</Badge>;
-                      return <>{b}{q?.extra?.has_concerns && <div><Badge tone="bad">concern noted</Badge></div>}</>;
+                        : cs === 'outstanding' ? <Badge tone="bad">not met</Badge>
+                        : <Badge>{r.epa_status === 'complete' ? 're-verify' : 'pending'}</Badge>;
+                      return <>{b}{q?.extra?.has_concerns && <> <Badge tone="bad">concern</Badge></>}</>;
                     })()}
                   </td>
-                  <td className="num">{r.n_observations}</td>
-                  <td>
+                  <td data-label="ITER">
                     {!r.itar ? <Badge>not started</Badge> : r.itar.status === 'approved' ? <Badge tone="ok">draft approved — ready for One45</Badge> : <Badge tone="warn">draft</Badge>}
-                    {(x?.itar?.changes_since_approval.length ?? 0) > 0 && <div><Badge tone="warn">new evidence since draft approval</Badge></div>}
+                    {(x?.itar?.changes_since_approval.length ?? 0) > 0 && <> <Badge tone="warn">new evidence since draft approval</Badge></>}
                   </td>
-                  <td className="small">
-                    {a.done ? <span className="muted">No action needed</span> : (
+                  <td data-label="To do" className="small" onClick={(e) => e.stopPropagation()}>
+                    {t.done ? <span className="muted">No action needed</span> : (
                       <>
-                        {a.faculty.length > 0 && <div><strong>You:</strong> {a.faculty.join(' · ')}</div>}
-                        {a.resident.length > 0 && <div className="muted">Resident: {a.resident.join(' · ')}</div>}
+                      <div className="print-only">{[t.faculty.length ? `You: ${t.faculty.map((f) => f.label).join('; ')}` : '', t.resident.length ? `Resident: ${t.resident.join('; ')}` : ''].filter(Boolean).join(' — ')}</div>
+                      <details className="todo no-print" data-testid="overview-todo">
+                        <summary>
+                          {t.faculty.length > 0 && <Badge tone="warn">You: {t.faculty.length}</Badge>}{' '}
+                          {t.resident.length > 0 && <Badge>Resident: {t.resident.length}</Badge>}
+                        </summary>
+                        {t.faculty.length > 0 && <div><strong>You:</strong> {t.faculty.map((f, i) => <span key={f.label}>{i > 0 && ' · '}<Link to={`/faculty/itar/${cohortId}/${r.id}${f.anchor}`}>{f.label}</Link></span>)}</div>}
+                        {t.resident.length > 0 && <div className="muted">Resident: {t.resident.join(' · ')}</div>}
+                        {open.length > 0 && <div className="muted">Open requirements: {open.join(', ')}</div>}
+                      </details>
                       </>
                     )}
                   </td>
@@ -223,6 +209,47 @@ export function BlockOverview() {
   );
 }
 
+/** Faculty dashboard: what needs the faculty member's attention, across their blocks. */
+export function FacultyTasks() {
+  const blocks = useLoad(() => rpc<any[]>('itar_blocks'), []);
+  const data = useLoad(async () => {
+    const list = (blocks.data ?? []).filter((b) => !b.archived);
+    return Promise.all(list.map(async (b) => {
+      const [o, rot] = await Promise.all([
+        rpc<{ cohort: Cohort; residents: OverviewRow[] }>('itar_block_overview', { p_cohort: b.id }),
+        rpc<RotRow[]>('rotation_block_overview', { p_cohort: b.id }).catch(() => [] as RotRow[]),
+      ]);
+      const by = new Map(rot.map((x) => [x.learner_id, x]));
+      return { block: b, rows: o.residents.map((r) => ({ r, t: residentTasks(r, by.get(r.id)) })) };
+    }));
+  }, [blocks.data]);
+  if (blocks.loading || (data.loading && !data.data)) return <Spinner />;
+  const err = blocks.error ?? data.error;
+  if (err) return <ErrorNote error={err} />;
+  const items = (data.data ?? []).flatMap(({ block, rows }) => rows.filter(({ t }) => t.faculty.length).map(({ r, t }) => ({ block, r, t })));
+  const total = items.reduce((a, x) => a + x.t.faculty.length, 0);
+  return (
+    <section className="card" style={{ ['--accent' as any]: 'var(--clay)', marginBottom: 18 }} data-testid="faculty-tasks">
+      <div className="row between">
+        <h3 style={{ margin: 0 }}>Needs your attention</h3>
+        {total > 0 && <Badge tone="warn">{total} task{total === 1 ? '' : 's'} · {items.length} resident{items.length === 1 ? '' : 's'}</Badge>}
+      </div>
+      {!items.length ? <p className="small muted">Nothing waiting for you in your rotation blocks.</p> : (
+        <ul className="tasklist">
+          {items.map(({ block, r, t }) => (
+            <li key={`${block.id}-${r.id}`} data-testid="faculty-task">
+              <Link to={`/faculty/itar/${block.id}/${r.id}`}><strong>{r.name}</strong></Link> <span className="small muted">· {block.name}</span>
+              <div className="chips" style={{ marginTop: 4 }}>
+                {t.faculty.map((f) => <Link key={f.label} className="chip" to={`/faculty/itar/${block.id}/${r.id}${f.anchor}`}>{f.label}</Link>)}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Resident ITAR workspace
 // ---------------------------------------------------------------------------
@@ -232,6 +259,14 @@ export function ItarWorkspace() {
   const rot = useLoad(() => rpc<Rotation>('rotation_status', { p_learner: learnerId, p_cohort: cohortId }), [cohortId, learnerId]);
   const tpl = useLoad(() => rpc<TemplateRow | null>('iter_template_for', { p_cohort: cohortId }).catch(() => null), [cohortId]);
   const [sel, setSel] = useState<{ key: string; id: string | null } | null>(null);
+  const loc = useLocation();
+  const ready = !!ws.data && tpl.data !== undefined;
+  // deep links from the dashboard / overview (e.g. #cases, #scans, #itar) once the page has rendered
+  useEffect(() => {
+    if (!ready || !loc.hash) return;
+    const t = setTimeout(() => document.getElementById(loc.hash.slice(1))?.scrollIntoView({ block: 'start' }), 60);
+    return () => clearTimeout(t);
+  }, [ready, loc.hash, learnerId]);
   if ((ws.loading && !ws.data) || (rot.loading && !rot.data && !rot.error) || (tpl.loading && tpl.data === undefined)) return <Spinner />;
   if (ws.error) return <div className="wrap"><ErrorNote error={ws.error} /></div>;
   const w = ws.data!;
@@ -709,11 +744,11 @@ type TemplateRow = { name: string; status: 'draft' | 'confirmed'; confirmed_at: 
 const KIND_LABEL: Record<NonNullable<ItarSection['kind']>, { label: string; tone?: 'ok' | 'warn' | 'info' }> = {
   header: { label: 'Check' },
   evidence: { label: 'Verified evidence — factual', tone: 'info' },
-  observations: { label: 'Reference — your observations' },
+  observations: { label: 'Faculty-entered' },
   role: { label: 'Notes from your observations' }, // earlier approved versions only
   outcome: { label: 'Your selection', tone: 'warn' },
   narrative: { label: 'Your judgement', tone: 'warn' },
-  basis: { label: 'Your selection', tone: 'warn' },
+  basis: { label: 'Your confirmation', tone: 'warn' },
   discussed: { label: 'Your selection', tone: 'warn' },
   record: { label: 'For your files' },
 };
@@ -722,11 +757,16 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
   const ev = w.evaluation;
   const locked = ev?.status === 'approved';
   const T = useMemo(() => (template ? parseTemplate(template.definition) : null), [template]);
-  const [f, setF] = useState(() => ({
-    strengths: ev?.strengths ?? '', areas: ev?.areas_for_improvement ?? '', other: ev?.observations ?? '',
-    iter: (ev?.iter_fields ?? {}) as IterFields,
-    sections: (ev?.itar_sections ?? []) as ItarSection[], snapshot: ev?.evidence_snapshot ?? {}, generated_at: ev?.generated_at ?? null,
-  }));
+  const [f, setF] = useState(() => {
+    const iter = (ev?.iter_fields ?? {}) as IterFields;
+    return {
+      strengths: ev?.strengths ?? '', areas: ev?.areas_for_improvement ?? '', other: ev?.observations ?? '',
+      // nothing counts as a confirmed basis of assessment unless the faculty member ticked it (older drafts pre-ticked suggestions)
+      iter: locked || iter.basis_confirmed ? iter : { ...iter, basis: [] },
+      sections: (ev?.itar_sections ?? []) as ItarSection[], snapshot: ev?.evidence_snapshot ?? {}, generated_at: ev?.generated_at ?? null,
+    };
+  });
+  const [view, setView] = useState<'quick' | 'evidence'>('quick');
   const [err, setErr] = useState<unknown>();
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -745,15 +785,28 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
   const fp = fingerprint(input);
   const stale = f.sections.length > 0 && f.snapshot?.fingerprint && f.snapshot.fingerprint !== fp;
   const todo = outstanding(input);
-  const placeholders = f.sections.some((s) => /\[Faculty to complete/.test(s.text));
+  const placeholders = f.sections.some((s) => NEEDS_FACULTY.test(s.text));
   const name = input.learnerName;
+  const quick = iterMode ? quickSections(f.sections) : [];
+  const record = iterMode ? evidenceSections(f.sections) : f.sections;
+  const shown = iterMode ? (view === 'quick' ? quick : record) : f.sections;
   const compose = (s: ItarSection[]) => (isIterDraft(s) ? composeIter(s) : composeSummary(s));
 
   function generate() {
     const chosen = chooseAttempt(w.attempts, selectedAttempt);
-    const iter: IterFields = T && f.iter.basis === undefined ? { ...f.iter, basis: suggestBasis(input, T) } : f.iter;
+    let next = { ...f };
+    if (T) {
+      // concise drafts from verified facts; text the faculty member wrote or edited is never replaced
+      const cur = { overall: f.iter.overall ?? '', strengths: f.strengths, areas: f.areas, recommendations: f.iter.recommendations ?? '' };
+      const { values, auto } = refreshDrafts(cur, f.iter.auto, quickDrafts(input));
+      const iter: IterFields = { ...f.iter, overall: values.overall, recommendations: values.recommendations, auto };
+      next = { ...f, strengths: values.strengths, areas: values.areas, iter };
+      next.sections = draftIter({ ...input, strengths: values.strengths, areasForImprovement: values.areas }, T, iter);
+    } else {
+      next.sections = draftItar(input);
+    }
     setF({
-      ...f, iter, sections: T ? draftIter(input, T, iter) : draftItar(input), generated_at: new Date().toISOString(),
+      ...next, generated_at: new Date().toISOString(),
       snapshot: {
         fingerprint: fp, attempt_id: chosen.attempt?.id ?? null, attempt_rule: chosen.rule, template: template ? { name: template.name, status: template.status } : null,
         evidence: w.requirements.map((r) => ({ requirement: r.title, state: requirementState(r), submission: latestSubmission(r)?.id ?? null, sha256: latestSubmission(r)?.sha256 ?? null })),
@@ -763,7 +816,8 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
         scans: rotation ? rotation.scans.categories.map((c) => ({ key: c.key, verified: c.verified, target: c.target, views_confirmed: c.views_confirmed })) : null,
       },
     });
-    setMsg(T ? 'ITER-ready summary assembled from the evidence above. Complete your judgement sections, then save.' : 'Draft assembled from the evidence above. Edit any section before saving.');
+    setView('quick');
+    setMsg(T ? 'One45 fields drafted from the portal evidence. Review and edit each one, confirm the basis of assessment, then save.' : 'Draft assembled from the evidence above. Edit any section before saving.');
     setConfirm(null);
   }
   /** Faculty fields re-render their own ITER sections immediately; evidence text is untouched. */
@@ -782,7 +836,9 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
       const body = {
         course_id: w.cohort.course_id, learner_id: w.learner.id, cohort_id: w.cohort.id, rotation_start: w.cohort.start_date, rotation_end: w.cohort.end_date,
         attempt_id: chosen.attempt?.id ?? null, attempt_rule: chosen.rule, exam_snapshot: factsFrom(chosen.attempt) ?? {},
-        evidence_snapshot: f.snapshot ?? {}, generated_at: f.generated_at, itar_sections: f.sections, summary: compose(f.sections),
+        evidence_snapshot: f.snapshot ?? {}, generated_at: f.generated_at, itar_sections: f.sections,
+        // the stored text: the One45 fields first, then the full evidence record
+        summary: iterMode ? `${composeIter(quick)}\n\n${composeIter(record)}` : composeSummary(f.sections),
         strengths: f.strengths, areas_for_improvement: f.areas, observations: f.other, iter_fields: f.iter,
       };
       let id = ev?.id;
@@ -830,17 +886,22 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
       setErr(new Error('The browser blocked clipboard access. Use “Download .txt”, or select the text and copy it manually.'));
     }
   }
-  const header = `${iterMode ? 'ITER-ready summary' : 'ITAR preparation'} — ${name}${w.learner.training_level ? ` (${w.learner.training_level})` : ''}\n${w.cohort.course}, ${w.cohort.name} (${dates(w.cohort)})\nStatus: ${locked ? `draft approved by ${ev?.approved_by_name ?? 'faculty'} on ${fmtDate(ev?.approved_at)} — ready for One45 (not submitted)` : 'DRAFT — not approved'}\n${iterMode ? 'Copy each section into the One45 ITER field shown after →. CanMEDS ratings and the overall outcome are selected by faculty in One45, where the ITER is reviewed and submitted; the portal submits nothing.\n' : ''}\n`;
+  const status = locked ? `draft approved by ${ev?.approved_by_name ?? 'faculty'} on ${fmtDate(ev?.approved_at)} — ready for One45 (not submitted)` : 'DRAFT — not approved';
+  const header = (what: string) => `${what} — ${name}${w.learner.training_level ? ` (${w.learner.training_level})` : ''}\n${w.cohort.course}, ${w.cohort.name} (${dates(w.cohort)})\nStatus: ${status}\n${iterMode ? 'Copy each field into the One45 ITER (destination after →). CanMEDS ratings and the overall outcome are selected by faculty in One45, where the ITER is reviewed and submitted; the portal submits nothing.\n' : ''}\n`;
   const setSection = (i: number, text: string) => setF({ ...f, sections: f.sections.map((s, j) => (j === i ? { ...s, text } : s)) });
-  const reminders = iterMode ? areaReminders(input, todo) : [];
-  const suggested = T ? suggestBasis(input, T) : [];
+  const hints = T ? basisHints(input, T) : {};
   const fileBase = `${iterMode ? 'ITER' : 'ITAR'}_${name.replace(/\W+/g, '_')}_${w.cohort.name.replace(/\W+/g, '_')}`;
 
-  function body(s: ItarSection, i: number) {
+  /** Legacy ITAR layout and evidence-record text. */
+  function textBody(s: ItarSection) {
+    const i = f.sections.indexOf(s);
     const rows = Math.min(14, Math.max(3, s.text.split('\n').length + Math.ceil(s.text.length / 110)));
-    if (!iterMode || !T) {
-      return <textarea rows={rows} value={s.text} disabled={locked} onChange={(e) => setSection(i, e.target.value)} aria-label={s.title} data-testid={`section-${s.key}`} />;
-    }
+    if (iterMode) return <div className="evidence-text" data-testid={`section-${s.key}`}>{s.text}</div>;
+    return <textarea rows={rows} value={s.text} disabled={locked} onChange={(e) => setSection(i, e.target.value)} aria-label={s.title} data-testid={`section-${s.key}`} />;
+  }
+  /** One45 field editors (Quick Copy). */
+  function fieldBody(s: ItarSection) {
+    if (!T) return textBody(s);
     // once approved, show the faculty selection as plain text (disabled controls are hard to read)
     if (locked && (s.kind === 'outcome' || s.kind === 'basis' || s.kind === 'discussed')) {
       return <div style={{ fontWeight: 600 }} data-testid={`iter-${s.kind}`}>{s.text}</div>;
@@ -851,10 +912,10 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
           <legend className="sr-only">{s.title}</legend>
           <div className="stack" style={{ gap: 4 }}>
             {T.outcome.options.map((o) => (
-              <label key={o} className="check" style={{ display: 'flex' }}><input type="radio" name="iter-outcome" checked={f.iter.outcome === o} disabled={locked}
+              <label key={o} className="check" style={{ display: 'flex' }}><input type="radio" name="iter-outcome" checked={f.iter.outcome === o}
                 onChange={() => setFaculty({ iter: { ...f.iter, outcome: o } })} /> {o}</label>
             ))}
-            <label className="check muted" style={{ display: 'flex' }}><input type="radio" name="iter-outcome" checked={!f.iter.outcome} disabled={locked}
+            <label className="check muted" style={{ display: 'flex' }}><input type="radio" name="iter-outcome" checked={!f.iter.outcome}
               onChange={() => setFaculty({ iter: { ...f.iter, outcome: null } })} /> Not selected here (select in One45)</label>
           </div>
         </fieldset>
@@ -863,11 +924,14 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
     if (s.kind === 'basis') {
       const sel = f.iter.basis ?? [];
       return (
-        <div className="stack" style={{ gap: 4 }} data-testid="iter-basis">
+        <div className="stack" style={{ gap: 6 }} data-testid="iter-basis">
+          <span className="small muted">Tick what informed your assessment. Nothing is ticked for you.</span>
           {T.basis.options.map((o) => (
-            <label key={o} className="check" style={{ display: 'flex' }}><input type="checkbox" checked={sel.includes(o)} disabled={locked}
-              onChange={(e) => setFaculty({ iter: { ...f.iter, basis: e.target.checked ? T.basis.options.filter((x) => x === o || sel.includes(x)) : sel.filter((x) => x !== o) } })} /> {o}
-              {suggested.includes(o) && <span className="small muted"> — portal records support this</span>}</label>
+            <label key={o} className="check" style={{ display: 'flex', alignItems: 'flex-start' }}>
+              <input type="checkbox" checked={sel.includes(o)} style={{ marginTop: 3 }}
+                onChange={(e) => setFaculty({ iter: { ...f.iter, basis_confirmed: true, basis: e.target.checked ? T.basis.options.filter((x) => x === o || sel.includes(x)) : sel.filter((x) => x !== o) } })} />
+              <span>{o}{hints[o] && <span className="small muted"> — {hints[o]}</span>}</span>
+            </label>
           ))}
         </div>
       );
@@ -876,36 +940,30 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
       return (
         <div className="row" data-testid="iter-discussed">
           {([['yes', 'Yes'], ['no', 'No'], [null, 'Not recorded here']] as const).map(([v, l]) => (
-            <label key={l} className="check"><input type="radio" name="iter-discussed" checked={(f.iter.discussed ?? null) === v} disabled={locked}
+            <label key={l} className="check"><input type="radio" name="iter-discussed" checked={(f.iter.discussed ?? null) === v}
               onChange={() => setFaculty({ iter: { ...f.iter, discussed: v } })} /> {l}</label>
           ))}
         </div>
       );
     }
-    if (s.kind === 'narrative') {
-      const k = s.key.replace('iter_', '') as NarrativeKey;
-      const value = k === 'strengths' ? f.strengths : k === 'areas' ? f.areas : f.iter[k] ?? '';
-      const set = (v: string) => (k === 'strengths' ? setFaculty({ strengths: v }) : k === 'areas' ? setFaculty({ areas: v }) : setFaculty({ iter: { ...f.iter, [k]: v } }));
-      return (
-        <>
-          {k === 'areas' && reminders.length > 0 && !locked && (
-            <div className="notice warn small" style={{ marginBottom: 6 }} data-testid="iter-reminders">
-              <strong>To consider (not inserted automatically):</strong>
-              <ul style={{ margin: '4px 0 0' }}>{reminders.map((r) => <li key={r}>{r}</li>)}</ul>
-            </div>
-          )}
-          <textarea rows={3} value={value} disabled={locked} onChange={(e) => set(e.target.value)} aria-label={s.title}
-            placeholder={T.narrative[k].required ? 'Required — your own words' : 'Optional — or write it directly in One45'} data-testid={`iter-${k}`} />
-        </>
-      );
-    }
-    return <textarea rows={rows} value={s.text} disabled={locked} onChange={(e) => setSection(i, e.target.value)} aria-label={s.title} data-testid={`section-${s.key}`} />;
+    const k = s.key.replace('iter_', '') as NarrativeKey;
+    const value = k === 'strengths' ? f.strengths : k === 'areas' ? f.areas : f.iter[k] ?? '';
+    const set = (v: string) => (k === 'strengths' ? setFaculty({ strengths: v }) : k === 'areas' ? setFaculty({ areas: v }) : setFaculty({ iter: { ...f.iter, [k]: v } }));
+    const drafted = !!value && value === f.iter.auto?.[k];
+    return (
+      <>
+        {drafted && !locked && <div className="small" style={{ color: 'var(--petrol)', marginBottom: 4 }} data-testid={`drafted-${k}`}>Drafted from portal records — review and edit before approving.</div>}
+        <textarea rows={Math.min(8, Math.max(3, Math.ceil(value.length / 95) + 1))} value={value} disabled={locked} onChange={(e) => set(e.target.value)} aria-label={s.title}
+          placeholder={T.narrative[k].required ? `Required — the portal has no faculty feedback to draft this from. Write your ${T.narrative[k].heading.toLowerCase()}.` : 'Optional — or write it directly in One45'}
+          data-testid={`iter-${k}`} />
+      </>
+    );
   }
 
   return (
     <section>
       <div className="no-print">
-        <SectionHead id="itar" letter="E" title={iterMode ? 'ITER-ready summary' : 'ITAR draft'}>
+        <SectionHead id="itar" letter="E" title={iterMode ? 'ITER for One45' : 'ITAR draft'}>
           {locked ? <Badge tone="ok">Draft approved — ready for One45 · {fmtDate(ev?.approved_at)}{ev?.approved_by_name ? ` · ${ev.approved_by_name}` : ''}</Badge> : ev ? <Badge tone="warn">Draft</Badge> : <Badge>Not started</Badge>}
         </SectionHead>
         {template && iterMode && (
@@ -917,7 +975,7 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
             {' '}The overall outcome and CanMEDS ratings are never filled in by the portal. Nothing is sent to One45.
           </p>
         )}
-        {locked && changes.length === 0 && <div className="notice ok small" style={{ marginBottom: 12 }} data-testid="ready-for-one45"><strong>Draft approved — ready for One45.</strong> This does not submit the ITER: copy each section into the resident's ITER in One45, complete the ratings there, then review and submit it in One45. Re-open here to make changes (recorded in the audit log).</div>}
+        {locked && changes.length === 0 && <div className="notice ok small" style={{ marginBottom: 12 }} data-testid="ready-for-one45"><strong>Draft approved — ready for One45.</strong> This does not submit the ITER: copy each field into the resident's ITER in One45, complete the ratings there, then review and submit it in One45. Re-open here to make changes (recorded in the audit log).</div>}
         {locked && changes.length > 0 && (
           <div className="notice warn small" style={{ marginBottom: 12 }} data-testid="itar-changed">
             <strong>New evidence since this draft was approved ({fmtDate(ev?.approved_at)}).</strong> The approved draft is unchanged and preserved. If you already submitted the ITER in One45, any correction is made in One45.
@@ -927,7 +985,7 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
           </div>
         )}
         <VersionHistory evaluationId={ev?.id ?? null} count={rotation?.itar?.versions ?? 0} />
-        {!locked && todo.length > 0 && (
+        {!locked && todo.length > 0 && !iterMode && (
           <div className="notice warn small" style={{ marginBottom: 12 }}>
             <strong>Outstanding:</strong> {todo.join(' · ')}. You can still prepare the draft; outstanding items are listed in it.
           </div>
@@ -946,42 +1004,41 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
           </div>
         )}
         {!locked && f.sections.length > 0 && !iterMode && T && (
-          <div className="notice small" style={{ margin: '10px 0' }}>This draft uses the earlier ITAR layout. Regenerate it to switch to the ITER-ready layout (your strengths and areas text is kept).</div>
+          <div className="notice small" style={{ margin: '10px 0' }}>This draft uses the earlier ITAR layout. Regenerate it to switch to the ITER for One45 (your strengths and areas text is kept).</div>
         )}
         {!locked && (
           <div className="row" style={{ margin: '14px 0' }}>
             <button className="btn" onClick={() => (f.sections.length ? setConfirm('regenerate') : generate())} data-testid="generate-draft">
-              {f.sections.length ? 'Regenerate from evidence' : T ? 'Generate ITER-ready summary' : 'Generate ITAR draft from evidence'}
+              {f.sections.length ? 'Refresh from evidence' : T ? 'Prepare ITER for One45' : 'Generate ITAR draft from evidence'}
             </button>
-            {stale && <span className="small" style={{ color: 'var(--warn-ink)' }}>Evidence has changed since this draft was generated.</span>}
+            {stale && <span className="small" style={{ color: 'var(--warn-ink)' }}>Evidence has changed since this draft was prepared.</span>}
           </div>
         )}
         {iterMode && f.sections.length > 0 && (
-          <details className="disclosure" style={{ marginBottom: 10 }} data-testid="iter-howto">
-            <summary>How to transfer this into the One45 ITER</summary>
-            <ol className="small" style={{ margin: '6px 0 0' }}>
-              <li>Open the resident's ITER in One45 next to this page and check the resident, rotation and dates.</li>
-              <li>Read <em>{T?.evidence.heading ?? 'Verified rotation evidence'}</em> — it is factual and is the basis for your ratings.</li>
-              <li>Complete the CanMEDS rating boxes in One45 yourself, as usual.</li>
-              <li>Select the same <em>{T?.outcome.heading ?? 'rotation objectives'}</em> option in One45.</li>
-              <li>Copy each narrative section into the field with the same heading.</li>
-              <li>Tick the same <em>{T?.basis.heading ?? 'basis of assessment'}</em> boxes and the discussion answer, then review and submit the ITER in One45 as usual. Approving the draft here does not submit it.</li>
-            </ol>
-          </details>
+          <div className="tabs" role="tablist" aria-label="ITER views" style={{ marginBottom: 12 }}>
+            <button role="tab" aria-selected={view === 'quick'} className={view === 'quick' ? 'active' : ''} onClick={() => setView('quick')} data-testid="view-quick">ITER Quick Copy</button>
+            <button role="tab" aria-selected={view === 'evidence'} className={view === 'evidence' ? 'active' : ''} onClick={() => setView('evidence')} data-testid="view-evidence">Full Evidence Record</button>
+          </div>
         )}
-        {f.sections.length > 0 && (
+        {iterMode && view === 'quick' && f.sections.length > 0 && (
+          <p className="small muted" style={{ margin: '0 0 10px' }}>
+            The One45 fields, in form order. Factual parts are drafted from verified portal records and your notes; nothing is rated or judged for you.
+            Edit each field, then <strong>Copy</strong> it into the same field in One45. CanMEDS ratings are ticked directly in One45.
+          </p>
+        )}
+        {shown.length > 0 && (
           <div className="stack" data-testid="itar-sections">
-            {f.sections.map((s, i) => (
+            {shown.map((s) => (
               <div key={s.key} className="panel" data-testid={`iter-section-${s.key}`}>
                 <div className="row between" style={{ marginBottom: 4, alignItems: 'flex-start' }}>
                   <div>
                     <strong>{s.title}</strong>{' '}
                     {s.kind && <Badge tone={KIND_LABEL[s.kind].tone}>{KIND_LABEL[s.kind].label}</Badge>}
                   </div>
-                  <button className="btn ghost small" onClick={() => copy(s.text, 'copy_section', s.title)} data-testid={`copy-${s.key}`}>Copy</button>
+                  <button className="btn ghost small" onClick={() => copy(s.text, 'copy_section', s.title)} disabled={NEEDS_FACULTY.test(s.text)} data-testid={`copy-${s.key}`}>Copy</button>
                 </div>
                 {s.dest && <div className="small muted" style={{ marginBottom: 6 }}>→ {s.dest}</div>}
-                {body(s, i)}
+                {iterMode && QUICK_KINDS.includes(s.kind) ? fieldBody(s) : textBody(s)}
               </div>
             ))}
           </div>
@@ -989,39 +1046,46 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
         <div className="row" style={{ marginTop: 14 }}>
           {!locked && <button className="btn secondary" disabled={busy || !f.sections.length} onClick={() => save(false)} data-testid="save-eval">Save draft</button>}
           {!locked && <button className="btn" disabled={busy || !f.sections.length || placeholders} onClick={() => setConfirm('approve')} data-testid="approve-eval"
-            title={placeholders ? 'Replace the [Faculty to complete …] placeholders first' : undefined}>Approve draft…</button>}
+            title={placeholders ? 'Complete the fields marked “Faculty to complete / confirm” first' : undefined}>Approve draft…</button>}
           {locked && <button className="btn secondary" onClick={() => setConfirm('reopen')}>Re-open for editing</button>}
-          {f.sections.length > 0 && <button className="btn secondary" onClick={() => copy(compose(f.sections), 'copy_all', iterMode ? 'Whole ITER-ready summary' : 'Whole draft')} data-testid="copy-all">{iterMode ? 'Copy all (with Elentra destinations)' : 'Copy all'}</button>}
-          {f.sections.length > 0 && <button className="btn secondary" onClick={() => { download(`${fileBase}.txt`, header + compose(f.sections), 'text/plain;charset=utf-8'); logExport(iterMode ? 'iter_text' : 'text'); }} data-testid="export-text">Download .txt</button>}
-          {f.sections.length > 0 && <button className="btn secondary" onClick={() => { logExport('print'); window.print(); }}>Print / PDF</button>}
+          {iterMode && quick.length > 0 && <button className="btn secondary" onClick={() => copy(composeIter(quick), 'copy_all', 'All One45 fields')} data-testid="copy-all">Copy all One45 fields</button>}
+          {!iterMode && f.sections.length > 0 && <button className="btn secondary" onClick={() => copy(composeSummary(f.sections), 'copy_all', 'Whole draft')} data-testid="copy-all">Copy all</button>}
+          {shown.length > 0 && <button className="btn secondary" onClick={() => {
+            const what = !iterMode ? 'ITAR preparation' : view === 'quick' ? 'ITER Quick Copy' : 'Full Evidence Record';
+            download(`${fileBase}${iterMode && view === 'evidence' ? '_evidence' : ''}.txt`, header(what) + compose(shown), 'text/plain;charset=utf-8');
+            logExport(iterMode ? 'iter_text' : 'text');
+          }} data-testid="export-text">Download .txt</button>}
+          {shown.length > 0 && <button className="btn secondary" onClick={() => { logExport('print'); window.print(); }} data-testid="print">Print / PDF</button>}
           {f.sections.length > 0 && <button className="btn secondary" onClick={() => { download(`${fileBase}.csv`, toCSV([{ resident: name, block: w.cohort.name, status: ev?.status ?? 'draft', approved_at: ev?.approved_at ?? '', ...Object.fromEntries(f.sections.map((s) => [s.title, s.text])) }])); logExport('csv'); }}>CSV</button>}
         </div>
-        {placeholders && !locked && <p className="small muted">Replace the [Faculty to complete …] placeholders before approving.</p>}
+        {placeholders && !locked && <p className="small muted">Complete the fields marked “Faculty to complete / confirm” before approving.</p>}
         {msg && <div className="notice ok small" role="status" style={{ marginTop: 10 }}>{msg}</div>}
         <ErrorNote error={err} />
       </div>
 
-      {/* print view: only the draft */}
-      <div className="print-only">
-        <h1 style={{ fontSize: 22 }}>{iterMode ? 'ITER-ready summary' : 'ITAR preparation'} — {name}</h1>
-        <p>{w.cohort.course}, {w.cohort.name} ({dates(w.cohort)}) · {locked ? `Draft approved by ${ev?.approved_by_name ?? 'faculty'} on ${fmtDate(ev?.approved_at)} — ready for One45; not submitted by the portal` : 'DRAFT — not approved'}</p>
-        {f.sections.map((s) => (
-          <div key={s.key} style={{ breakInside: 'avoid', marginBottom: 12 }}>
-            <h3 style={{ marginBottom: 2 }}>{s.title}</h3>
-            {s.dest && <div style={{ fontSize: 11, color: '#555', marginBottom: 4 }}>→ {s.dest}</div>}
-            <div style={{ whiteSpace: 'pre-wrap' }}>{s.text}</div>
+      {/* print view: only what is on screen (Quick Copy or the evidence record) */}
+      <div className="print-only print-doc">
+        <div className="print-head">
+          <strong>{!iterMode ? 'ITAR preparation' : view === 'quick' ? 'ITER for One45 — Quick Copy' : 'ITER — Full Evidence Record'}</strong> · {name}{w.learner.training_level ? ` (${w.learner.training_level})` : ''}
+          <div>{w.cohort.course}, {w.cohort.name} ({dates(w.cohort)}) · {locked ? `Draft approved by ${ev?.approved_by_name ?? 'faculty'} on ${fmtDate(ev?.approved_at)} — ready for One45; not submitted by the portal` : 'DRAFT — not approved'}</div>
+        </div>
+        {shown.map((s) => (
+          <div key={s.key} className={`print-sec ${s.kind === 'evidence' ? 'long' : ''}`}>
+            <h3>{s.title}</h3>
+            {s.dest && <div className="print-dest">→ {s.dest}</div>}
+            <div className="print-text">{s.text}</div>
           </div>
         ))}
       </div>
 
       {confirm === 'regenerate' && (
-        <Confirm title="Regenerate from the evidence?" confirmLabel="Replace section text" onCancel={() => setConfirm(null)} onConfirm={generate}
-          body={<p>Evidence and observation sections are rebuilt from the current records{T ? ' in the ITER-ready layout' : ''}. Your strengths, areas, other narrative and selections are kept; edits you typed directly into evidence or observation sections are replaced.</p>} />
+        <Confirm title="Refresh from the evidence?" confirmLabel="Refresh" onCancel={() => setConfirm(null)} onConfirm={generate}
+          body={<p>The evidence record is rebuilt from the current records{T ? ', and drafted One45 fields you have not edited are updated' : ''}. Text you wrote or edited, and your selections, are kept.</p>} />
       )}
       {confirm === 'approve' && (
         <Confirm title="Approve this draft for One45?" confirmLabel="Approve draft" onCancel={() => setConfirm(null)} onConfirm={() => save(true)}
           body={<div className="stack small">
-            <p>By approving, you confirm that you reviewed the evidence and this text, that it reflects your professional judgement, and that it contains no statement about clinical or technical performance that was not directly observed.</p>
+            <p>By approving, you confirm that you reviewed the evidence and every field, including any text drafted from portal records, that it reflects your professional judgement, and that it contains no statement about clinical or technical performance that was not directly observed or documented.</p>
             <p>Approving here locks the draft as <strong>ready for One45</strong>; it does <strong>not</strong> submit the ITER. CanMEDS ratings and the overall rotation outcome are selected by you in One45, where you review and submit the ITER. The portal assigns no rating and submits nothing.</p>
           </div>} />
       )}

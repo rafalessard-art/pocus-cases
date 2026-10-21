@@ -125,6 +125,20 @@ describe('exam consistency between the requirements section and the exam section
 });
 
 describe('resident next steps', () => {
+  it('names each remaining Brightspace case with a direct upload link when the case list is known', () => {
+    const r: Rotation = { ...rot, requirements: [req('Brightspace learning cases', 'learning_cases', 'in_progress', { key: 'bs', extra: { returned: 1, missing: 1, awaiting: 1, verified: 1 } })] };
+    const { todo, waiting } = residentNextSteps(r, false, [
+      { id: 'c1', title: 'Gastric case', state: 'verified' },
+      { id: 'c2', title: 'ONSD case', state: 'clarification_requested' },
+      { id: 'c3', title: 'Vascular access case', state: 'missing' },
+      { id: 'c4', title: 'Diaphragm case', state: 'submitted' },
+    ]);
+    expect(todo.map((t) => [t.label, t.to])).toEqual([
+      ['Re-upload Brightspace completion: ONSD case (returned by faculty)', '/evidence#case-c2'],
+      ['Upload Brightspace completion: Vascular access case', '/evidence#case-c3'],
+    ]);
+    expect(waiting.map((t) => t.label)).toEqual(['1 learning-case upload awaiting faculty review']);
+  });
   it('turns requirement states into resident actions and a separate "waiting on faculty" list', () => {
     const r: Rotation = {
       ...rot,

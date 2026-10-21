@@ -5,6 +5,9 @@ import { Badge, Confirm, Empty, ErrorNote, Spinner, fmtDate, useLoad } from '../
 import { isStaff, useAuth } from '../lib/auth';
 import { NextSteps } from '../components/NextSteps';
 import { rpc } from '../lib/supabase';
+import { caseStates, type Requirement } from '../lib/itar';
+
+const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
 export type MyExam = {
   assignment_id: string;
@@ -126,6 +129,12 @@ export function LearnerHome() {
   const active = (exams.data ?? []).filter((e) => e.state === 'available' || e.state === 'in_progress');
   const rq = useLoad(() => rpc<any[]>('my_requirements').catch(() => []), []);
   const rqBlock = (rq.data ?? [])[0];
+  const ev = useLoad(() => rpc<{ cohort: { id: string }; requirements: Requirement[] }[]>('my_evidence').catch(() => []), []);
+  const cases = caseStates((ev.data ?? []).find((x) => x.cohort.id === rqBlock?.cohort.id)?.requirements ?? (ev.data ?? [])[0]?.requirements ?? []);
+  const casesVerified = cases.filter((c) => c.state === 'verified').length;
+  // required curriculum items that are the Brightspace learning cases are tracked by verified uploads, not self-ticks
+  const caseTitles = new Set(cases.map((c) => norm(c.title)));
+  const otherRequired = required.filter((i: any) => !caseTitles.has(norm(i.title)));
   return (
     <Page kicker="POCUS Rotation" title={`Welcome${profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}`}
       subtitle="Your POCUS rotation requirements, examination and curriculum">
@@ -137,16 +146,23 @@ export function LearnerHome() {
       {rqBlock && (
         <>
           <p className="seclabel" style={{ marginTop: 0 }}>{rqBlock.cohort.course} · {rqBlock.cohort.name}</p>
-          <NextSteps rotation={rqBlock.rotation} openExam={active.length > 0} />
+          <NextSteps rotation={rqBlock.rotation} openExam={active.length > 0} cases={cases} />
         </>
       )}
       <div className="grid two">
         <div className="card" style={{ ['--accent' as any]: 'var(--sky)' }}>
           <p className="kicker">Curriculum</p>
           <div className="stats">
-            <div className="stat"><b>{done}/{required.length}</b><span>required resources completed</span></div>
+            {cases.length > 0
+              ? <div className="stat" data-testid="curriculum-cases"><b>{casesVerified}/{cases.length}</b><span>required learning cases verified</span></div>
+              : <div className="stat"><b>{done}/{required.length}</b><span>required resources completed</span></div>}
+            {cases.length > 0 && otherRequired.length > 0 && <div className="stat"><b>{otherRequired.filter((i: any) => i.completed_at).length}/{otherRequired.length}</b><span>other required resources</span></div>}
           </div>
-          <p className="small muted">Teaching cases, interactive tools and references for the rotation.</p>
+          <p className="small muted">
+            {cases.length > 0
+              ? 'The required learning cases are the same cases you complete in Brightspace; they count once faculty verify your upload. Interactive tools and references are optional.'
+              : 'Teaching cases, interactive tools and references for the rotation.'}
+          </p>
           <Link to="/curriculum" className="btn secondary">Open curriculum</Link>
         </div>
         <div className="card" style={{ ['--accent' as any]: 'var(--clay)' }}>

@@ -6,8 +6,8 @@
 import { describe, expect, it } from 'vitest';
 import { FORBIDDEN, type ItarInput, type WsAttempt } from './itar';
 import {
-  DEFAULT_TEMPLATE, applyFaculty, areaReminders, composeIter, draftIter, entrustmentText, isIterDraft, parseTemplate, suggestBasis,
-  type IterFields,
+  BASIS_PROMPT, DEFAULT_TEMPLATE, NEEDS_FACULTY, applyFaculty, basisHints, composeIter, draftIter, entrustmentText, evidenceSections, isIterDraft,
+  parseTemplate, quickDrafts, quickSections, refreshDrafts, type IterFields,
 } from './iter';
 import type { Rotation, RotationReq } from './requirements';
 
@@ -66,11 +66,13 @@ const sec = (s: ReturnType<typeof draftIter>, key: string) => s.find((x) => x.ke
 describe('ITER-ready summary structure', () => {
   const s = draftIter(fixture(), T, {});
 
-  it('follows the ITER headings in form order, with one evidence section first and no CanMEDS role sections', () => {
-    expect(s.map((x) => x.title)).toEqual([
-      'Resident and rotation', 'Verified rotation evidence (POCUS portal)', 'Faculty observations',
+  it('puts the One45 fields first (Quick Copy) and keeps the evidence record separate; no CanMEDS sections', () => {
+    expect(quickSections(s).map((x) => x.title)).toEqual([
       'Overall rotation objectives', 'Overall explanation of performance', 'Summary of strengths', 'Summary of areas needing improvement',
-      'Recommendations for ongoing improvement', 'Basis of assessment', 'Performance discussed with the trainee', 'Portal record',
+      'Recommendations for ongoing improvement', 'Basis of assessment', 'Performance discussed with the trainee',
+    ]);
+    expect(evidenceSections(s).map((x) => x.title)).toEqual([
+      'Resident and rotation', 'Verified rotation evidence (POCUS portal)', 'Faculty observations', 'Evidence sources and verification',
     ]);
     expect(isIterDraft(s)).toBe(true);
     expect(s.every((x) => x.dest && x.kind)).toBe(true);
@@ -100,16 +102,22 @@ describe('ITER-ready summary structure', () => {
     expect(ev).toMatch(/^Completion and assessment records verified in the POCUS portal\. They are not ratings and do not by themselves establish competence\./);
     expect(ev).toMatch(/Rotation requirements complete: 4 of 6 \(1 not yet due\)\./);
     expect(ev).toMatch(/• Written POCUS examination — complete: 85\.0% \(34\/40 points\) on POCUS Block Exam \(fictional\) v2, attempt 1 of 1 submitted \(most recent submitted attempt\), submitted October 14, 2026\. Strongest domains: Gastric 95%\. Domains to review: Lung 50%\. Knowledge assessment only\./);
-    expect(ev).toMatch(/• Brightspace learning cases — in progress: 1 of 2 verified by faculty from completion evidence uploaded by the resident \(Gastric ultrasound case\)\. Not yet verified: ONSD case \(no evidence submitted\)\./);
+    expect(ev).toMatch(/• Brightspace learning cases — in progress: 1 of 2 verified by faculty from completion evidence uploaded by the resident \(Gastric ultrasound case — Dr Fictional Faculty\)\. Not yet verified: ONSD case \(no evidence submitted\)\./);
     expect(ev).toMatch(/• Logbook of reviewed POCUS scans — complete: 60 of 60 faculty-verified reviewed scans, 64 reviewed in total \(Cardiac 40\/40; Gastric 24\/20\)\..*not an assessment of scanning competence/);
     expect(ev).toMatch(/• TeachingMedicine online skills modules — complete; confirmed by Dr Fictional Faculty, October 15, 2026\./);
     expect(ev).toMatch(/• POCUS rounds presentation — not yet due\./);
-    const all = composeIter(s);
-    const once = (re: RegExp) => expect(all.match(new RegExp(re.source, 'g'))?.length ?? 0).toBe(1);
-    once(/Only one lung assessment documented/);
-    once(/Interprets antral cross-sectional area reliably/);
-    once(/Systematic gastric scanning sequence/);
-    once(/reviewed the resident's C6 POCUS EPA assessments/);
+    // within each view, EPA feedback appears once (the Quick Copy uses its own concise drafts)
+    const record = composeIter(evidenceSections(s));
+    const once = (txt: string, re: RegExp) => expect(txt.match(new RegExp(re.source, 'g'))?.length ?? 0).toBe(1);
+    once(record, /Only one lung assessment documented/);
+    once(record, /Interprets antral cross-sectional area reliably/);
+    once(record, /Systematic gastric scanning sequence/);
+    once(record, /reviewed the resident's C6 POCUS EPA assessments/);
+    const d = quickDrafts(fixture());
+    const quick = [d.overall, d.strengths, d.areas, d.recommendations].join('\n');
+    once(quick, /Only one lung assessment documented/);
+    once(quick, /Interprets antral cross-sectional area reliably/);
+    once(quick, /Systematic gastric scanning sequence/);
   });
 
   it('EPA counts are reported as reviewed and never turned into a requirement decision', () => {
@@ -124,42 +132,98 @@ describe('ITER-ready summary structure', () => {
   });
 });
 
+describe('ITER Quick Copy drafts', () => {
+  const PRAISE = /excellent|outstanding|superb|great|impressive|competent|strong (?!scan)|well done|exceeds/i;
+
+  it('drafts a concise overall explanation from verified facts and faculty-entered notes only', () => {
+    const d = quickDrafts(fixture());
+    expect(d.overall).toBe([
+      'Completed 4 of 6 required POCUS rotation activities; still to complete: Brightspace learning cases.',
+      'Written examination: 85%.',
+      'Scanning: 60 of 60 required faculty-verified studies, meeting every category target.',
+      'C6 POCUS EPAs: criteria partially met on faculty review of the Elentra assessments (6 reviewed; 2 at the highest entrustment level).',
+      'EPA review findings: Interprets antral cross-sectional area reliably.',
+      'Faculty observations: Obtained a right lateral decubitus antral view independently; Explained the gastric scan to the patient clearly; Arrived prepared for every session.',
+    ].join(' '));
+    expect(d.overall.length).toBeLessThan(700);
+    for (const t of Object.values(d)) expect(t).not.toMatch(PRAISE);
+    for (const f of FORBIDDEN) expect(Object.values(d).join(' ')).not.toMatch(f);
+  });
+
+  it('strengths and areas come only from documented EPA feedback and factual gaps; otherwise left for faculty', () => {
+    const d = quickDrafts(fixture());
+    expect(d.strengths).toBe('Systematic gastric scanning sequence. Highest written examination scores: Gastric (95%).');
+    expect(d.areas).toBe('Concern noted on review of the EPA assessments: Only one lung assessment documented. Written examination domains to review: Lung (50%).');
+    expect(d.recommendations).toBe('Complete the remaining rotation requirements. Review Lung.');
+    const bare = quickDrafts(fixture({ epa: null, observations: [], attempts: [att({ breakdown: { domains: [] } })] }));
+    expect(bare.strengths).toBe('');
+    expect(bare.areas).toBe('');
+    const s = draftIter({ ...fixture(), strengths: bare.strengths, areasForImprovement: bare.areas }, T, {});
+    expect(sec(s, 'iter_strengths').text).toMatch(NEEDS_FACULTY);
+    expect(sec(s, 'iter_areas').text).toMatch(NEEDS_FACULTY);
+  });
+
+  it('a resident with everything complete gets a short synthesis', () => {
+    const done: Rotation = { ...rotation, requirements: rotation.requirements.map((r) => ({ ...r, status: 'verified' as const })) };
+    const d = quickDrafts(fixture({ rotationReqs: done }));
+    expect(d.overall).toMatch(/^Completed all 6 required POCUS rotation activities, including TeachingMedicine modules and POCUS rounds presentation\./);
+    expect(d.recommendations).toBe('Review Lung.');
+  });
+
+  it('refreshing replaces only drafts the faculty member has not edited', () => {
+    const prev = quickDrafts(fixture());
+    const next = { ...prev, overall: 'NEW overall', strengths: 'NEW strengths', areas: 'NEW areas', recommendations: 'NEW recs' };
+    const { values, auto } = refreshDrafts({ ...prev, strengths: 'My own words about strengths', recommendations: '' }, prev, next);
+    expect(values).toEqual({ overall: 'NEW overall', strengths: 'My own words about strengths', areas: 'NEW areas', recommendations: 'NEW recs' });
+    expect(auto).toEqual(next);
+    // first time: empty fields take the drafts, written text is kept
+    expect(refreshDrafts({ overall: '', strengths: 'Typed before', areas: '', recommendations: '' }, undefined, next).values.strengths).toBe('Typed before');
+  });
+});
+
 describe('faculty sections', () => {
-  it('strengths and areas start as placeholders that block approval; optional fields do not', () => {
+  it('strengths, areas and the basis of assessment need faculty input before approval; optional fields do not', () => {
     const s = draftIter(fixture(), T, {});
     expect(sec(s, 'iter_strengths').text).toBe('[Faculty to complete: summary of strengths.]');
     expect(sec(s, 'iter_areas').text).toBe('[Faculty to complete: summary of areas needing improvement.]');
-    expect(sec(s, 'iter_overall').text).not.toMatch(/\[Faculty to complete/);
-    expect(sec(s, 'iter_recommendations').text).not.toMatch(/\[Faculty to complete/);
+    expect(sec(s, 'iter_basis').text).toBe(BASIS_PROMPT);
+    expect(sec(s, 'iter_overall').text).not.toMatch(NEEDS_FACULTY);
+    expect(sec(s, 'iter_recommendations').text).not.toMatch(NEEDS_FACULTY);
   });
 
   it('selections and text are faculty entries, re-rendered without touching the evidence', () => {
-    const f: IterFields = { outcome: 'Yes, Partially', basis: ['Formal direct observation', 'Written examination', 'Made up'], discussed: 'yes', overall: 'Fictional overall comment', recommendations: '' };
+    const f: IterFields = { outcome: 'Yes, Partially', basis: ['Informal observation', 'Written examination', 'Made up'], basis_confirmed: true, discussed: 'yes', overall: 'Fictional overall comment', recommendations: '' };
     const s0 = draftIter(fixture(), T, {});
     const edited = s0.map((x) => (x.key === 'iter_evidence' ? { ...x, text: x.text + '\nFaculty edit kept' } : x));
     const s = applyFaculty(edited, T, f, { strengths: 'Fictional strengths', areas: 'Fictional areas' });
     expect(sec(s, 'iter_outcome').text).toBe('Yes, Partially');
-    expect(sec(s, 'iter_basis').text).toBe('Formal direct observation; Written examination');
+    expect(sec(s, 'iter_basis').text).toBe('Informal observation; Written examination');
     expect(sec(s, 'iter_discussed').text).toBe('Yes');
     expect(sec(s, 'iter_overall').text).toBe('Fictional overall comment.');
     expect(sec(s, 'iter_strengths').text).toBe('Fictional strengths.');
     expect(sec(s, 'iter_evidence').text).toMatch(/Faculty edit kept$/);
     expect(sec(applyFaculty(s, T, { outcome: 'Outstanding' }, { strengths: '', areas: '' }), 'iter_outcome').text).toMatch(/Not selected/);
+    // a basis that was never confirmed by faculty (older pre-ticked drafts) does not count
+    expect(sec(applyFaculty(s, T, { basis: ['Written examination'] }, { strengths: 'x', areas: 'y' }), 'iter_basis').text).toBe(BASIS_PROMPT);
   });
 
-  it('suggests the basis of assessment from what the portal holds; reminders stay out of the text', () => {
-    expect(suggestBasis(fixture(), T)).toEqual(['Informal observation', 'Formal direct observation', 'Written examination', 'Other']);
-    expect(suggestBasis(fixture({ observations: [], attempts: [], epa: null, requirements: [], rotationReqs: null }), T)).toEqual([]);
-    const r = areaReminders(fixture(), ['ONSD case: no evidence submitted']);
-    expect(r).toEqual(['EPA concern recorded: Only one lung assessment documented.', 'Outstanding: ONSD case: no evidence submitted.', 'Exam domains to review: Lung 50%.']);
+  it('basis of assessment: nothing is ticked automatically; EPA verification is never formal direct observation', () => {
+    const h = basisHints(fixture(), T);
+    expect(Object.keys(h)).toEqual(T.basis.options);
+    expect(h['Formal direct observation']).toMatch(/Only if you or a colleague formally observed the resident\. EPA verification, image review in QPath and the written exam do not count on their own\./);
+    expect(h['Informal observation']).toBe('3 faculty observations recorded in the portal');
+    expect(basisHints(fixture({ observations: [] }), T)['Informal observation']).toBe('No faculty observations recorded in the portal');
+    expect(h['Written examination']).toBe('End-of-block written examination on record');
+    expect(sec(draftIter(fixture(), T, {}), 'iter_basis').text).toBe(BASIS_PROMPT);
   });
 
-  it('the transfer sheet lists each section with its One45 destination, never Elentra', () => {
-    const txt = composeIter(draftIter(fixture(), T, { outcome: 'Yes, Fully' }));
-    expect(txt).toMatch(/OVERALL ROTATION OBJECTIVES\n→ One45 ITER → rotation objectives: select the same option\.\nYes, Fully/);
+  it('the transfer sheet lists each One45 field with its destination, never Elentra', () => {
+    const s = draftIter(fixture(), T, { outcome: 'Yes, Fully' });
+    const txt = composeIter(quickSections(s));
+    expect(txt).toMatch(/^OVERALL ROTATION OBJECTIVES\n→ One45 ITER → rotation objectives: select the same option\.\nYes, Fully/);
     expect(txt).toMatch(/SUMMARY OF STRENGTHS\n→ One45 ITER → “Summary of strengths”: paste\./);
-    expect(txt).not.toMatch(/Elentra ITER|in Elentra\b(?! on)/);
-    expect(txt).toMatch(/Approval in the portal is a draft approval, not a One45 submission\./);
+    expect(composeIter(s)).not.toMatch(/Elentra ITER|in Elentra\b(?! on)/);
+    expect(composeIter(evidenceSections(s))).toMatch(/Approval in the portal is a draft approval, not a One45 submission\./);
   });
 });
 

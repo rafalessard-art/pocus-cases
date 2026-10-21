@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom';
-import { completion, residentNextSteps, scanPct, type Rotation } from '../lib/requirements';
+import { completion, residentNextSteps, scanPct, type CaseState, type Rotation } from '../lib/requirements';
 import { Badge } from './ui';
 
 /** Resident summary: progress, what to do next (with direct actions), and what is waiting on faculty. */
-export function NextSteps({ rotation, openExam, compact }: { rotation: Rotation; openExam?: boolean; compact?: boolean }) {
+export function NextSteps({ rotation, openExam, compact, cases }: { rotation: Rotation; openExam?: boolean; compact?: boolean; cases?: CaseState[] }) {
   const c = completion(rotation.requirements);
-  const { todo, waiting } = residentNextSteps(rotation, openExam);
+  const { todo, waiting } = residentNextSteps(rotation, openExam, cases);
   const s = rotation.scans;
   return (
     <section className="card" style={{ ['--accent' as any]: 'var(--petrol)', marginBottom: 18 }} data-testid="next-steps">

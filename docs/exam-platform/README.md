@@ -123,7 +123,7 @@ Residents never need faculty screens. Excel logbooks are not uploaded; see QPATH
 
 **ITER-ready export (Phase 6).** The ITAR draft is now generated in the layout of the University of Ottawa Anesthesiology ITER, which is completed and submitted in **One45** ([ITER_EXPORT.md](ITER_EXPORT.md)). It has:
 - one factual *verified rotation evidence* section (requirements, exam with the attempt used, scans by category, Brightspace, C6 EPA review — EPA information appears only there);
-- faculty observations as one reference section (CanMEDS ratings are ticked directly in Elentra and are not prepared here);
+- faculty observations as one reference section (CanMEDS ratings are ticked directly in One45 and are not prepared here);
 - the official rotation-objectives options and the four narrative fields;
 - basis of assessment and "discussed with trainee".
 
@@ -131,9 +131,19 @@ Each section shows where it goes in the **One45** ITER and has its own Copy butt
 
 The template is configurable (Admin → ITAR setup) and stays *draft* until the director confirms the POCUS block form. The C6 verification gains optional fields: assessments reviewed, entrustment counts and findings. They never decide the requirement. Approved versions keep the layout they were approved with.
 
+**Workflow and ITER efficiency (Phase 7).**
+- **ITER Quick Copy** is now the default view. It shows only the One45 fields. The overall explanation is drafted in concise factual sentences from verified records. Strengths, areas and recommendations are drafted only from documented EPA/faculty feedback or the record; otherwise the box prompts faculty. There are no ratings, no outcome and no praise.
+- Refreshing keeps faculty edits.
+- The **Full Evidence Record** holds the detail, in a separate view.
+- **Basis of assessment** is never pre-ticked. Faculty must confirm it, and *formal direct observation* is explained as a real observed encounter only. This fixes Jordan's draft, which had shown it with no observations.
+- **Faculty dashboard → Needs your attention** lists de-duplicated tasks per resident, linking to the exact workspace section.
+- The **block overview** is a compact table (requirements, scans, exam, EPA, ITER, expandable to-do). It stacks into cards on phones, and prints and exports cleanly.
+- **Residents** see each missing Brightspace case by name, with a direct upload link. The Curriculum page now shows the same Brightspace verification status (previously it counted self-ticks, so "Curriculum 0/4" disagreed with "Brightspace 3/4").
+- There are no database changes in this phase.
+
 **Before the departmental demonstration:** see [VALIDATION_REPORT.md](VALIDATION_REPORT.md), [DEMO_SCRIPT.md](DEMO_SCRIPT.md), [DIRECTOR_DECISIONS.md](DIRECTOR_DECISIONS.md) and [DEPLOYMENT_READINESS.md](DEPLOYMENT_READINESS.md).
 
-**Block overview (cohort dashboard).** Faculty → block card. It shows one row per resident: exam, evidence verified/awaiting/returned/missing, EPA, observations, ITAR status, and "needs attention", split into *you* vs *resident*. It has an "only needing attention" filter, CSV export, one click into each resident, and Previous/Next between residents.
+**Block overview (cohort dashboard).** Faculty → block card. It shows one compact row per resident: requirements, scans, exam, EPA, ITER, and an expandable to-do split into *you* vs *resident*. It has an "only needing attention" filter, CSV export, one click into each resident, and Previous/Next between residents.
 
 **Access.** Faculty see a resident's ITAR data only if they are an **evaluator of that resident's block**; admins see all. Learners never see EPA reviews, observations or drafts; they see only their own uploads and the reviewer's message.
 
@@ -145,9 +155,9 @@ The template is configurable (Admin → ITAR setup) and stays *draft* until the 
 
 ## 4. Tests
 
-- **Unit (52):** autosave queue (offline, crash-restore, ordering), CSV, importer, evaluation drafting guardrails, ITAR draft (attempt rule, verified-only evidence, no rating/inference, placeholders, sources, staleness), overview attention rules.
+- **Unit (60):** autosave queue (offline, crash-restore, ordering), CSV, importer, evaluation drafting guardrails, ITAR draft (attempt rule, verified-only evidence, no rating/inference, placeholders, sources, staleness), overview attention rules, faculty task list (de-duplicated, with links), named Brightspace next steps, ITER Quick Copy drafting (facts only, no praise, refresh keeps faculty edits, basis never auto-ticked).
 - **Database (79):** the ITAR suite (13) covers evidence privacy and upload rules, block-scoped faculty access, review messages and audit, EPA locking, learner exclusion, one ITAR per resident per block, approval lock, and retention. The original suite (31): permissions and secrecy for every role, invitation gating, versioning and immutability, autosave seq rule, timing and deadline, attempts and accommodations, partial-credit, short-answer and hotspot scoring, release policy, storage policy, evaluations.
-- **End-to-end (2 tests; the main scenario now includes the 8-step ITAR workflow):** the full demonstration lifecycle in a real browser against a Supabase-equivalent stack. It includes an interruption with a reload, offline autosave, video playback checks, a phone-width layout check and automated WCAG 2.1 AA checks (axe) on the main screens.
+- **End-to-end (2 tests; the main scenario now includes the ITAR workflow through ITER Quick Copy):** the full demonstration lifecycle in a real browser against a Supabase-equivalent stack. It includes an interruption with a reload, offline autosave, video playback checks, a phone-width layout check and automated WCAG 2.1 AA checks (axe) on the main screens.
 
 See [TESTING.md](TESTING.md).
 
