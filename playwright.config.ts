@@ -1,4 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
+import { assertLocal } from './tests/local-only';
+
+assertLocal('DATABASE_URL', process.env.DATABASE_URL);
+assertLocal('E2E_BASE_URL', process.env.E2E_BASE_URL);
+assertLocal('E2E_MAIL_URL', process.env.E2E_MAIL_URL);
 
 /**
  * End-to-end tests run against a full Supabase-compatible stack serving the

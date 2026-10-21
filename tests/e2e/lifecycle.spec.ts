@@ -568,6 +568,8 @@ test('full examination lifecycle', async ({ page, context }) => {
     await page.getByTestId('iter-strengths').fill('Fictional: consistent, careful image acquisition; clear communication of findings to the team');
     await page.getByTestId('iter-areas').fill('Fictional: practise lung ultrasound in more patients');
     await page.getByTestId('iter-outcome').getByLabel('Yes, Fully').check();
+    // only the rounds presentation is left, and it is not yet due: no "Yes, Fully" reminder
+    await expect(page.getByTestId('outcome-reminder')).toHaveCount(0);
     await page.getByTestId('iter-basis').getByRole('checkbox', { name: /^Informal observation/ }).check();
     await page.getByTestId('iter-basis').getByRole('checkbox', { name: /^Written examination/ }).check();
     await page.getByTestId('iter-discussed').getByLabel('Yes', { exact: true }).check();

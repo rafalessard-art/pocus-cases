@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { isAdmin, isStaff, useAuth } from '../lib/auth';
+import { isDemoDatabase } from '../lib/supabase';
 
 function ThemeToggle() {
   const [dark, setDark] = useState(() => document.documentElement.dataset.theme === 'dark');
@@ -64,6 +65,11 @@ export function TopNav({ children }: { children?: ReactNode }) {
         )}
         <ThemeToggle />
       </div>
+      {isDemoDatabase && (
+        <div className="demo-banner" role="note" data-testid="demo-banner">
+          Demonstration environment — fictional residents and synthetic documents only. Nothing here is a learner record.
+        </div>
+      )}
     </nav>
   );
 }

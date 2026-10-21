@@ -34,6 +34,8 @@ The ITAR workspace (Faculty → block → resident → **E · ITER for One45**) 
 | Basis of assessment | — (see below) | Always confirmed by faculty |
 | Discussed with the trainee | — | Always selected by faculty |
 
+**"Yes, Fully" reminder.** If you select *Yes, Fully* while required rotation items are still outstanding in the portal (items not yet due are not counted), a short reminder lists them under the outcome and again in the approval dialog. It never blocks approval and never changes your selection.
+
 If there is nothing documented to draft from, the box stays empty with a prompt (for example *"no faculty feedback to draft this from"*), and faculty write it. Strengths and areas are required before approval.
 
 ## Basis of assessment: faculty confirm it

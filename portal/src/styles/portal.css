@@ -134,6 +134,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* ---------- exam player ---------- */
 .exam-shell { min-height: 100vh; display: flex; flex-direction: column; }
+.demo-banner { background: var(--clay, #b4532a); color: #fff; text-align: center; font-size: 12px; font-weight: 600; letter-spacing: .02em; padding: 3px 12px; }
 .exam-bar { position: sticky; top: 0; z-index: 50; background: var(--paper2); border-bottom: 2px solid var(--ink); }
 :root[data-theme="dark"] .exam-bar { border-bottom-color: var(--rule); }
 .exam-bar-inner { max-width: 1280px; margin: 0 auto; padding: 10px 20px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }

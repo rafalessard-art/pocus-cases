@@ -66,14 +66,19 @@ Then sign in at `/app/login` with that email. Invite everyone else from **Admin 
 
 ## 5. Connect Vercel
 
-Vercel → project `pocus-cases` → Settings → **Environment Variables**. Add both values to **Preview** and **Production**:
+Vercel → project `pocus-cases` → Settings → **Environment Variables**. **Preview** uses the demonstration project. **Production** must use a *separate, new* production project (see below):
 
 | Name | Value |
 |---|---|
 | `VITE_SUPABASE_URL` | Supabase → Project Settings → API → Project URL (`https://<ref>.supabase.co`) |
 | `VITE_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → `anon` / publishable key |
 
-For this project both values are already committed in `.env.production` (they are public by design), so the build works without dashboard settings. Vercel variables with the same names override the file.
+The **demonstration** project's values are committed in `.env.production` (they are public by design), so preview builds work without dashboard settings. Vercel variables with the same names override the file.
+
+**The demonstration database can never back production.**
+- The build script refuses it: a production build (`VERCEL_ENV=production`) whose settings point at the demonstration project is built *without* database settings. `/app` then shows "not configured", and the public site deploys normally.
+- To go live, create the production Supabase project fresh from the migrations (sections 1–4). **Do not clone, restore or copy the demonstration project:** the migrations contain only reference data (course, curriculum, requirements, ITER template), and every fictional resident, demo exam and synthetic upload lives only in the demonstration database.
+- Then set that project's two values as **Production** variables in Vercel.
 
 The anon key is designed to be public: it grants nothing beyond what RLS allows. **Never** put the `service_role` key or database password in Vercel, in the code or in the browser. The portal does not need them.
 

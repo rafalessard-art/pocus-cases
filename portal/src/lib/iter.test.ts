@@ -8,6 +8,7 @@ import { FORBIDDEN, type ItarInput, type WsAttempt } from './itar';
 import {
   BASIS_PROMPT, DEFAULT_TEMPLATE, NEEDS_FACULTY, applyFaculty, basisHints, composeIter, draftIter, entrustmentText, evidenceSections, isIterDraft,
   parseTemplate, quickDrafts, quickSections, refreshDrafts, type IterFields,
+  fullyMetReminder,
 } from './iter';
 import type { Rotation, RotationReq } from './requirements';
 
@@ -241,5 +242,27 @@ describe('configurable template', () => {
     expect(sec(s, 'iter_overall').text).toBe('[Faculty to complete: overall explanation of performance.]');
     expect(sec(s, 'iter_outcome').text).toMatch(/Not selected/); // not an option of this template
     expect(parseTemplate(null)).toEqual(DEFAULT_TEMPLATE);
+  });
+});
+
+describe('"Yes, Fully" reminder (non-blocking)', () => {
+  const r = (kind: RotationReq['kind'], title: string, status: RotationReq['status'], required = true) => ({ kind, title, status, required });
+  const reqs = [
+    r('epa', 'C6 POCUS EPAs', 'in_progress'),
+    r('learning_cases', 'Brightspace learning cases', 'verified'),
+    r('scan_log', 'Logbook of reviewed POCUS scans', 'submitted'),
+    r('attestation', 'POCUS rounds presentation', 'not_yet_due'),
+    r('attestation', 'Optional extra', 'not_started', false),
+    r('exam', 'Written POCUS examination', 'not_applicable'),
+  ];
+  it('lists open required items only when "Yes, Fully" is selected', () => {
+    expect(fullyMetReminder('Yes, Fully', reqs)).toEqual(['C6 POCUS EPAs', 'scan logbook']);
+    expect(fullyMetReminder('Yes, Partially', reqs)).toEqual([]);
+    expect(fullyMetReminder('No, due to absence', reqs)).toEqual([]);
+    expect(fullyMetReminder(null, reqs)).toEqual([]);
+  });
+  it('is silent when every required item is complete, not applicable or not yet due', () => {
+    expect(fullyMetReminder('Yes, Fully', reqs.filter((x) => x.kind !== 'epa' && x.kind !== 'scan_log'))).toEqual([]);
+    expect(fullyMetReminder('Yes, Fully', undefined)).toEqual([]);
   });
 });

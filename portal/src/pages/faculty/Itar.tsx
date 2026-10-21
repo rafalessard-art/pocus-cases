@@ -7,7 +7,7 @@ import { isAdmin, useAuth } from '../../lib/auth';
 import { download, toCSV } from '../../lib/csv';
 import { deleteEvidenceFiles } from '../../lib/evidence';
 import {
-  CATEGORIES, CRITERIA_LABEL, epaVerified, STATUS_LABEL, TONE, chooseAttempt, composeSummary, draftItar, factsFrom, fingerprint, latestSubmission, outstanding,
+  CATEGORIES, CRITERIA_LABEL, epaVerified, STATUS_LABEL, TONE, andList, chooseAttempt, composeSummary, draftItar, factsFrom, fingerprint, latestSubmission, outstanding,
   requirementState, type AttemptRule, type EpaEntry, type EpaReview, type ItarInput, type ItarSection, type Observation, type OverviewRow,
   type Requirement, type WsAttempt,
 } from '../../lib/itar';
@@ -15,11 +15,11 @@ import {
   REQ_LABEL, REQ_TONE, completion, rotationPassPct, scanDeltas, scanPct, withSelectedAttempt, type ReqStatus, type Rotation, type RotationReq,
 } from '../../lib/requirements';
 import {
-  NEEDS_FACULTY, QUICK_KINDS, applyFaculty, basisHints, composeIter, draftIter, entrustmentText, evidenceSections, isIterDraft, parseTemplate, quickDrafts,
+  NEEDS_FACULTY, QUICK_KINDS, applyFaculty, basisHints, composeIter, draftIter, entrustmentText, evidenceSections, fullyMetReminder, isIterDraft, parseTemplate, quickDrafts,
   quickSections, refreshDrafts, type IterFields, type NarrativeKey,
 } from '../../lib/iter';
 import { openRequirements, residentTasks, type RotRow } from '../../lib/overview';
-import { rpc, supabase } from '../../lib/supabase';
+import { isDemoDatabase, rpc, supabase } from '../../lib/supabase';
 
 type Cohort = { id: string; course_id: string; course: string; name: string; block_label: string | null; academic_year: string | null; start_date: string | null; end_date: string | null };
 type EvalRow = {
@@ -107,7 +107,7 @@ export function BlockOverview() {
   const count = (f: (r: OverviewRow) => boolean) => residents.filter(f).length;
 
   function exportCsv() {
-    download(`${cohort.name.replace(/\W+/g, '_')}_ITER_status.csv`, toCSV(rows.map(({ r, x, t, open }) => ({
+    download(`${isDemoDatabase ? 'DEMO_' : ''}${cohort.name.replace(/\W+/g, '_')}_ITER_status.csv`, toCSV(rows.map(({ r, x, t, open }) => ({
       resident: r.name, training_level: r.training_level ?? '',
       requirements_complete: t.completion ? `${t.completion.done}/${t.completion.total}` : '', requirements_open: open.join('; '),
       scans_verified: x ? `${x.scans.verified_total}/${x.scans.target_total}` : '',
@@ -753,6 +753,9 @@ const KIND_LABEL: Record<NonNullable<ItarSection['kind']>, { label: string; tone
   record: { label: 'For your files' },
 };
 
+/** Printouts and downloads from the demonstration database are marked so they can't pass for learner records. */
+const DEMO_MARK = 'DEMONSTRATION — FICTIONAL DATA, NOT A LEARNER RECORD';
+
 function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: Ws; reload: () => void; selectedAttempt: string | null; rotation: Rotation | null; template: TemplateRow | null }) {
   const ev = w.evaluation;
   const locked = ev?.status === 'approved';
@@ -785,6 +788,8 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
   const fp = fingerprint(input);
   const stale = f.sections.length > 0 && f.snapshot?.fingerprint && f.snapshot.fingerprint !== fp;
   const todo = outstanding(input);
+  // non-blocking: "Yes, Fully" while required items are open (never changes the outcome)
+  const openItems = fullyMetReminder(f.iter.outcome, (input.rotationReqs ?? rotation)?.requirements);
   const placeholders = f.sections.some((s) => NEEDS_FACULTY.test(s.text));
   const name = input.learnerName;
   const quick = iterMode ? quickSections(f.sections) : [];
@@ -887,10 +892,10 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
     }
   }
   const status = locked ? `draft approved by ${ev?.approved_by_name ?? 'faculty'} on ${fmtDate(ev?.approved_at)} — ready for One45 (not submitted)` : 'DRAFT — not approved';
-  const header = (what: string) => `${what} — ${name}${w.learner.training_level ? ` (${w.learner.training_level})` : ''}\n${w.cohort.course}, ${w.cohort.name} (${dates(w.cohort)})\nStatus: ${status}\n${iterMode ? 'Copy each field into the One45 ITER (destination after →). CanMEDS ratings and the overall outcome are selected by faculty in One45, where the ITER is reviewed and submitted; the portal submits nothing.\n' : ''}\n`;
+  const header = (what: string) => `${isDemoDatabase ? `${DEMO_MARK}\n` : ''}${what} — ${name}${w.learner.training_level ? ` (${w.learner.training_level})` : ''}\n${w.cohort.course}, ${w.cohort.name} (${dates(w.cohort)})\nStatus: ${status}\n${iterMode ? 'Copy each field into the One45 ITER (destination after →). CanMEDS ratings and the overall outcome are selected by faculty in One45, where the ITER is reviewed and submitted; the portal submits nothing.\n' : ''}\n`;
   const setSection = (i: number, text: string) => setF({ ...f, sections: f.sections.map((s, j) => (j === i ? { ...s, text } : s)) });
   const hints = T ? basisHints(input, T) : {};
-  const fileBase = `${iterMode ? 'ITER' : 'ITAR'}_${name.replace(/\W+/g, '_')}_${w.cohort.name.replace(/\W+/g, '_')}`;
+  const fileBase = `${isDemoDatabase ? 'DEMO_' : ''}${iterMode ? 'ITER' : 'ITAR'}_${name.replace(/\W+/g, '_')}_${w.cohort.name.replace(/\W+/g, '_')}`;
 
   /** Legacy ITAR layout and evidence-record text. */
   function textBody(s: ItarSection) {
@@ -918,6 +923,11 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
             <label className="check muted" style={{ display: 'flex' }}><input type="radio" name="iter-outcome" checked={!f.iter.outcome}
               onChange={() => setFaculty({ iter: { ...f.iter, outcome: null } })} /> Not selected here (select in One45)</label>
           </div>
+          {openItems.length > 0 && (
+            <div className="notice warn small" role="status" style={{ marginTop: 8 }} data-testid="outcome-reminder">
+              <strong>Reminder:</strong> required rotation items are still outstanding in the portal: {andList(openItems)}. Please review them before approving. The outcome remains your decision.
+            </div>
+          )}
         </fieldset>
       );
     }
@@ -1066,6 +1076,7 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
       {/* print view: only what is on screen (Quick Copy or the evidence record) */}
       <div className="print-only print-doc">
         <div className="print-head">
+          {isDemoDatabase && <div data-testid="print-demo-mark"><strong>{DEMO_MARK}</strong></div>}
           <strong>{!iterMode ? 'ITAR preparation' : view === 'quick' ? 'ITER for One45 — Quick Copy' : 'ITER — Full Evidence Record'}</strong> · {name}{w.learner.training_level ? ` (${w.learner.training_level})` : ''}
           <div>{w.cohort.course}, {w.cohort.name} ({dates(w.cohort)}) · {locked ? `Draft approved by ${ev?.approved_by_name ?? 'faculty'} on ${fmtDate(ev?.approved_at)} — ready for One45; not submitted by the portal` : 'DRAFT — not approved'}</div>
         </div>
@@ -1086,6 +1097,7 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
         <Confirm title="Approve this draft for One45?" confirmLabel="Approve draft" onCancel={() => setConfirm(null)} onConfirm={() => save(true)}
           body={<div className="stack small">
             <p>By approving, you confirm that you reviewed the evidence and every field, including any text drafted from portal records, that it reflects your professional judgement, and that it contains no statement about clinical or technical performance that was not directly observed or documented.</p>
+            {openItems.length > 0 && <p className="notice warn" data-testid="approve-reminder"><strong>Reminder:</strong> you selected “{f.iter.outcome}” while these required items are still outstanding in the portal: {andList(openItems)}. You can still approve.</p>}
             <p>Approving here locks the draft as <strong>ready for One45</strong>; it does <strong>not</strong> submit the ITER. CanMEDS ratings and the overall rotation outcome are selected by you in One45, where you review and submit the ITER. The portal assigns no rating and submits nothing.</p>
           </div>} />
       )}

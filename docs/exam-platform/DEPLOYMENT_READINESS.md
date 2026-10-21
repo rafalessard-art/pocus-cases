@@ -2,6 +2,18 @@
 
 **Current state:** a preview only (Vercel preview of `feature/exam-platform` + Supabase project `ngnggoekezucadlwiomp`, Canada Central). It holds fictional data only, and no real residents are invited. **Keep it that way until the approvals below are in place.**
 
+**Feature freeze (Oct 21, 2026):** no further feature development until the POCUS rotation director and supervising staff have given feedback. Only fixes needed for the demonstration are allowed.
+
+## Keeping demonstration data out of real records
+
+| Safeguard | How |
+|---|---|
+| Separate databases | Fictional residents, demo exams, synthetic Brightspace files and demo ITER drafts exist only in the demonstration project. Migrations seed reference data only. Production is a new project built from the migrations, never a copy. |
+| Build guard | A production build pointed at the demonstration project gets no database connection (`scripts/build-site.mjs`), so merging to `main` cannot expose or reuse the demo data. |
+| Visible labelling | While connected to the demonstration project, every portal page shows "Demonstration environment — fictional residents and synthetic documents only". ITER printouts and .txt downloads carry "DEMONSTRATION — FICTIONAL DATA, NOT A LEARNER RECORD", and exported files start with `DEMO_`. |
+| Tests stay local | Unit, database and end-to-end tests refuse any non-local database or site URL (`tests/local-only.ts`), so they cannot write fictional data to, or reset, a hosted database. |
+| Content | Demo names are marked "(fictional)", demo exams "DEMO", and synthetic files "SYNTHETIC … NOT A REAL BRIGHTSPACE RECORD". The real ITER/EPA examples were never stored. |
+
 ## Data collected, access and storage
 
 | Data | Who can see it | Stored in |

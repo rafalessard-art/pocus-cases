@@ -7,6 +7,9 @@ const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? import.meta.env.VITE_
 export const configured = Boolean(url && anonKey);
 export const supabaseUrl = url ?? '';
 export const supabaseAnonKey = anonKey ?? '';
+/** The demonstration database: fictional residents, demo exams and synthetic evidence only (labelled in the UI; production builds refuse it). */
+export const DEMO_PROJECT_REFS = ['ngnggoekezucadlwiomp'];
+export const isDemoDatabase = DEMO_PROJECT_REFS.some((r) => (url ?? '').includes(r));
 
 export const supabase: SupabaseClient = configured
   ? createClient(url!, anonKey!, {

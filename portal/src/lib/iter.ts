@@ -238,6 +238,16 @@ const shortTitle = (r: Pick<RotationReq, 'kind' | 'title'>) =>
       : r.kind === 'exam' ? 'written examination'
         : r.kind === 'epa' ? 'C6 POCUS EPAs'
           : r.title.replace(/ online skills modules/i, ' modules').replace(/ mentor review and ultrasound portfolio/i, ' portfolio review');
+/**
+ * Faculty selected "Yes, Fully" while required rotation items are still open:
+ * the items to mention in a reminder. Never blocks approval and never changes
+ * the outcome, which stays the faculty member's decision. Items not yet due
+ * are not counted (same rule as the completion count).
+ */
+export function fullyMetReminder(outcome: string | null | undefined, reqs: Pick<RotationReq, 'kind' | 'title' | 'required' | 'status'>[] | undefined): string[] {
+  if (!outcome || !/^yes,?\s*fully$/i.test(outcome.trim())) return [];
+  return (reqs ?? []).filter((r) => r.required && !['verified', 'not_applicable', 'not_yet_due'].includes(r.status)).map(shortTitle);
+}
 const clip = (t: string, n = 180) => {
   const x = t.trim().replace(/\s+/g, ' ').replace(/[.;]+$/, '');
   return x.length > n ? `${x.slice(0, n - 1).trimEnd()}…` : x;
