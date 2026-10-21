@@ -22,6 +22,13 @@ const LEARNER = `resident-${RUN}@e2e.test`;
 const FIX = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 const SHOTS = process.env.E2E_SHOTS; // optional folder for walkthrough screenshots
 
+/** Print preview: the page as the print stylesheet lays it out. */
+async function printShot(page: Page, name: string) {
+  if (!SHOTS) return;
+  await page.emulateMedia({ media: 'print' });
+  await page.pdf({ path: join(SHOTS, `${name}.pdf`), format: 'Letter', printBackground: true });
+  await page.emulateMedia({ media: 'screen' });
+}
 async function shot(page: Page, name: string, el?: Locator) {
   if (!SHOTS) return;
   if (el) {
@@ -599,6 +606,7 @@ test('full examination lifecycle', async ({ page, context }) => {
     expect(txt).toContain('SUMMARY OF AREAS NEEDING IMPROVEMENT');
     expect(txt).not.toMatch(/Meets expectations|Above expectations|Outstanding\b/);
     await shot(page, '12d-iter-approved', page.locator('section:has(#itar) > .no-print'));
+    await printShot(page, 'print-iter-quick-copy');
     await page.getByTestId('view-evidence').click();
     await expect(page.getByTestId('iter-section-iter_record')).toContainText('Evidence sources and verification');
     await page.getByTestId('view-quick').click();
@@ -628,6 +636,7 @@ test('full examination lifecycle', async ({ page, context }) => {
     await expect(row).toContainText('102/102');
     await expect(page.locator('.stat', { hasText: 'Drafts approved · ready for One45' })).toContainText('1/1');
     await shot(page, '12e-block-complete');
+    await printShot(page, 'print-block-overview');
   });
 
   await test.step('evidence added after approval is flagged; the approved version is preserved', async () => {

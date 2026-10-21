@@ -297,5 +297,8 @@ details.todo > div { margin-top: 4px; max-width: 320px; }
   table.stackable td::before { content: attr(data-label); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); }
 }
 @media print {
-  table.stackable { font-size: 9pt; }
+  table.stackable { font-size: 9pt; width: 100%; }
+  table.stackable .badge { white-space: normal; font-size: 7pt; letter-spacing: .02em; }
+  table.stackable td[data-label="To do"] { min-width: 2.2in; }
+  table.stackable td[data-label="Resident"] { min-width: 1.1in; }
 }
