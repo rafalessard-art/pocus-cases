@@ -136,7 +136,7 @@ export function LearnerHome() {
   const caseTitles = new Set(cases.map((c) => norm(c.title)));
   const otherRequired = required.filter((i: any) => !caseTitles.has(norm(i.title)));
   return (
-    <Page kicker="POCUS Rotation" title={`Welcome${profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}`}
+    <Page kicker="POCUS Rotation" title={`Welcome${profile?.full_name ? `, ${profile.full_name.replace(/^(Dr\.?|Prof\.?)\s+/i, '').split(' ')[0]}` : ''}`}
       subtitle="Your POCUS rotation requirements, examination and curriculum">
       {isStaff(profile) && (
         <div className="notice" style={{ marginBottom: 18 }}>

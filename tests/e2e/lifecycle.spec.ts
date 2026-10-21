@@ -10,7 +10,7 @@
  * Chromium has no H.264 decoder; production clips are H.264 MP4).
  */
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import pg from 'pg';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -22,8 +22,13 @@ const LEARNER = `resident-${RUN}@e2e.test`;
 const FIX = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 const SHOTS = process.env.E2E_SHOTS; // optional folder for walkthrough screenshots
 
-async function shot(page: Page, name: string) {
-  if (SHOTS) await page.screenshot({ path: join(SHOTS, `${name}.png`), fullPage: false });
+async function shot(page: Page, name: string, el?: Locator) {
+  if (!SHOTS) return;
+  if (el) {
+    await page.addStyleTag({ content: '.topnav{position:static!important}' }); // no sticky header in stitched element shots
+    await el.screenshot({ path: join(SHOTS, `${name}.png`) });
+  }
+  else await page.screenshot({ path: join(SHOTS, `${name}.png`), fullPage: false });
 }
 
 /** Fail on serious/critical WCAG 2.1 A/AA violations. */
@@ -379,7 +384,7 @@ test('full examination lifecycle', async ({ page, context }) => {
     await expect(row.getByTestId('overview-todo')).toContainText('Review evidence (4)');
     await row.getByTestId('overview-todo').locator('summary').click();
     await expect(row.getByRole('link', { name: 'Review evidence (4)' })).toHaveAttribute('href', /#cases$/);
-    await shot(page, '12a-block-overview');
+    await shot(page, '12a-block-overview', page.getByTestId('block-overview'));
     await a11y(page, 'block overview');
     await row.click();
     await expect(page).toHaveURL(/\/app\/faculty\/itar\//);
@@ -419,16 +424,19 @@ test('full examination lifecycle', async ({ page, context }) => {
     await expect(page.getByTestId('todo-list')).toContainText('Re-upload Brightspace completion: Systematic Peripheral Vascular Access (returned by faculty)');
     await expect(page.getByText('Action needed').first()).toBeVisible();
     await expect(page.getByTestId('curriculum-cases')).toContainText('3/4');
+    await shot(page, 'r1-resident-next-steps');
     // the curriculum shows the same cases with their verification status (no separate self-ticks)
     await page.goto('/app/curriculum');
     await expect(page.getByTestId('curriculum-case-status')).toHaveCount(4);
     await expect(page.getByTestId('curriculum-case-status').filter({ hasText: 'Verified' })).toHaveCount(3);
+    await shot(page, 'r2-curriculum-cases');
     await page.goto('/app/');
     // straight from the next step to that case's upload
     await page.getByTestId('todo-list').getByRole('link', { name: 'Re-upload' }).click();
     await expect(page).toHaveURL(/\/app\/evidence#case-/);
     const row = page.getByTestId('evidence-requirement').filter({ hasText: 'Peripheral Vascular Access' });
     await expect(row.getByText(/does not show the completion date clearly/)).toBeVisible();
+    await shot(page, 'r3-upload-deep-link');
     await expect(page.getByText('3 of 4')).toBeVisible();
     await row.getByTestId('evidence-file').setInputFiles(join(FIX, 'SYNTHETIC-brightspace-completion-3.pdf'));
     await row.getByTestId('evidence-upload').click();
@@ -543,7 +551,7 @@ test('full examination lifecycle', async ({ page, context }) => {
     await expect(ev).toContainText('does not by itself determine whether the C6 requirement is met');
     await expect(page.getByTestId('section-iter_observations')).toContainText('Practical scanning skills:');
     await expect(page.getByTestId('section-iter_record')).toContainText('Approval in the portal is a draft approval, not a One45 submission.');
-    await shot(page, '12c2-full-evidence-record');
+    await shot(page, '12c2-full-evidence-record', page.locator('section:has(#itar) > .no-print'));
     await page.getByTestId('view-quick').click();
     // faculty review and edit the qualitative assessment
     await page.getByTestId('iter-strengths').fill('Fictional: consistent, careful image acquisition; clear communication of findings to the team');
@@ -561,7 +569,7 @@ test('full examination lifecycle', async ({ page, context }) => {
     await expect(page.getByTestId('iter-overall')).toHaveValue(/^Completed 6 of 7 required/);
     await expect(page.getByTestId('iter-basis').getByRole('checkbox', { name: /^Written examination/ })).toBeChecked();
     await expect(page.getByTestId('iter-outcome').getByLabel('Yes, Fully')).toBeChecked();
-    await shot(page, '12c-iter-quick-copy');
+    await shot(page, '12c-iter-quick-copy', page.locator('section:has(#itar) > .no-print'));
     await a11y(page, 'ITER Quick Copy');
     await page.getByTestId('approve-eval').click();
     await expect(page.getByRole('dialog')).toContainText('it does not submit the ITER');
@@ -590,7 +598,7 @@ test('full examination lifecycle', async ({ page, context }) => {
     expect(txt).toMatch(/Status: draft approved by Dr\. Demo Faculty on .* — ready for One45 \(not submitted\)/);
     expect(txt).toContain('SUMMARY OF AREAS NEEDING IMPROVEMENT');
     expect(txt).not.toMatch(/Meets expectations|Above expectations|Outstanding\b/);
-    await shot(page, '12d-iter-approved');
+    await shot(page, '12d-iter-approved', page.locator('section:has(#itar) > .no-print'));
     await page.getByTestId('view-evidence').click();
     await expect(page.getByTestId('iter-section-iter_record')).toContainText('Evidence sources and verification');
     await page.getByTestId('view-quick').click();
@@ -631,7 +639,7 @@ test('full examination lifecycle', async ({ page, context }) => {
     await expect(page.getByTestId('iter-strengths')).toBeDisabled(); // nothing changed silently
     await page.getByTestId('itar-versions').locator('summary').first().click();
     await expect(page.getByText('Version 1 · approved')).toBeVisible();
-    await shot(page, '12f-post-approval-flag');
+    await shot(page, '12f-post-approval-flag', page.locator('section:has(#itar) > .no-print'));
     await page.getByRole('link', { name: '← Block' }).click();
     const row = page.getByTestId('overview-row').filter({ hasText: 'Dr. Demo Resident' });
     await expect(row).toContainText('new evidence since draft approval');
