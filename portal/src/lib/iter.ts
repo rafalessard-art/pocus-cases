@@ -8,8 +8,8 @@
  *   header      resident and rotation (check against Elentra)
  *   evidence    ONE factual section: requirements, exam, learning cases, scans,
  *               EPA review (the only place EPA information appears)
- *   role × 7    CanMEDS roles: notes built ONLY from faculty observations
- *               recorded for that role. No rating is ever assigned.
+ *   observations  faculty observations for the block, as a reference (only
+ *               when some exist). No rating is ever assigned.
  *   outcome     overall rotation objectives — faculty selection only
  *   narrative   overall explanation / strengths / areas / recommendations —
  *               faculty text only (strengths and areas are required)
@@ -20,7 +20,7 @@
  * Factual completion evidence is kept apart from any judgement of competence.
  */
 import {
-  CRITERIA_LABEL, STATUS_LABEL, andList, chooseAttempt, epaVerified, factsFrom, fmt, latestSubmission, requirementState, sentence,
+  CATEGORIES, CRITERIA_LABEL, STATUS_LABEL, andList, chooseAttempt, epaVerified, factsFrom, fmt, latestSubmission, requirementState, sentence,
   type EpaReview, type ItarInput, type ItarSection, type Observation,
 } from './itar';
 import { REQ_LABEL, completion, rotationPassPct, type RotationReq } from './requirements';
@@ -33,10 +33,7 @@ export type IterTemplate = {
   version: number;
   form_name: string;
   based_on: string;
-  rating_scale: string[];
   evidence: { heading: string; destination: string };
-  roles: { key: string; heading: string; categories: string[] }[];
-  role_destination: string;
   outcome: { heading: string; destination: string; options: string[] };
   narrative: Record<NarrativeKey, { heading: string; required: boolean }>;
   narrative_destination: string;
@@ -57,18 +54,7 @@ export const DEFAULT_TEMPLATE: IterTemplate = {
   version: 1,
   form_name: 'University of Ottawa Anesthesiology ITER',
   based_on: 'Elective assessment ITER example (October 2026). Confirm that the current POCUS block ITER uses the same headings and options.',
-  rating_scale: ['Not assessed', 'Unsatisfactory', 'Below expectations', 'Meets expectations', 'Above expectations', 'Outstanding'],
   evidence: { heading: 'Verified rotation evidence (POCUS portal)', destination: 'Reference for rating. If useful, paste after your own text in “Overall explanation of performance”.' },
-  roles: [
-    { key: 'medical_expert', heading: 'Medical Expert', categories: ['scanning', 'clinical_judgement', 'technical'] },
-    { key: 'communicator', heading: 'Communicator', categories: ['communication'] },
-    { key: 'manager', heading: 'Manager', categories: ['manager'] },
-    { key: 'scholar', heading: 'Scholar', categories: ['scholar'] },
-    { key: 'collaborator', heading: 'Collaborator', categories: ['collaborator'] },
-    { key: 'health_advocate', heading: 'Health Advocate', categories: ['health_advocate'] },
-    { key: 'professional', heading: 'Professional', categories: ['professionalism'] },
-  ],
-  role_destination: 'Elentra ITER → {heading}: select a rating for each item yourself (the portal assigns none). Use these notes as evidence; paste them into the role\'s comment box if the form has one.',
   outcome: {
     heading: 'Overall rotation objectives',
     destination: 'Elentra ITER → rotation objectives: select the same option.',
@@ -92,23 +78,16 @@ export const DEFAULT_TEMPLATE: IterTemplate = {
 const str = (v: unknown, d: string) => (typeof v === 'string' && v.trim() ? v.trim() : d);
 const strs = (v: unknown, d: string[]) => (Array.isArray(v) && v.every((x) => typeof x === 'string' && x.trim()) && v.length ? v.map((x: string) => x.trim()) : d);
 
-/** Read a stored template; missing parts fall back to the default, malformed roles are rejected. */
+/** Read a stored template; missing or malformed parts fall back to the default. */
 export function parseTemplate(def: unknown): IterTemplate {
   const d = (def && typeof def === 'object' ? def : {}) as Record<string, any>;
   const T = DEFAULT_TEMPLATE;
-  const roles = Array.isArray(d.roles) && d.roles.length
-    ? d.roles.filter((r: any) => r && typeof r.key === 'string' && typeof r.heading === 'string' && r.heading.trim())
-      .map((r: any) => ({ key: r.key, heading: r.heading.trim(), categories: Array.isArray(r.categories) ? r.categories.filter((c: unknown) => typeof c === 'string') : [] }))
-    : T.roles;
   const n = (d.narrative ?? {}) as Record<string, any>;
   return {
     version: Number(d.version) || 1,
     form_name: str(d.form_name, T.form_name),
     based_on: str(d.based_on, T.based_on),
-    rating_scale: strs(d.rating_scale, T.rating_scale),
     evidence: { heading: str(d.evidence?.heading, T.evidence.heading), destination: str(d.evidence?.destination, T.evidence.destination) },
-    roles: roles.length ? roles : T.roles,
-    role_destination: str(d.role_destination, T.role_destination),
     outcome: { heading: str(d.outcome?.heading, T.outcome.heading), destination: str(d.outcome?.destination, T.outcome.destination), options: strs(d.outcome?.options, T.outcome.options) },
     narrative: Object.fromEntries(NARRATIVE_KEYS.map((k) => [k, {
       heading: str(n[k]?.heading, T.narrative[k].heading),
@@ -194,7 +173,7 @@ function attestationEvidence(r: RotationReq): string {
 }
 
 export function iterEvidence(i: ItarInput): string {
-  const lines = ['Completion and assessment records verified in the POCUS portal. They are not CanMEDS ratings and do not by themselves establish competence.'];
+  const lines = ['Completion and assessment records verified in the POCUS portal. They are not ratings and do not by themselves establish competence.'];
   const rot = i.rotationReqs;
   if (rot?.requirements.length) {
     const c = completion(rot.requirements);
@@ -217,17 +196,17 @@ export function iterEvidence(i: ItarInput): string {
 }
 
 // ---------------------------------------------------------------------------
-// CanMEDS roles: notes only from recorded faculty observations
+// Faculty observations (reference only)
 // ---------------------------------------------------------------------------
 const obsLine = (o: Observation) => {
   const meta = [o.author, fmt(o.observed_on || o.created_at), o.context?.trim()].filter(Boolean).join(', ');
   return `• ${sentence(o.body)}${meta ? ` (${meta})` : ''}`;
 };
-export const NO_ROLE_NOTES = 'No faculty observations recorded in the portal for this role.';
 
-export function roleNotes(observations: Observation[], categories: string[]): string {
-  const xs = observations.filter((o) => categories.includes(o.category));
-  return xs.length ? xs.map(obsLine).join('\n') : NO_ROLE_NOTES;
+export function observationNotes(observations: Observation[]): string {
+  return CATEGORIES.filter((c) => observations.some((o) => o.category === c.key))
+    .map((c) => `${c.label}:\n${observations.filter((o) => o.category === c.key).map(obsLine).join('\n')}`)
+    .join('\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -317,14 +296,9 @@ export function draftIter(i: ItarInput, t: IterTemplate, f: IterFields): ItarSec
     dest: 'Check that the Elentra ITER is for the same resident, rotation and dates.' });
   S.push({ key: 'iter_evidence', kind: 'evidence', title: t.evidence.heading, text: iterEvidence(i), dest: t.evidence.destination });
 
-  const mapped = new Set(t.roles.flatMap((r) => r.categories));
-  for (const r of t.roles) {
-    S.push({ key: `iter_role_${r.key}`, kind: 'role', title: r.heading, text: roleNotes(i.observations, r.categories), dest: t.role_destination.replace('{heading}', r.heading) });
-  }
-  const unmapped = i.observations.filter((o) => !mapped.has(o.category));
-  if (unmapped.length) {
-    S.push({ key: 'iter_role_other', kind: 'role', title: 'Other faculty observations (no CanMEDS role selected)', text: unmapped.map(obsLine).join('\n'),
-      dest: 'Reference — use under the most relevant role or in “Overall explanation of performance”.' });
+  if (i.observations.length) {
+    S.push({ key: 'iter_observations', kind: 'observations', title: 'Faculty observations', text: observationNotes(i.observations),
+      dest: 'Reference — use in your own words in “Overall explanation of performance” or the summaries below, if relevant.' });
   }
 
   const fac = (key: string, kind: ItarSection['kind'], title: string, dest: string) =>
@@ -347,7 +321,7 @@ export function draftIter(i: ItarInput, t: IterTemplate, f: IterFields): ItarSec
       `Learning cases: screenshots/PDFs uploaded by the resident, not retrieved from Brightspace${reviewers.length ? `; verified by ${andList(reviewers)}` : ''}.`,
       'EPA review: faculty attestation that the Elentra assessments were reviewed; no EPA data is retrieved from Elentra automatically.',
       `Faculty observations: ${i.observations.length}${authors.length ? ` (${andList(authors)})` : ''}.`,
-      'The portal assigns no CanMEDS rating and no overall outcome; both are the supervising faculty member\'s judgement, entered in Elentra.',
+      'The portal assigns no rating and no overall outcome; both are the supervising faculty member\'s judgement, entered in Elentra.',
     ].join('\n') });
   return S;
 }

@@ -15,7 +15,7 @@ import {
   REQ_LABEL, REQ_TONE, completion, requirementActions, rotationPassPct, scanDeltas, scanPct, withSelectedAttempt, type ItarState, type ReqStatus, type Rotation, type RotationReq,
 } from '../../lib/requirements';
 import {
-  applyFaculty, areaReminders, composeIter, draftIter, entrustmentText, isIterDraft, parseTemplate, suggestBasis, type IterFields, type IterTemplate, type NarrativeKey,
+  applyFaculty, areaReminders, composeIter, draftIter, entrustmentText, isIterDraft, parseTemplate, suggestBasis, type IterFields, type NarrativeKey,
 } from '../../lib/iter';
 import { rpc, supabase } from '../../lib/supabase';
 
@@ -284,7 +284,7 @@ export function ItarWorkspace() {
         <ExamSection w={w} chosen={chosen} locked={locked} passPct={rotationPassPct(rot.data)} onSelect={(id) => setSel({ key: `${cohortId}/${learnerId}`, id })} />
         <CasesSection w={w} reload={reload} />
         <EpaSection key={`${learnerId}-${w.epa_review?.updated_at ?? 'new'}`} w={w} reload={reload} />
-        <ObservationsSection w={w} reload={reload} locked={locked} template={tpl.data ? parseTemplate(tpl.data.definition) : null} />
+        <ObservationsSection w={w} reload={reload} locked={locked} />
       </div>
       <DraftSection key={`${learnerId}-${ev?.id ?? 'new'}-${ev?.updated_at ?? ''}`} w={w} reload={reload} selectedAttempt={selected} rotation={rot.data ?? null} template={tpl.data ?? null} />
     </Page>
@@ -630,9 +630,7 @@ function EpaSection({ w, reload }: { w: Ws; reload: () => void }) {
   );
 }
 
-function ObservationsSection({ w, reload, locked, template }: { w: Ws; reload: () => void; locked: boolean; template: IterTemplate | null }) {
-  const roleOf = (k: string) => template?.roles.find((r) => r.categories.includes(k))?.heading;
-  const catLabel = (k: string, label: string) => (roleOf(k) ? `${label} — ${roleOf(k)}` : template ? `${label} — no CanMEDS role` : label);
+function ObservationsSection({ w, reload, locked }: { w: Ws; reload: () => void; locked: boolean }) {
   const [f, setF] = useState({ category: 'scanning', observed_on: today(), context: '', body: '' });
   const [err, setErr] = useState<unknown>();
   const [busy, setBusy] = useState(false);
@@ -668,7 +666,7 @@ function ObservationsSection({ w, reload, locked, template }: { w: Ws; reload: (
           {!block.length && <Empty>No observations recorded for this block yet.</Empty>}
           {CATEGORIES.filter((c) => block.some((o) => o.category === c.key)).map((c) => (
             <div key={c.key} className="panel">
-              <strong>{catLabel(c.key, c.label)}</strong>
+              <strong>{c.label}</strong>
               {block.filter((o) => o.category === c.key).map((o) => (
                 <div key={o.id} className="small" style={{ borderTop: '1px solid var(--rule-soft)', paddingTop: 8, marginTop: 8 }}>
                   <div style={{ whiteSpace: 'pre-wrap' }}>{o.body}</div>
@@ -689,9 +687,9 @@ function ObservationsSection({ w, reload, locked, template }: { w: Ws; reload: (
         </div>
         <aside className="panel stack">
           <strong>Add an observation</strong>
-          <label className="field">Category {template && <span className="hint">sets the CanMEDS role in the ITER summary</span>}
+          <label className="field">Category
             <select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} data-testid="obs-category">
-              {CATEGORIES.map((c) => <option key={c.key} value={c.key}>{catLabel(c.key, c.label)}</option>)}
+              {CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
             </select>
           </label>
           <label className="field">Observed on<input type="date" value={f.observed_on} onChange={(e) => setF({ ...f, observed_on: e.target.value })} /></label>
@@ -711,7 +709,8 @@ type TemplateRow = { name: string; status: 'draft' | 'confirmed'; confirmed_at: 
 const KIND_LABEL: Record<NonNullable<ItarSection['kind']>, { label: string; tone?: 'ok' | 'warn' | 'info' }> = {
   header: { label: 'Check' },
   evidence: { label: 'Verified evidence — factual', tone: 'info' },
-  role: { label: 'Notes from your observations — rate in Elentra' },
+  observations: { label: 'Reference — your observations' },
+  role: { label: 'Notes from your observations' }, // earlier approved versions only
   outcome: { label: 'Your selection', tone: 'warn' },
   narrative: { label: 'Your judgement', tone: 'warn' },
   basis: { label: 'Your selection', tone: 'warn' },
@@ -915,7 +914,7 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
             {template.status === 'confirmed'
               ? <Badge tone="ok">confirmed{template.confirmed_by_name ? ` by ${template.confirmed_by_name}` : ''}</Badge>
               : <><Badge tone="warn">draft</Badge> The rotation director still needs to confirm it matches the current POCUS block ITER.</>}
-            {' '}Ratings and the overall outcome are never filled in by the portal. Nothing is sent to Elentra.
+            {' '}The overall outcome and any ratings are never filled in by the portal. Nothing is sent to Elentra.
           </p>
         )}
         {locked && changes.length === 0 && <div className="notice ok small" style={{ marginBottom: 12 }}>Approved and locked. Copy each section into {iterMode ? 'Elentra' : 'the official ITAR'}. Re-open to make changes (recorded in the audit log).</div>}
@@ -963,7 +962,7 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
             <ol className="small" style={{ margin: '6px 0 0' }}>
               <li>Open the resident's ITER in Elentra next to this page and check the resident, rotation and dates.</li>
               <li>Read <em>{T?.evidence.heading ?? 'Verified rotation evidence'}</em> — it is factual and is the basis for your ratings.</li>
-              <li>For each CanMEDS role, select the ratings in Elentra yourself (or <em>Not assessed</em>); copy the notes into the role's comment box if the form has one.</li>
+              <li>Complete the rating boxes in Elentra yourself, as usual.</li>
               <li>Select the same <em>{T?.outcome.heading ?? 'rotation objectives'}</em> option in Elentra.</li>
               <li>Copy each narrative section into the field with the same heading.</li>
               <li>Tick the same <em>{T?.basis.heading ?? 'basis of assessment'}</em> boxes and the discussion answer, then submit in Elentra as usual.</li>
@@ -1023,7 +1022,7 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
         <Confirm title={iterMode ? 'Approve this ITER-ready summary?' : 'Approve this ITAR draft?'} confirmLabel="Approve and lock" onCancel={() => setConfirm(null)} onConfirm={() => save(true)}
           body={<div className="stack small">
             <p>By approving, you confirm that you reviewed the evidence and this text, that it reflects your professional judgement, and that it contains no statement about clinical or technical performance that was not directly observed.</p>
-            <p>{iterMode ? 'CanMEDS ratings and the overall rotation outcome are selected by you in Elentra; the portal assigns none and submits nothing.' : 'The overall rating is recorded by you in the official ITAR; this portal does not assign one.'}</p>
+            <p>{iterMode ? 'Ratings and the overall rotation outcome are selected by you in Elentra; the portal assigns none and submits nothing.' : 'The overall rating is recorded by you in the official ITAR; this portal does not assign one.'}</p>
           </div>} />
       )}
       {confirm === 'reopen' && (

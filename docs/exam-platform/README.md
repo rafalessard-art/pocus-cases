@@ -123,11 +123,11 @@ Residents never need faculty screens. Excel logbooks are not uploaded; see QPATH
 
 **ITER-ready export (Phase 6).** The ITAR draft is now generated in the layout of the University of Ottawa Anesthesiology ITER ([ITER_EXPORT.md](ITER_EXPORT.md)). It has:
 - one factual *verified rotation evidence* section (requirements, exam with the attempt used, scans by category, Brightspace, C6 EPA review — EPA information appears only there);
-- the seven CanMEDS roles, with notes **only** from faculty observations recorded under each role;
+- faculty observations as one reference section (CanMEDS ratings are ticked directly in Elentra and are not prepared here);
 - the official rotation-objectives options and the four narrative fields;
 - basis of assessment and "discussed with trainee".
 
-Each section shows where it goes in Elentra and has its own Copy button; *Copy all* and *Download .txt* give a transfer sheet. The portal never selects CanMEDS ratings or the outcome and submits nothing to Elentra.
+Each section shows where it goes in Elentra and has its own Copy button; *Copy all* and *Download .txt* give a transfer sheet. The portal never selects ratings or the outcome and submits nothing to Elentra.
 
 The template is configurable (Admin → ITAR setup) and stays *draft* until the director confirms the POCUS block form. The C6 verification gains optional fields: assessments reviewed, entrustment counts and findings. They never decide the requirement. Approved versions keep the layout they were approved with.
 

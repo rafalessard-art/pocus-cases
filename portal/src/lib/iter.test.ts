@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { FORBIDDEN, type ItarInput, type WsAttempt } from './itar';
 import {
-  DEFAULT_TEMPLATE, NO_ROLE_NOTES, applyFaculty, areaReminders, composeIter, draftIter, entrustmentText, isIterDraft, parseTemplate, suggestBasis,
+  DEFAULT_TEMPLATE, applyFaculty, areaReminders, composeIter, draftIter, entrustmentText, isIterDraft, parseTemplate, suggestBasis,
   type IterFields,
 } from './iter';
 import type { Rotation, RotationReq } from './requirements';
@@ -66,39 +66,38 @@ const sec = (s: ReturnType<typeof draftIter>, key: string) => s.find((x) => x.ke
 describe('ITER-ready summary structure', () => {
   const s = draftIter(fixture(), T, {});
 
-  it('follows the ITER headings in form order, with one evidence section first', () => {
+  it('follows the ITER headings in form order, with one evidence section first and no CanMEDS role sections', () => {
     expect(s.map((x) => x.title)).toEqual([
-      'Resident and rotation', 'Verified rotation evidence (POCUS portal)',
-      'Medical Expert', 'Communicator', 'Manager', 'Scholar', 'Collaborator', 'Health Advocate', 'Professional',
-      'Other faculty observations (no CanMEDS role selected)',
+      'Resident and rotation', 'Verified rotation evidence (POCUS portal)', 'Faculty observations',
       'Overall rotation objectives', 'Overall explanation of performance', 'Summary of strengths', 'Summary of areas needing improvement',
       'Recommendations for ongoing improvement', 'Basis of assessment', 'Performance discussed with the trainee', 'Portal record',
     ]);
     expect(isIterDraft(s)).toBe(true);
     expect(s.every((x) => x.dest && x.kind)).toBe(true);
-    expect(sec(s, 'iter_role_medical_expert').dest).toMatch(/^Elentra ITER → Medical Expert: select a rating for each item yourself/);
+    expect(composeIter(s)).not.toMatch(/CanMEDS|Medical Expert|Health Advocate|Collaborator/);
   });
 
-  it('assigns no CanMEDS rating and no overall outcome', () => {
+  it('assigns no rating and no overall outcome', () => {
     const all = composeIter(s);
     for (const f of FORBIDDEN) expect(all).not.toMatch(f);
-    for (const r of T.rating_scale.filter((x) => x !== 'Not assessed')) expect(all).not.toContain(r);
+    for (const r of ['Unsatisfactory', 'Below expectations', 'Meets expectations', 'Above expectations', 'Outstanding']) expect(all).not.toContain(r);
     expect(sec(s, 'iter_outcome').text).toBe('Not selected in the portal — select in Elentra.');
     for (const o of T.outcome.options) expect(all).not.toContain(o);
   });
 
-  it('CanMEDS notes come only from faculty observations recorded for that role; others are left for faculty', () => {
-    expect(sec(s, 'iter_role_medical_expert').text).toBe('• Obtained a right lateral decubitus antral view independently. (Dr Fictional Faculty, October 8, 2026, Pre-op clinic)');
-    expect(sec(s, 'iter_role_communicator').text).toMatch(/^• Explained the gastric scan/);
-    for (const k of ['manager', 'scholar', 'collaborator', 'health_advocate', 'professional']) expect(sec(s, `iter_role_${k}`).text).toBe(NO_ROLE_NOTES);
-    // the exam score and EPA review are never written under a CanMEDS role
-    for (const x of s.filter((y) => y.kind === 'role')) expect(x.text).not.toMatch(/85\.0%|Elentra|entrustment/);
-    expect(sec(s, 'iter_role_other').text).toMatch(/Arrived prepared/);
+  it('faculty observations are one reference section, grouped by category, and only when some exist', () => {
+    expect(sec(s, 'iter_observations').text).toBe([
+      'Practical scanning skills:', '• Obtained a right lateral decubitus antral view independently. (Dr Fictional Faculty, October 8, 2026, Pre-op clinic)',
+      'Communication:', '• Explained the gastric scan to the patient clearly. (Dr Fictional Faculty, October 9, 2026)',
+      'General:', '• Arrived prepared for every session. (Dr Other Fictional, October 10, 2026)',
+    ].join('\n'));
+    expect(sec(s, 'iter_observations').text).not.toMatch(/85\.0%|Elentra|entrustment/);
+    expect(draftIter(fixture({ observations: [] }), T, {}).some((x) => x.key === 'iter_observations')).toBe(false);
   });
 
   it('separates factual evidence from judgement and writes EPA information exactly once', () => {
     const ev = sec(s, 'iter_evidence').text;
-    expect(ev).toMatch(/^Completion and assessment records verified in the POCUS portal\. They are not CanMEDS ratings and do not by themselves establish competence\./);
+    expect(ev).toMatch(/^Completion and assessment records verified in the POCUS portal\. They are not ratings and do not by themselves establish competence\./);
     expect(ev).toMatch(/Rotation requirements complete: 4 of 6 \(1 not yet due\)\./);
     expect(ev).toMatch(/• Written POCUS examination — complete: 85\.0% \(34\/40 points\) on POCUS Block Exam \(fictional\) v2, attempt 1 of 1 submitted \(most recent submitted attempt\), submitted October 14, 2026\. Strongest domains: Gastric 95%\. Domains to review: Lung 50%\. Knowledge assessment only\./);
     expect(ev).toMatch(/• Brightspace learning cases — in progress: 1 of 2 verified by faculty from completion evidence uploaded by the resident \(Gastric ultrasound case\)\. Not yet verified: ONSD case \(no evidence submitted\)\./);
@@ -163,16 +162,15 @@ describe('faculty sections', () => {
 });
 
 describe('configurable template', () => {
-  it('headings, options and role mapping come from the template; gaps fall back to the default', () => {
+  it('headings and options come from the template; gaps fall back to the default; old role settings are ignored', () => {
     const t = parseTemplate({
-      roles: [{ key: 'leader', heading: 'Leader', categories: ['manager', 'general'] }],
+      roles: [{ key: 'leader', heading: 'Leader', categories: ['manager'] }],
       outcome: { options: ['Achieved', 'Not achieved'] },
       narrative: { strengths: { heading: 'Strengths observed' }, overall: { required: true } },
     });
     expect(t.outcome.heading).toBe('Overall rotation objectives');
     const s = draftIter(fixture(), t, { outcome: 'Yes, Fully' });
-    expect(s.filter((x) => x.kind === 'role').map((x) => x.title)).toEqual(['Leader', 'Other faculty observations (no CanMEDS role selected)']);
-    expect(sec(s, 'iter_role_leader').text).toMatch(/Arrived prepared/);
+    expect(s.some((x) => x.kind === 'role' || /Leader/.test(x.title))).toBe(false);
     expect(sec(s, 'iter_strengths').title).toBe('Strengths observed');
     expect(sec(s, 'iter_overall').text).toBe('[Faculty to complete: overall explanation of performance.]');
     expect(sec(s, 'iter_outcome').text).toMatch(/Not selected/); // not an option of this template

@@ -27,8 +27,8 @@ describe('ITER template', () => {
   it('a draft default template follows the ITER headings; staff read it, residents cannot', async () => {
     const t = await rpc(faculty, 'iter_template_for', { p_cohort: block });
     expect(t.status).toBe('draft');
-    expect(t.definition.roles.map((r: any) => r.heading)).toEqual(
-      ['Medical Expert', 'Communicator', 'Manager', 'Scholar', 'Collaborator', 'Health Advocate', 'Professional']);
+    expect(t.definition).not.toHaveProperty('roles'); // no CanMEDS role sections (migration 13)
+    expect(t.definition).not.toHaveProperty('rating_scale');
     expect(t.definition.outcome.options).toEqual(
       ['No, due to other reasons', 'No, due to absence', 'No, due to unsatisfactory performance', 'Yes, Partially', 'Yes, Fully']);
     expect(['overall', 'strengths', 'areas', 'recommendations'].map((k) => t.definition.narrative[k].heading)).toEqual(
@@ -44,10 +44,10 @@ describe('ITER template', () => {
     const [row] = await as(admin, (q) => q(`insert into public.iter_templates (course_id, name, definition, status) values ($1, 'POCUS block ITER', $2, 'confirmed') returning id, status, confirmed_by`, [course, def]));
     expect(row).toMatchObject({ status: 'confirmed', confirmed_by: admin.id });
     expect((await rpc(faculty, 'iter_template_for', { p_cohort: block })).name).toBe('POCUS block ITER');
-    const def2 = { ...def, roles: def.roles.map((r: any) => (r.key === 'manager' ? { ...r, heading: 'Leader' } : r)) };
+    const def2 = { ...def, outcome: { ...def.outcome, heading: 'Rotation objectives achieved?' } };
     const [after] = await as(admin, (q) => q(`update public.iter_templates set definition = $2 where id = $1 returning status, confirmed_by`, [row.id, def2]));
     expect(after).toEqual({ status: 'draft', confirmed_by: null });
-    await expect(as(admin, (q) => q(`update public.iter_templates set definition = '{"roles": []}' where id = $1`, [row.id]))).rejects.toThrow(/roles/);
+    await expect(as(admin, (q) => q(`update public.iter_templates set definition = '{"narrative": {}}' where id = $1`, [row.id]))).rejects.toThrow(/outcome options/);
     await sql(`delete from public.iter_templates where id = $1`, [row.id]);
   });
 });
@@ -112,13 +112,11 @@ describe('optional C6 EPA details', () => {
   });
 });
 
-describe('CanMEDS observation categories', () => {
-  it('faculty can record observations for every role', async () => {
-    for (const category of ['manager', 'scholar', 'collaborator', 'health_advocate']) {
-      await as(faculty, (q) => q(`insert into public.faculty_notes (course_id, learner_id, author_id, cohort_id, category, body)
-        values ($1, $2, $3, $4, $5, 'Fictional observation')`, [course, resident.id, faculty.id, block, category]));
-    }
+describe('observation categories', () => {
+  it('the CanMEDS-only categories were removed again', async () => {
     await expect(as(faculty, (q) => q(`insert into public.faculty_notes (course_id, learner_id, author_id, cohort_id, category, body)
-      values ($1, $2, $3, $4, 'rating', 'x')`, [course, resident.id, faculty.id, block]))).rejects.toThrow();
+      values ($1, $2, $3, $4, 'health_advocate', 'Fictional observation')`, [course, resident.id, faculty.id, block]))).rejects.toThrow();
+    await as(faculty, (q) => q(`insert into public.faculty_notes (course_id, learner_id, author_id, cohort_id, category, body)
+      values ($1, $2, $3, $4, 'communication', 'Fictional observation')`, [course, resident.id, faculty.id, block]));
   });
 });

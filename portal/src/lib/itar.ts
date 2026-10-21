@@ -36,8 +36,7 @@ export type EpaReview = {
 export const CRITERIA_LABEL = { met: 'met', partially_met: 'partially met', outstanding: 'outstanding' } as const;
 /** A completed review under the streamlined form (older completed reviews lack a criteria decision). */
 export const epaVerified = (e: EpaReview | null | undefined) => !!e && e.status === 'complete' && !!e.criteria_status;
-export type Category = 'scanning' | 'clinical_judgement' | 'technical' | 'professionalism' | 'communication' | 'general'
-  | 'manager' | 'scholar' | 'collaborator' | 'health_advocate';
+export type Category = 'scanning' | 'clinical_judgement' | 'technical' | 'professionalism' | 'communication' | 'general';
 export type Observation = { id: string; category: Category; observed_on: string | null; context?: string; body: string; author?: string | null; created_at: string };
 export type WsAttempt = {
   id: string; exam_title: string; version: number; attempt_no: number; status: 'in_progress' | 'submitted'; started_at: string;
@@ -47,7 +46,7 @@ export type WsAttempt = {
 export type ItarSection = {
   key: string; title: string; text: string;
   /** ITER-ready sections (iter.ts): what kind of content, and where it goes in Elentra */
-  kind?: 'header' | 'evidence' | 'role' | 'outcome' | 'narrative' | 'basis' | 'discussed' | 'record'; dest?: string;
+  kind?: 'header' | 'evidence' | 'observations' | 'role' | 'outcome' | 'narrative' | 'basis' | 'discussed' | 'record'; dest?: string;
 };
 export type AttemptRule = 'latest_submitted' | 'faculty_selected' | 'none';
 
@@ -57,10 +56,6 @@ export const CATEGORIES: { key: Category; label: string; core: boolean }[] = [
   { key: 'technical', label: 'Technical performance', core: true },
   { key: 'professionalism', label: 'Professionalism', core: true },
   { key: 'communication', label: 'Communication', core: false },
-  { key: 'collaborator', label: 'Collaboration', core: false },
-  { key: 'manager', label: 'Management / leadership', core: false },
-  { key: 'scholar', label: 'Scholarship / teaching', core: false },
-  { key: 'health_advocate', label: 'Health advocacy', core: false },
   { key: 'general', label: 'General', core: false },
 ];
 export const categoryLabel = (k: string) => CATEGORIES.find((c) => c.key === k)?.label ?? k;

@@ -496,7 +496,7 @@ test('full examination lifecycle', async ({ page, context }) => {
     await expect(page.getByTestId('iter-template')).toContainText('The rotation director still needs to confirm it matches the current POCUS block ITER');
     await page.getByTestId('generate-draft').click();
     const ev = page.getByTestId('section-iter_evidence');
-    await expect(ev).toHaveValue(/^Completion and assessment records verified in the POCUS portal\. They are not CanMEDS ratings/);
+    await expect(ev).toHaveValue(/^Completion and assessment records verified in the POCUS portal\. They are not ratings and do not by themselves establish competence\./);
     await expect(ev).toHaveValue(/Rotation requirements complete: 6 of 7 \(1 not yet due\)/);
     await expect(ev).toHaveValue(/Written POCUS examination — complete: 100\.0% .*attempt 1 of 1 submitted \(most recent submitted attempt\).* — rotation pass mark 75% met\. .*Knowledge assessment only\./);
     await expect(ev).toHaveValue(/Brightspace learning cases — complete: 4 of 4 verified by faculty/);
@@ -507,12 +507,11 @@ test('full examination lifecycle', async ({ page, context }) => {
     await expect(ev).toHaveValue(/Faculty-identified findings: Fictional: reliable gastric antrum views/);
     await expect(ev).toHaveValue(/Strengths noted in the EPA assessments: Fictional data: clear communication/);
     await expect(ev).toHaveValue(/POCUS rounds presentation — not yet due\./);
-    // CanMEDS notes only from this block's observations; no rating anywhere
-    await expect(page.getByTestId('section-iter_role_medical_expert')).toHaveValue(/^• Fictional: obtained PLAX and A4C views independently/);
-    await expect(page.getByTestId('section-iter_role_medical_expert')).not.toHaveValue(/Engaged well in the scanning sessions/);
-    await expect(page.getByTestId('section-iter_role_professional')).toHaveValue(/sought feedback/);
-    await expect(page.getByTestId('section-iter_role_scholar')).toHaveValue('No faculty observations recorded in the portal for this role.');
-    await expect(page.getByTestId('iter-section-iter_role_communicator')).toContainText('select a rating for each item yourself');
+    // no CanMEDS role sections; this block's observations appear once, as reference
+    await expect(page.getByTestId('itar-sections')).not.toContainText(/Medical Expert|Communicator|Health Advocate|CanMEDS/);
+    await expect(page.getByTestId('section-iter_observations')).toHaveValue(/^Practical scanning skills:\n• Fictional: obtained PLAX and A4C views independently/);
+    await expect(page.getByTestId('section-iter_observations')).toHaveValue(/Professionalism:\n• Fictional: prepared for every session/);
+    await expect(page.getByTestId('section-iter_observations')).not.toHaveValue(/Engaged well in the scanning sessions/);
     for (const o of ['No, due to other reasons', 'Yes, Partially', 'Yes, Fully']) await expect(page.getByTestId('iter-outcome').getByLabel(o)).not.toBeChecked();
     // basis of assessment: suggested from portal records, faculty can change it
     for (const o of ['Informal observation', 'Formal direct observation', 'Written examination', 'Other']) await expect(page.getByTestId('iter-basis').getByLabel(o)).toBeChecked();
@@ -548,7 +547,8 @@ test('full examination lifecycle', async ({ page, context }) => {
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('Fictional: consistent, careful image acquisition.');
     await page.getByTestId('copy-all').click();
     const clip = await page.evaluate(() => navigator.clipboard.readText());
-    expect(clip).toContain('MEDICAL EXPERT\n→ Elentra ITER → Medical Expert: select a rating for each item yourself');
+    expect(clip).toContain('FACULTY OBSERVATIONS\n→ Reference');
+    expect(clip).not.toMatch(/MEDICAL EXPERT|CanMEDS/);
     expect(clip).toContain('OVERALL ROTATION OBJECTIVES\n→ Elentra ITER → rotation objectives: select the same option.\nYes, Fully');
     expect(clip).toContain('PERFORMANCE DISCUSSED WITH THE TRAINEE\n→ Elentra ITER → select Yes or No.\nYes');
     const [dl] = await Promise.all([page.waitForEvent('download'), page.getByTestId('export-text').click()]);

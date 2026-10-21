@@ -22,11 +22,9 @@ What faculty record in the portal from a set of such assessments (optional, neve
 
 ## Fictional ITER (as completed by faculty in Elentra)
 
-**CanMEDS roles.** Each item is rated by faculty on: Not assessed / Unsatisfactory / Below expectations / Meets expectations / Above expectations / Outstanding.
-- Medical Expert: faculty rate the items themselves. Portal note: "Obtained a right lateral decubitus antral view independently (Dr Fictional Faculty, October 8, 2026, Pre-op clinic)."
-- Communicator: faculty rate. Portal note: "Explained the gastric scan to the patient clearly."
-- Manager, Scholar, Collaborator, Health Advocate: no portal observations. Faculty rate from their own assessment or select *Not assessed*.
-- Professional: faculty rate.
+**CanMEDS roles:** ticked by faculty directly in Elentra; the portal prepares nothing for them.
+
+**Faculty observations (portal reference):** "Obtained a right lateral decubitus antral view independently"; "Explained the gastric scan to the patient clearly".
 
 **Overall rotation objectives:** Yes, Partially (faculty selection).
 

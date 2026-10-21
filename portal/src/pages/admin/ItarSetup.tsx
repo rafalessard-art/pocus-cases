@@ -4,7 +4,6 @@ import { Badge, Confirm, Empty, ErrorNote, Spinner, fmtDate, useLoad } from '../
 import { cohorts as loadCohorts, pocusCourse } from '../../lib/content';
 import { deleteEvidenceFiles } from '../../lib/evidence';
 import { rpc, supabase } from '../../lib/supabase';
-import { categoryLabel } from '../../lib/itar';
 import { NARRATIVE_KEYS, parseTemplate, type IterTemplate } from '../../lib/iter';
 
 type Req = {
@@ -375,7 +374,7 @@ function IterTemplateConfig() {
     <section style={{ marginBottom: 30 }}>
       <h2>ITER export template</h2>
       <p className="small muted">
-        Controls the headings, options and Elentra destinations of the ITER-ready summary. It never adds ratings. The seeded layout is based on an elective ITER
+        Controls the headings, options and Elentra destinations of the ITER-ready summary. It never adds ratings or the outcome. The seeded layout is based on an elective ITER
         example — the rotation director should confirm it matches the current POCUS block ITER.
       </p>
       {list.loading && !list.data ? <Spinner /> : list.error ? <ErrorNote error={list.error} /> : !row ? <Empty>No template configured.</Empty>
@@ -410,7 +409,6 @@ function TemplateEditor({ row, reload }: { row: TplRow; reload: () => void }) {
     <div className="panel stack" data-testid="iter-template-editor">
       <div className="row between">
         <div>{row.status === 'confirmed' ? <Badge tone="ok">confirmed {fmtDate(row.confirmed_at)}</Badge> : <Badge tone="warn">draft — pending rotation director confirmation</Badge>}</div>
-        <span className="small muted">Rating scale shown to faculty (never filled in): {t.rating_scale.join(' · ')}</span>
       </div>
       <div className="formgrid">
         {field('Template name', name, setName)}
@@ -421,21 +419,6 @@ function TemplateEditor({ row, reload }: { row: TplRow; reload: () => void }) {
         {field('Evidence section heading', t.evidence.heading, (v) => setT({ ...t, evidence: { ...t.evidence, heading: v } }))}
         {field('Evidence → where to paste', t.evidence.destination, (v) => setT({ ...t, evidence: { ...t.evidence, destination: v } }))}
       </div>
-      <strong className="small">CanMEDS roles (headings exactly as on the form) and the observation categories that feed each</strong>
-      <div className="tablewrap">
-        <table className="data">
-          <thead><tr><th>Heading</th><th>Observation categories</th></tr></thead>
-          <tbody>
-            {t.roles.map((r, i) => (
-              <tr key={r.key}>
-                <td><input type="text" value={r.heading} aria-label={`Heading for ${r.key}`} onChange={(e) => setT({ ...t, roles: t.roles.map((x, j) => (j === i ? { ...x, heading: e.target.value } : x)) })} data-testid={`tpl-role-${r.key}`} /></td>
-                <td className="small">{r.categories.map((c) => categoryLabel(c)).join(', ') || '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {field('Role → where to paste ({heading} is replaced)', t.role_destination, (v) => setT({ ...t, role_destination: v }))}
       <div className="formgrid">
         {field('Rotation objectives heading', t.outcome.heading, (v) => setT({ ...t, outcome: { ...t.outcome, heading: v } }))}
         <label className="field">Rotation objectives options <span className="hint">one per line, as on the form</span>
