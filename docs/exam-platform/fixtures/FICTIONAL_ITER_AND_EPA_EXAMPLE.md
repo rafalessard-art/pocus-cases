@@ -1,6 +1,6 @@
 # Fictional ITER and C6 EPA example (test and demonstration data only)
 
-Everything below is invented. It mirrors the **structure** of the University of Ottawa Anesthesiology ITER and the ANES-C6 POCUS EPA form, so the export can be tested without real assessment records. The real example forms are identifiable educational records, so they are never stored in the portal or used as fixtures.
+Everything below is invented. It mirrors the **structure** of the University of Ottawa Anesthesiology ITER (One45) and the ANES-C6 POCUS EPA form (Elentra), so the export can be tested without real assessment records. The real example forms are identifiable educational records, so they are never stored in the portal or used as fixtures.
 
 ## Fictional C6 POCUS EPA assessment
 
@@ -20,9 +20,9 @@ What faculty record in the portal from a set of such assessments (optional, neve
 - findings: "Interprets antral cross-sectional area reliably";
 - criteria decision: *partially met*.
 
-## Fictional ITER (as completed by faculty in Elentra)
+## Fictional ITER (as completed and submitted by faculty in One45)
 
-**CanMEDS roles:** ticked by faculty directly in Elentra; the portal prepares nothing for them.
+**CanMEDS roles:** ticked by faculty directly in One45; the portal prepares nothing for them.
 
 **Faculty observations (portal reference):** "Obtained a right lateral decubitus antral view independently"; "Explained the gastric scan to the patient clearly".
 

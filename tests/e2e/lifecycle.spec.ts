@@ -534,27 +534,29 @@ test('full examination lifecycle', async ({ page, context }) => {
     await shot(page, '12c-iter-draft');
     await a11y(page, 'ITER-ready summary');
     await page.getByTestId('approve-eval').click();
-    await page.getByRole('button', { name: 'Approve and lock' }).click();
-    await expect(page.locator('#itar').getByText(/^Approved/)).toBeVisible();
+    await expect(page.getByRole('dialog')).toContainText('it does not submit the ITER');
+    await page.getByRole('button', { name: 'Approve draft', exact: true }).click();
+    await expect(page.locator('#itar').getByText(/^Draft approved — ready for One45/)).toBeVisible();
+    await expect(page.getByTestId('ready-for-one45')).toContainText('This does not submit the ITER');
     await expect(page.getByTestId('iter-strengths')).toBeDisabled();
     await expect(page.getByTestId('iter-outcome')).toHaveText('Yes, Fully');
   });
 
-  await test.step('faculty copies each section into Elentra (transfer sheet and download)', async () => {
+  await test.step('faculty copies each section into the One45 ITER (transfer sheet and download)', async () => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await page.getByTestId('copy-iter_strengths').click();
-    await expect(page.getByText('Summary of strengths copied — paste it into Elentra.')).toBeVisible();
+    await expect(page.getByText('Summary of strengths copied — paste it into the ITER in One45.')).toBeVisible();
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('Fictional: consistent, careful image acquisition.');
     await page.getByTestId('copy-all').click();
     const clip = await page.evaluate(() => navigator.clipboard.readText());
     expect(clip).toContain('FACULTY OBSERVATIONS\n→ Reference');
     expect(clip).not.toMatch(/MEDICAL EXPERT|CanMEDS/);
-    expect(clip).toContain('OVERALL ROTATION OBJECTIVES\n→ Elentra ITER → rotation objectives: select the same option.\nYes, Fully');
-    expect(clip).toContain('PERFORMANCE DISCUSSED WITH THE TRAINEE\n→ Elentra ITER → select Yes or No.\nYes');
+    expect(clip).toContain('OVERALL ROTATION OBJECTIVES\n→ One45 ITER → rotation objectives: select the same option.\nYes, Fully');
+    expect(clip).toContain('PERFORMANCE DISCUSSED WITH THE TRAINEE\n→ One45 ITER → select Yes or No.\nYes');
     const [dl] = await Promise.all([page.waitForEvent('download'), page.getByTestId('export-text').click()]);
     const txt = await (await import('node:fs/promises')).readFile((await dl.path())!, 'utf8');
     expect(txt).toContain('ITER-ready summary — Dr. Demo Resident');
-    expect(txt).toMatch(/Status: approved by Dr\. Demo Faculty/);
+    expect(txt).toMatch(/Status: draft approved by Dr\. Demo Faculty on .* — ready for One45 \(not submitted\)/);
     expect(txt).toContain('PORTAL RECORD');
     expect(txt).not.toMatch(/Meets expectations|Above expectations|Outstanding\b/);
     await shot(page, '12d-iter-approved');
@@ -579,11 +581,11 @@ test('full examination lifecycle', async ({ page, context }) => {
     await page.getByRole('link', { name: '← Block' }).click();
     const row = page.getByTestId('overview-row').filter({ hasText: 'Dr. Demo Resident' });
     await expect(row).toContainText('4/4');
-    await expect(row).toContainText('approved');
+    await expect(row).toContainText('draft approved — ready for One45');
     await expect(row).toContainText('No action needed');
     await expect(row).toContainText('6/7');
     await expect(row).toContainText('102/102');
-    await expect(page.locator('.stat', { hasText: 'ITARs approved' })).toContainText('1/1');
+    await expect(page.locator('.stat', { hasText: 'Drafts approved · ready for One45' })).toContainText('1/1');
     await shot(page, '12e-block-complete');
   });
 
@@ -599,7 +601,7 @@ test('full examination lifecycle', async ({ page, context }) => {
     await shot(page, '12f-post-approval-flag');
     await page.getByRole('link', { name: '← Block' }).click();
     const row = page.getByTestId('overview-row').filter({ hasText: 'Dr. Demo Resident' });
-    await expect(row).toContainText('new evidence since approval');
+    await expect(row).toContainText('new evidence since draft approval');
     await expect(row).toContainText('Review new evidence');
     await signOut(page);
   });

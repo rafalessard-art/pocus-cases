@@ -2,10 +2,10 @@
  * ITER-ready summary: pure helpers (no network), unit-tested in iter.test.ts.
  *
  * Re-arranges what the portal already holds under the headings of the
- * institutional ITER (University of Ottawa Anesthesiology; template is
+ * institutional ITER in One45 (University of Ottawa Anesthesiology; template is
  * configurable and stays DRAFT until the rotation director confirms it):
  *
- *   header      resident and rotation (check against Elentra)
+ *   header      resident and rotation (check against One45)
  *   evidence    ONE factual section: requirements, exam, learning cases, scans,
  *               EPA review (the only place EPA information appears)
  *   observations  faculty observations for the block, as a reference (only
@@ -53,11 +53,11 @@ export type IterFields = {
 export const DEFAULT_TEMPLATE: IterTemplate = {
   version: 1,
   form_name: 'University of Ottawa Anesthesiology ITER',
-  based_on: 'Elective assessment ITER example (October 2026). Confirm that the current POCUS block ITER uses the same headings and options.',
+  based_on: 'Elective assessment ITER example from One45 (October 2026). Confirm that the current POCUS block ITER in One45 uses the same headings and options.',
   evidence: { heading: 'Verified rotation evidence (POCUS portal)', destination: 'Reference for rating. If useful, paste after your own text in “Overall explanation of performance”.' },
   outcome: {
     heading: 'Overall rotation objectives',
-    destination: 'Elentra ITER → rotation objectives: select the same option.',
+    destination: 'One45 ITER → rotation objectives: select the same option.',
     options: ['No, due to other reasons', 'No, due to absence', 'No, due to unsatisfactory performance', 'Yes, Partially', 'Yes, Fully'],
   },
   narrative: {
@@ -66,13 +66,13 @@ export const DEFAULT_TEMPLATE: IterTemplate = {
     areas: { heading: 'Summary of areas needing improvement', required: true },
     recommendations: { heading: 'Recommendations for ongoing improvement', required: false },
   },
-  narrative_destination: 'Elentra ITER → “{heading}”: paste.',
+  narrative_destination: 'One45 ITER → “{heading}”: paste.',
   basis: {
     heading: 'Basis of assessment',
-    destination: 'Elentra ITER → basis of assessment: tick the same boxes.',
+    destination: 'One45 ITER → basis of assessment: tick the same boxes.',
     options: ['Informal observation', 'Formal direct observation', 'Written examination', 'Oral examination', 'OSCE', 'Other'],
   },
-  discussed: { heading: 'Performance discussed with the trainee', destination: 'Elentra ITER → select Yes or No.' },
+  discussed: { heading: 'Performance discussed with the trainee', destination: 'One45 ITER → select Yes or No.' },
 };
 
 const str = (v: unknown, d: string) => (typeof v === 'string' && v.trim() ? v.trim() : d);
@@ -218,12 +218,12 @@ const PLACEHOLDER: Record<'strengths' | 'areas', string> = {
   strengths: '[Faculty to complete: summary of strengths.]',
   areas: '[Faculty to complete: summary of areas needing improvement.]',
 };
-const OPTIONAL_BLANK = 'Not completed in the portal (optional) — write in Elentra if needed.';
+const OPTIONAL_BLANK = 'Not completed in the portal (optional) — write it in One45 if needed.';
 
 export function facultyText(key: string, t: IterTemplate, f: IterFields, x: FacultyText): string | null {
   switch (key) {
     case 'iter_outcome':
-      return f.outcome && t.outcome.options.includes(f.outcome) ? f.outcome : 'Not selected in the portal — select in Elentra.';
+      return f.outcome && t.outcome.options.includes(f.outcome) ? f.outcome : 'Not selected in the portal — select in One45.';
     case 'iter_overall':
     case 'iter_recommendations': {
       const k = key === 'iter_overall' ? 'overall' : 'recommendations';
@@ -238,10 +238,10 @@ export function facultyText(key: string, t: IterTemplate, f: IterFields, x: Facu
     }
     case 'iter_basis': {
       const sel = (f.basis ?? []).filter((b) => t.basis.options.includes(b));
-      return sel.length ? sel.join('; ') : 'Not recorded in the portal — tick in Elentra.';
+      return sel.length ? sel.join('; ') : 'Not recorded in the portal — tick in One45.';
     }
     case 'iter_discussed':
-      return f.discussed === 'yes' ? 'Yes' : f.discussed === 'no' ? 'No' : 'Not recorded in the portal — select in Elentra.';
+      return f.discussed === 'yes' ? 'Yes' : f.discussed === 'no' ? 'No' : 'Not recorded in the portal — select in One45.';
     default:
       return null;
   }
@@ -293,7 +293,7 @@ export function draftIter(i: ItarInput, t: IterTemplate, f: IterFields): ItarSec
   const dates = i.blockStart || i.blockEnd ? `, ${fmt(i.blockStart) || '—'} to ${fmt(i.blockEnd) || '—'}` : '';
   S.push({ key: 'iter_header', kind: 'header', title: 'Resident and rotation',
     text: `${i.learnerName}${i.trainingLevel ? ` (${i.trainingLevel})` : ''} — ${i.rotation}, ${i.blockName}${dates}.`,
-    dest: 'Check that the Elentra ITER is for the same resident, rotation and dates.' });
+    dest: 'Check that the One45 ITER is for the same resident, rotation and dates.' });
   S.push({ key: 'iter_evidence', kind: 'evidence', title: t.evidence.heading, text: iterEvidence(i), dest: t.evidence.destination });
 
   if (i.observations.length) {
@@ -321,12 +321,12 @@ export function draftIter(i: ItarInput, t: IterTemplate, f: IterFields): ItarSec
       `Learning cases: screenshots/PDFs uploaded by the resident, not retrieved from Brightspace${reviewers.length ? `; verified by ${andList(reviewers)}` : ''}.`,
       'EPA review: faculty attestation that the Elentra assessments were reviewed; no EPA data is retrieved from Elentra automatically.',
       `Faculty observations: ${i.observations.length}${authors.length ? ` (${andList(authors)})` : ''}.`,
-      'The portal assigns no rating and no overall outcome; both are the supervising faculty member\'s judgement, entered in Elentra.',
+      'The portal assigns no rating and no overall outcome; both are the supervising faculty member\'s judgement, entered and submitted in One45. Approval in the portal is a draft approval, not a One45 submission.',
     ].join('\n') });
   return S;
 }
 
-/** Plain-text transfer sheet: every section with its Elentra destination, in form order. */
+/** Plain-text transfer sheet: every section with its One45 destination, in form order. */
 export function composeIter(sections: ItarSection[]): string {
   return sections.map((s) => `${s.title.toUpperCase()}${s.dest ? `\n→ ${s.dest}` : ''}\n${s.text.trim()}`).join('\n\n');
 }

@@ -72,7 +72,7 @@ Not collected: student numbers, dates of birth, phone numbers, addresses, IP-bas
 | Accounts | Deactivate at graduation; delete per policy | Admin → People; deletion via SQL |
 | Media | While in use; archive afterwards; delete when authorization lapses | Storage API by an admin with dashboard access |
 | Learning-case evidence **files** | Configurable: Admin → ITAR setup → "days after the block ends" (empty = keep until deleted). Set per records-retention policy | The admin screen lists files past the period; deletion removes the file and keeps the record, review history and SHA-256; each deletion is audit-logged with a reason |
-| EPA reviews, ITAR drafts and approvals | Per PGME evaluation-record policy (the official ITAR lives in the institution's system) | Rows are not deletable in the app; export, then delete by an admin with database access |
+| EPA reviews, ITAR drafts and approvals | Per PGME evaluation-record policy (the official ITER lives in One45; EPAs in Elentra) | Rows are not deletable in the app; export, then delete by an admin with database access |
 | Audit log | ≥ 2 years | Database |
 
 **Backups:** Supabase Pro takes daily backups (Point-in-Time Recovery is an optional add-on). Also export results CSVs each block to the program's official records system. That system, not this portal, should hold the record of truth for evaluations.

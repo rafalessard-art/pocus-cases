@@ -45,7 +45,7 @@ export type WsAttempt = {
 };
 export type ItarSection = {
   key: string; title: string; text: string;
-  /** ITER-ready sections (iter.ts): what kind of content, and where it goes in Elentra */
+  /** ITER-ready sections (iter.ts): what kind of content, and where it goes in the One45 ITER */
   kind?: 'header' | 'evidence' | 'observations' | 'role' | 'outcome' | 'narrative' | 'basis' | 'discussed' | 'record'; dest?: string;
 };
 export type AttemptRule = 'latest_submitted' | 'faculty_selected' | 'none';
@@ -261,7 +261,7 @@ export function draftItar(i: ItarInput): ItarSection[] {
     : '• EPA review: pending.');
   const authors = [...new Set(i.observations.map((x) => x.author).filter(Boolean))] as string[];
   src.push(`• Direct observations: ${i.observations.length} entr${i.observations.length === 1 ? 'y' : 'ies'}${authors.length ? ` by ${andList(authors)}` : ''}.`);
-  src.push(`• Prepared in the POCUS Portal ITAR preparation workspace on ${fmt(i.today)}. The portal assigns no overall rating; the overall assessment is the supervising faculty member's judgement, recorded in the institution's official ITAR.`);
+  src.push(`• Prepared in the POCUS Portal ITAR preparation workspace on ${fmt(i.today)}. The portal assigns no overall rating; the overall assessment is the supervising faculty member's judgement, entered and submitted in the official ITER in One45.`);
   S.push({ key: 'sources', title: 'Evidence sources and verification status', text: src.join('\n') });
   return S;
 }

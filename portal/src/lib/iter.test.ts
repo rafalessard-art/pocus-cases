@@ -81,7 +81,7 @@ describe('ITER-ready summary structure', () => {
     const all = composeIter(s);
     for (const f of FORBIDDEN) expect(all).not.toMatch(f);
     for (const r of ['Unsatisfactory', 'Below expectations', 'Meets expectations', 'Above expectations', 'Outstanding']) expect(all).not.toContain(r);
-    expect(sec(s, 'iter_outcome').text).toBe('Not selected in the portal — select in Elentra.');
+    expect(sec(s, 'iter_outcome').text).toBe('Not selected in the portal — select in One45.');
     for (const o of T.outcome.options) expect(all).not.toContain(o);
   });
 
@@ -154,10 +154,12 @@ describe('faculty sections', () => {
     expect(r).toEqual(['EPA concern recorded: Only one lung assessment documented.', 'Outstanding: ONSD case: no evidence submitted.', 'Exam domains to review: Lung 50%.']);
   });
 
-  it('the transfer sheet lists each section with its Elentra destination', () => {
+  it('the transfer sheet lists each section with its One45 destination, never Elentra', () => {
     const txt = composeIter(draftIter(fixture(), T, { outcome: 'Yes, Fully' }));
-    expect(txt).toMatch(/OVERALL ROTATION OBJECTIVES\n→ Elentra ITER → rotation objectives: select the same option\.\nYes, Fully/);
-    expect(txt).toMatch(/SUMMARY OF STRENGTHS\n→ Elentra ITER → “Summary of strengths”: paste\./);
+    expect(txt).toMatch(/OVERALL ROTATION OBJECTIVES\n→ One45 ITER → rotation objectives: select the same option\.\nYes, Fully/);
+    expect(txt).toMatch(/SUMMARY OF STRENGTHS\n→ One45 ITER → “Summary of strengths”: paste\./);
+    expect(txt).not.toMatch(/Elentra ITER|in Elentra\b(?! on)/);
+    expect(txt).toMatch(/Approval in the portal is a draft approval, not a One45 submission\./);
   });
 });
 

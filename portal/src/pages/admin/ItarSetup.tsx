@@ -362,7 +362,7 @@ function RotationConfig() {
 
 type TplRow = { id: string; course_id: string | null; name: string; status: 'draft' | 'confirmed'; definition: unknown; confirmed_at: string | null; updated_at: string };
 
-/** Admin: the ITER export layout (headings, options and where each section goes in Elentra). */
+/** Admin: the ITER export layout (headings, options and where each section goes in the One45 ITER). */
 function IterTemplateConfig() {
   const list = useLoad(async () => {
     const { data, error } = await supabase.from('iter_templates').select('*').order('course_id', { nullsFirst: false });
@@ -374,7 +374,7 @@ function IterTemplateConfig() {
     <section style={{ marginBottom: 30 }}>
       <h2>ITER export template</h2>
       <p className="small muted">
-        Controls the headings, options and Elentra destinations of the ITER-ready summary. It never adds ratings or the outcome. The seeded layout is based on an elective ITER
+        Controls the headings, options and One45 destinations of the ITER-ready summary (the ITER itself is completed and submitted in One45). It never adds ratings or the outcome. The seeded layout is based on an elective ITER
         example — the rotation director should confirm it matches the current POCUS block ITER.
       </p>
       {list.loading && !list.data ? <Spinner /> : list.error ? <ErrorNote error={list.error} /> : !row ? <Empty>No template configured.</Empty>

@@ -29,6 +29,7 @@ Use **either** option.
 20261020001100_epa_verification.sql
 20261020001200_iter_export.sql
 20261020001300_iter_without_canmeds.sql
+20261020001400_one45_terminology.sql
 ```
 
 **B — Supabase CLI.**

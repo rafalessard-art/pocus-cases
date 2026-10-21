@@ -31,7 +31,7 @@ Vercel serves only static code; it stores no learner data.
    - SSO preference;
    - incident response.
 3. **Records retention:** evidence files, approved ITAR versions, exam records, audit log (see PRIVACY_AND_GOVERNANCE.md §5).
-4. **Program approval:** the director decisions (DIRECTOR_DECISIONS.md) and the PGME evaluation policy (the official ITAR remains in the institutional system).
+4. **Program approval:** the director decisions (DIRECTOR_DECISIONS.md) and the PGME evaluation policy (the official ITER is completed and submitted in One45; EPAs remain in Elentra).
 
 ## Technical items for production
 

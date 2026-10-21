@@ -80,7 +80,7 @@ export function BlocksPanel() {
           <p className="small muted" style={{ margin: '0 0 10px' }}>{dates(x)}</p>
           <div className="stats">
             <div className="stat"><b>{x.n_residents}</b><span>residents</span></div>
-            <div className="stat"><b>{x.n_approved}/{x.n_residents}</b><span>ITARs approved</span></div>
+            <div className="stat"><b>{x.n_approved}/{x.n_residents}</b><span>Drafts approved · ready for One45</span></div>
           </div>
         </Link>
       ))}
@@ -104,7 +104,7 @@ export function BlockOverview() {
     const c = x ? completion(x.requirements) : null;
     if (x) {
       const extra = requirementActions(x.requirements);
-      if ((x.itar?.changes_since_approval.length ?? 0) > 0) extra.faculty.push('Review new evidence (ITAR approved earlier)');
+      if ((x.itar?.changes_since_approval.length ?? 0) > 0) extra.faculty.push('Review new evidence (draft approved earlier)');
       if (a.done && (extra.faculty.length || extra.resident.length)) a.done = false; // an approved ITAR never hides outstanding requirements
       a.faculty.splice(a.faculty.length && !a.done ? a.faculty.length - 1 : a.faculty.length, 0, ...extra.faculty); // keep "Prepare/Approve ITAR" last
       a.resident.push(...extra.resident);
@@ -135,7 +135,7 @@ export function BlockOverview() {
           <div className="stat"><b>{count((r) => r.evidence.required > 0 && r.evidence.verified === r.evidence.required)}/{n}</b><span>cases all verified</span></div>
           <div className="stat"><b>{rq.data ? rows.filter((x) => x.x?.requirements.find((q) => q.kind === 'epa')?.status === 'verified').length : count((r) => r.epa_status === 'complete')}/{n}</b><span>EPA criteria met</span></div>
           {rq.data && <div className="stat"><b>{rows.filter((x) => x.c && x.c.outstanding === 0).length}/{n}</b><span>requirements complete</span></div>}
-          <div className="stat"><b>{count((r) => r.itar?.status === 'approved')}/{n}</b><span>ITARs approved</span></div>
+          <div className="stat"><b>{count((r) => r.itar?.status === 'approved')}/{n}</b><span>Drafts approved · ready for One45</span></div>
         </div>
       </section>
       <div className="row between" style={{ marginBottom: 10 }}>
@@ -202,8 +202,8 @@ export function BlockOverview() {
                   </td>
                   <td className="num">{r.n_observations}</td>
                   <td>
-                    {!r.itar ? <Badge>not started</Badge> : r.itar.status === 'approved' ? <Badge tone="ok">approved</Badge> : <Badge tone="warn">draft</Badge>}
-                    {(x?.itar?.changes_since_approval.length ?? 0) > 0 && <div><Badge tone="warn">new evidence since approval</Badge></div>}
+                    {!r.itar ? <Badge>not started</Badge> : r.itar.status === 'approved' ? <Badge tone="ok">draft approved — ready for One45</Badge> : <Badge tone="warn">draft</Badge>}
+                    {(x?.itar?.changes_since_approval.length ?? 0) > 0 && <div><Badge tone="warn">new evidence since draft approval</Badge></div>}
                   </td>
                   <td className="small">
                     {a.done ? <span className="muted">No action needed</span> : (
@@ -257,7 +257,7 @@ export function ItarWorkspace() {
     { id: 'cases', label: 'B · Learning cases', ok: req.length > 0 && nVerified === req.length, detail: `${nVerified}/${req.length} verified` },
     { id: 'epa', label: 'C · EPA review', ok: epaVerified(w.epa_review) && w.epa_review!.criteria_status === 'met', detail: epaVerified(w.epa_review) ? `criteria ${CRITERIA_LABEL[w.epa_review!.criteria_status!]}` : w.epa_review?.status === 'complete' ? 're-verify' : 'pending' },
     { id: 'observations', label: 'D · Observations', ok: blockObs.length > 0, detail: `${blockObs.length} recorded` },
-    { id: 'itar', label: tpl.data ? 'E · ITER summary' : 'E · ITAR draft', ok: locked, detail: locked ? 'approved' : ev ? 'draft' : 'not started' },
+    { id: 'itar', label: tpl.data ? 'E · ITER summary' : 'E · ITAR draft', ok: locked, detail: locked ? 'draft approved — ready for One45' : ev ? 'draft' : 'not started' },
   ];
 
   return (
@@ -270,8 +270,8 @@ export function ItarWorkspace() {
       </>}>
       <div className="no-print">
         <div className="notice small" style={{ marginBottom: 14 }}>
-          This workspace <strong>prepares</strong> an ITAR from evidence in the portal. It does not replace the official ITAR, assigns no overall rating and never infers
-          scanning, clinical or technical skill from exam scores.
+          This workspace <strong>prepares</strong> a draft from evidence in the portal. The official ITER is completed and submitted by faculty in <strong>One45</strong>;
+          C6 EPA assessments stay in Elentra. The portal assigns no rating, never infers scanning, clinical or technical skill from exam scores, and submits nothing.
         </div>
         <nav className="checklist" aria-label="Evidence checklist">
           {steps.map((s) => (
@@ -824,13 +824,13 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
       ok = legacyCopy(text); // locked-down browsers often block the async clipboard API
     }
     if (ok) {
-      setMsg(`${label} copied — paste it into ${iterMode ? 'Elentra' : 'the official ITAR'}.`);
+      setMsg(`${label} copied — paste it into the ITER in One45.`);
       logExport(iterMode ? `iter_${format}` : format);
     } else {
       setErr(new Error('The browser blocked clipboard access. Use “Download .txt”, or select the text and copy it manually.'));
     }
   }
-  const header = `${iterMode ? 'ITER-ready summary' : 'ITAR preparation'} — ${name}${w.learner.training_level ? ` (${w.learner.training_level})` : ''}\n${w.cohort.course}, ${w.cohort.name} (${dates(w.cohort)})\nStatus: ${locked ? `approved by ${ev?.approved_by_name ?? 'faculty'} on ${fmtDate(ev?.approved_at)}` : 'DRAFT — not approved'}\n${iterMode ? 'Copy each section into the Elentra ITER field shown after →. Ratings and the overall outcome are selected by faculty in Elentra; nothing is submitted automatically.\n' : ''}\n`;
+  const header = `${iterMode ? 'ITER-ready summary' : 'ITAR preparation'} — ${name}${w.learner.training_level ? ` (${w.learner.training_level})` : ''}\n${w.cohort.course}, ${w.cohort.name} (${dates(w.cohort)})\nStatus: ${locked ? `draft approved by ${ev?.approved_by_name ?? 'faculty'} on ${fmtDate(ev?.approved_at)} — ready for One45 (not submitted)` : 'DRAFT — not approved'}\n${iterMode ? 'Copy each section into the One45 ITER field shown after →. CanMEDS ratings and the overall outcome are selected by faculty in One45, where the ITER is reviewed and submitted; the portal submits nothing.\n' : ''}\n`;
   const setSection = (i: number, text: string) => setF({ ...f, sections: f.sections.map((s, j) => (j === i ? { ...s, text } : s)) });
   const reminders = iterMode ? areaReminders(input, todo) : [];
   const suggested = T ? suggestBasis(input, T) : [];
@@ -855,7 +855,7 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
                 onChange={() => setFaculty({ iter: { ...f.iter, outcome: o } })} /> {o}</label>
             ))}
             <label className="check muted" style={{ display: 'flex' }}><input type="radio" name="iter-outcome" checked={!f.iter.outcome} disabled={locked}
-              onChange={() => setFaculty({ iter: { ...f.iter, outcome: null } })} /> Not selected here (select in Elentra)</label>
+              onChange={() => setFaculty({ iter: { ...f.iter, outcome: null } })} /> Not selected here (select in One45)</label>
           </div>
         </fieldset>
       );
@@ -895,7 +895,7 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
             </div>
           )}
           <textarea rows={3} value={value} disabled={locked} onChange={(e) => set(e.target.value)} aria-label={s.title}
-            placeholder={T.narrative[k].required ? 'Required — your own words' : 'Optional — or write it directly in Elentra'} data-testid={`iter-${k}`} />
+            placeholder={T.narrative[k].required ? 'Required — your own words' : 'Optional — or write it directly in One45'} data-testid={`iter-${k}`} />
         </>
       );
     }
@@ -906,7 +906,7 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
     <section>
       <div className="no-print">
         <SectionHead id="itar" letter="E" title={iterMode ? 'ITER-ready summary' : 'ITAR draft'}>
-          {locked ? <Badge tone="ok">Approved {fmtDate(ev?.approved_at)}{ev?.approved_by_name ? ` · ${ev.approved_by_name}` : ''}</Badge> : ev ? <Badge tone="warn">Draft</Badge> : <Badge>Not started</Badge>}
+          {locked ? <Badge tone="ok">Draft approved — ready for One45 · {fmtDate(ev?.approved_at)}{ev?.approved_by_name ? ` · ${ev.approved_by_name}` : ''}</Badge> : ev ? <Badge tone="warn">Draft</Badge> : <Badge>Not started</Badge>}
         </SectionHead>
         {template && iterMode && (
           <p className="small muted" style={{ marginTop: -4 }} data-testid="iter-template">
@@ -914,13 +914,13 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
             {template.status === 'confirmed'
               ? <Badge tone="ok">confirmed{template.confirmed_by_name ? ` by ${template.confirmed_by_name}` : ''}</Badge>
               : <><Badge tone="warn">draft</Badge> The rotation director still needs to confirm it matches the current POCUS block ITER.</>}
-            {' '}The overall outcome and any ratings are never filled in by the portal. Nothing is sent to Elentra.
+            {' '}The overall outcome and CanMEDS ratings are never filled in by the portal. Nothing is sent to One45.
           </p>
         )}
-        {locked && changes.length === 0 && <div className="notice ok small" style={{ marginBottom: 12 }}>Approved and locked. Copy each section into {iterMode ? 'Elentra' : 'the official ITAR'}. Re-open to make changes (recorded in the audit log).</div>}
+        {locked && changes.length === 0 && <div className="notice ok small" style={{ marginBottom: 12 }} data-testid="ready-for-one45"><strong>Draft approved — ready for One45.</strong> This does not submit the ITER: copy each section into the resident's ITER in One45, complete the ratings there, then review and submit it in One45. Re-open here to make changes (recorded in the audit log).</div>}
         {locked && changes.length > 0 && (
           <div className="notice warn small" style={{ marginBottom: 12 }} data-testid="itar-changed">
-            <strong>New evidence since this ITAR was approved ({fmtDate(ev?.approved_at)}).</strong> The approved version is unchanged and preserved.
+            <strong>New evidence since this draft was approved ({fmtDate(ev?.approved_at)}).</strong> The approved draft is unchanged and preserved. If you already submitted the ITER in One45, any correction is made in One45.
             <ul style={{ margin: '6px 0' }}>{changes.map((c, i) => <li key={i}>{c.area}: {c.what} — {fmtDate(c.at)}</li>)}</ul>
             If this affects the evaluation, start a revision: re-open, regenerate, review and approve again (a new version is kept alongside the original).
             <div style={{ marginTop: 8 }}><button className="btn small" onClick={() => setConfirm('reopen')} data-testid="start-revision">Start a revision…</button></div>
@@ -958,14 +958,14 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
         )}
         {iterMode && f.sections.length > 0 && (
           <details className="disclosure" style={{ marginBottom: 10 }} data-testid="iter-howto">
-            <summary>How to transfer this into the Elentra ITER</summary>
+            <summary>How to transfer this into the One45 ITER</summary>
             <ol className="small" style={{ margin: '6px 0 0' }}>
-              <li>Open the resident's ITER in Elentra next to this page and check the resident, rotation and dates.</li>
+              <li>Open the resident's ITER in One45 next to this page and check the resident, rotation and dates.</li>
               <li>Read <em>{T?.evidence.heading ?? 'Verified rotation evidence'}</em> — it is factual and is the basis for your ratings.</li>
-              <li>Complete the rating boxes in Elentra yourself, as usual.</li>
-              <li>Select the same <em>{T?.outcome.heading ?? 'rotation objectives'}</em> option in Elentra.</li>
+              <li>Complete the CanMEDS rating boxes in One45 yourself, as usual.</li>
+              <li>Select the same <em>{T?.outcome.heading ?? 'rotation objectives'}</em> option in One45.</li>
               <li>Copy each narrative section into the field with the same heading.</li>
-              <li>Tick the same <em>{T?.basis.heading ?? 'basis of assessment'}</em> boxes and the discussion answer, then submit in Elentra as usual.</li>
+              <li>Tick the same <em>{T?.basis.heading ?? 'basis of assessment'}</em> boxes and the discussion answer, then review and submit the ITER in One45 as usual. Approving the draft here does not submit it.</li>
             </ol>
           </details>
         )}
@@ -989,7 +989,7 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
         <div className="row" style={{ marginTop: 14 }}>
           {!locked && <button className="btn secondary" disabled={busy || !f.sections.length} onClick={() => save(false)} data-testid="save-eval">Save draft</button>}
           {!locked && <button className="btn" disabled={busy || !f.sections.length || placeholders} onClick={() => setConfirm('approve')} data-testid="approve-eval"
-            title={placeholders ? 'Replace the [Faculty to complete …] placeholders first' : undefined}>Approve…</button>}
+            title={placeholders ? 'Replace the [Faculty to complete …] placeholders first' : undefined}>Approve draft…</button>}
           {locked && <button className="btn secondary" onClick={() => setConfirm('reopen')}>Re-open for editing</button>}
           {f.sections.length > 0 && <button className="btn secondary" onClick={() => copy(compose(f.sections), 'copy_all', iterMode ? 'Whole ITER-ready summary' : 'Whole draft')} data-testid="copy-all">{iterMode ? 'Copy all (with Elentra destinations)' : 'Copy all'}</button>}
           {f.sections.length > 0 && <button className="btn secondary" onClick={() => { download(`${fileBase}.txt`, header + compose(f.sections), 'text/plain;charset=utf-8'); logExport(iterMode ? 'iter_text' : 'text'); }} data-testid="export-text">Download .txt</button>}
@@ -1004,7 +1004,7 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
       {/* print view: only the draft */}
       <div className="print-only">
         <h1 style={{ fontSize: 22 }}>{iterMode ? 'ITER-ready summary' : 'ITAR preparation'} — {name}</h1>
-        <p>{w.cohort.course}, {w.cohort.name} ({dates(w.cohort)}) · {locked ? `Approved by ${ev?.approved_by_name ?? 'faculty'} on ${fmtDate(ev?.approved_at)}` : 'DRAFT — not approved'}</p>
+        <p>{w.cohort.course}, {w.cohort.name} ({dates(w.cohort)}) · {locked ? `Draft approved by ${ev?.approved_by_name ?? 'faculty'} on ${fmtDate(ev?.approved_at)} — ready for One45; not submitted by the portal` : 'DRAFT — not approved'}</p>
         {f.sections.map((s) => (
           <div key={s.key} style={{ breakInside: 'avoid', marginBottom: 12 }}>
             <h3 style={{ marginBottom: 2 }}>{s.title}</h3>
@@ -1019,10 +1019,10 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
           body={<p>Evidence and observation sections are rebuilt from the current records{T ? ' in the ITER-ready layout' : ''}. Your strengths, areas, other narrative and selections are kept; edits you typed directly into evidence or observation sections are replaced.</p>} />
       )}
       {confirm === 'approve' && (
-        <Confirm title={iterMode ? 'Approve this ITER-ready summary?' : 'Approve this ITAR draft?'} confirmLabel="Approve and lock" onCancel={() => setConfirm(null)} onConfirm={() => save(true)}
+        <Confirm title="Approve this draft for One45?" confirmLabel="Approve draft" onCancel={() => setConfirm(null)} onConfirm={() => save(true)}
           body={<div className="stack small">
             <p>By approving, you confirm that you reviewed the evidence and this text, that it reflects your professional judgement, and that it contains no statement about clinical or technical performance that was not directly observed.</p>
-            <p>{iterMode ? 'Ratings and the overall rotation outcome are selected by you in Elentra; the portal assigns none and submits nothing.' : 'The overall rating is recorded by you in the official ITAR; this portal does not assign one.'}</p>
+            <p>Approving here locks the draft as <strong>ready for One45</strong>; it does <strong>not</strong> submit the ITER. CanMEDS ratings and the overall rotation outcome are selected by you in One45, where you review and submit the ITER. The portal assigns no rating and submits nothing.</p>
           </div>} />
       )}
       {confirm === 'reopen' && (
@@ -1269,7 +1269,7 @@ function VersionHistory({ evaluationId, count }: { evaluationId: string | null; 
   if (!evaluationId || count === 0) return null;
   return (
     <details className="disclosure" style={{ marginBottom: 12 }} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)} data-testid="itar-versions">
-      <summary>Approved versions ({count}) — preserved exactly as approved</summary>
+      <summary>Approved draft versions ({count}) — preserved exactly as approved</summary>
       {v.loading && <Spinner />}
       <ErrorNote error={v.error} />
       {(v.data ?? []).map((x) => (

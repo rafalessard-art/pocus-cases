@@ -43,7 +43,7 @@ Verified live on the preview: fictional Alex Demo-Resident has version 1, then n
 
 A typical resident takes about 15–20 clicks plus the judgement text faculty must write anyway.
 
-Remaining manual entry is by design: EPA details (until an approved Elentra integration) and pasting into the official ITAR system.
+Remaining manual entry is by design: EPA details (until an approved Elentra integration) and pasting into the official ITER in One45.
 
 **Not added** (would add burden or weaken attestation):
 - automatic views confirmation;
