@@ -382,6 +382,10 @@ test('full examination lifecycle', async ({ page, context }) => {
     await expect(task).toContainText('Review evidence (4)');
     await expect(task).toContainText('Prepare ITER draft');
     await expect(task.getByRole('link', { name: 'Review evidence (4)' })).toHaveAttribute('href', /\/app\/faculty\/itar\/.+#cases$/);
+    // faculty have one entry point: no separate "Home" that would redirect here anyway
+    const nav = page.getByRole('navigation', { name: 'Main' });
+    await expect(nav.getByRole('link', { name: 'Home', exact: true })).toHaveCount(0);
+    await expect(nav.getByRole('link', { name: 'Faculty Dashboard' })).toHaveAttribute('aria-current', 'page');
     await shot(page, '12-faculty-dashboard');
     await page.getByTestId('block-card').filter({ hasText: cohortName }).click();
     await expect(page.getByRole('heading', { name: cohortName })).toBeVisible();

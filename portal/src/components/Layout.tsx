@@ -36,11 +36,11 @@ export function TopNav({ children }: { children?: ReactNode }) {
         <a href="/" className="brand" title="Back to the public case series">POCUS Cases</a>
         {profile && (
           <>
-            <NavLink to="/" end>Home</NavLink>
+            {/* Faculty and admins land on their dashboard ("/" redirects there), so they get one link, not two. */}
+            {isStaff(profile) ? <NavLink to="/faculty">Faculty Dashboard</NavLink> : <NavLink to="/" end>Home</NavLink>}
             <NavLink to="/curriculum">Curriculum</NavLink>
             <NavLink to="/exams">Examinations</NavLink>
             {!isStaff(profile) && <NavLink to="/requirements">Requirements</NavLink>}
-            {isStaff(profile) && <NavLink to="/faculty">Faculty Dashboard</NavLink>}
             {isAdmin(profile) && <NavLink to="/admin">Admin</NavLink>}
           </>
         )}
