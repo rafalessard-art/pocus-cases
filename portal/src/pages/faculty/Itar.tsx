@@ -848,10 +848,10 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
           <legend className="sr-only">{s.title}</legend>
           <div className="stack" style={{ gap: 4 }}>
             {T.outcome.options.map((o) => (
-              <label key={o} className="check"><input type="radio" name="iter-outcome" checked={f.iter.outcome === o} disabled={locked}
+              <label key={o} className="check" style={{ display: 'flex' }}><input type="radio" name="iter-outcome" checked={f.iter.outcome === o} disabled={locked}
                 onChange={() => setFaculty({ iter: { ...f.iter, outcome: o } })} /> {o}</label>
             ))}
-            <label className="check muted"><input type="radio" name="iter-outcome" checked={!f.iter.outcome} disabled={locked}
+            <label className="check muted" style={{ display: 'flex' }}><input type="radio" name="iter-outcome" checked={!f.iter.outcome} disabled={locked}
               onChange={() => setFaculty({ iter: { ...f.iter, outcome: null } })} /> Not selected here (select in Elentra)</label>
           </div>
         </fieldset>
@@ -862,7 +862,7 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
       return (
         <div className="stack" style={{ gap: 4 }} data-testid="iter-basis">
           {T.basis.options.map((o) => (
-            <label key={o} className="check"><input type="checkbox" checked={sel.includes(o)} disabled={locked}
+            <label key={o} className="check" style={{ display: 'flex' }}><input type="checkbox" checked={sel.includes(o)} disabled={locked}
               onChange={(e) => setFaculty({ iter: { ...f.iter, basis: e.target.checked ? T.basis.options.filter((x) => x === o || sel.includes(x)) : sel.filter((x) => x !== o) } })} /> {o}
               {suggested.includes(o) && <span className="small muted"> — portal records support this</span>}</label>
           ))}
@@ -910,7 +910,7 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
             Layout: <strong>{template.name}</strong>{' '}
             {template.status === 'confirmed'
               ? <Badge tone="ok">confirmed{template.confirmed_by_name ? ` by ${template.confirmed_by_name}` : ''}</Badge>
-              : <Badge tone="warn">draft — rotation director to confirm it matches the current POCUS block ITER</Badge>}
+              : <><Badge tone="warn">draft</Badge> The rotation director still needs to confirm it matches the current POCUS block ITER.</>}
             {' '}Ratings and the overall outcome are never filled in by the portal. Nothing is sent to Elentra.
           </p>
         )}

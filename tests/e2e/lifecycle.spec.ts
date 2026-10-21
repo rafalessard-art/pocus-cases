@@ -493,7 +493,7 @@ test('full examination lifecycle', async ({ page, context }) => {
   });
 
   await test.step('the ITER-ready summary is assembled from the evidence, completed by faculty and approved', async () => {
-    await expect(page.getByTestId('iter-template')).toContainText('draft — rotation director to confirm');
+    await expect(page.getByTestId('iter-template')).toContainText('The rotation director still needs to confirm it matches the current POCUS block ITER');
     await page.getByTestId('generate-draft').click();
     const ev = page.getByTestId('section-iter_evidence');
     await expect(ev).toHaveValue(/^Completion and assessment records verified in the POCUS portal\. They are not CanMEDS ratings/);
