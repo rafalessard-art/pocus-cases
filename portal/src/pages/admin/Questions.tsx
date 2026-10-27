@@ -114,7 +114,10 @@ export function QuestionEditor() {
         const { data: vers } = await supabase.from('question_versions').select('id, version, locked, created_at, stem').eq('question_id', id).order('version', { ascending: false });
         const { data: v } = await supabase.from('question_versions').select('*').eq('id', qq.current_version_id).single();
         const { data: k } = await supabase.from('question_keys').select('key').eq('question_version_id', v.id).maybeSingle();
-        const { data: m } = await supabase.from('question_version_media').select('*, media_versions(*, media_assets(*))').eq('question_version_id', v.id).order('position');
+        // media_versions ↔ media_assets have two FKs, so the embed must name one; and a failed media
+        // load must stop the editor, because saving with an empty list would detach the question's media.
+        const { data: m, error: mErr } = await supabase.from('question_version_media').select('*, media_versions(*, media_assets!media_versions_asset_id_fkey(*))').eq('question_version_id', v.id).order('position');
+        if (mErr) throw mErr;
         setF({
           question_key: qq.question_key ?? '',
           type: v.type,
