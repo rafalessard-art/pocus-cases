@@ -64,7 +64,7 @@ How each loop is done: you export an MP4 from QPath. Claude blacks out the burne
 - **You:**
   - send the remaining QPath exports;
   - approve the 8 stills;
-  - optional: set up your own email sender (see "Test it yourself", step 1).
+  - optional: set up your own email sender, so sign-in codes always arrive (Supabase → Authentication → SMTP).
 - **Rotation director (12 decisions in [DIRECTOR_DECISIONS](docs/exam-platform/DIRECTOR_DECISIONS.md)):** among them, C6 EPA criteria, scan counts, the ITER template used in One45, exam attempts and feedback, and the case list.
 - **Faculty:** confirm the 3 exam typos; review the draft exam before it's published.
 
@@ -82,6 +82,7 @@ How each loop is done: you export an MP4 from QPath. Claude blacks out the burne
 ## What Claude changed most recently
 
 - **Oct 28:**
+  - Set up your two Chrome windows: Faculty in your main profile, Resident (Jordan) in "POCUS Resident".
   - This overview.
   - `npm run visual`, a screenshot report on a local test copy.
   - Local-only test settings.
@@ -95,7 +96,11 @@ How each loop is done: you export an MP4 from QPath. Claude blacks out the burne
 
 **Look at the live demonstration (no code)**
 
-1. Make two Chrome profiles, **POCUS Faculty** and **POCUS Resident**. In each one, log in to vercel.com once (that clears the preview login wall) and open the portal link. Sign in once with the matching demo account: your admin account, or the fictional resident (Jordan). Each profile stays signed in, so you won't need another code unless you sign out.
+1. Two Chrome windows are already set up (Oct 28), each logged in to Vercel and to the portal:
+   - **your main Chrome profile ("Rafa")** is the **faculty/admin** view;
+   - the **"POCUS Resident"** profile is signed in as the fictional resident **Jordan**.
+
+   They stay signed in, so you won't need another code unless you sign out. Claude in Chrome is installed in both, so Claude can check either view.
    - If a code doesn't arrive, it's because the demo project uses Supabase's built-in sender, which allows only about 2 emails per hour. Wait, or set up your own sender: Supabase → Authentication → SMTP, with a Gmail app password you enter yourself.
 2. After a Claude session, open the portal in each profile and refresh. You're always looking at the newest build.
 
