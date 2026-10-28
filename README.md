@@ -2,6 +2,8 @@
 
 A small static teaching site by Raphael Lessard, MD — simulated point-of-care ultrasound cases for senior anesthesiology residents. Live at <https://pocus-cases.vercel.app>.
 
+**Portal project status:** see [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md).
+
 ## What's here
 
 ### Pages

@@ -4,6 +4,7 @@ The portal lives at **`/app`** on the existing site. The public teaching cases a
 
 | Document | What it covers |
 |---|---|
+| [PROJECT_OVERVIEW.md](../../PROJECT_OVERVIEW.md) | **Start here:** current status, links, exam migration progress, blockers, how to test |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Supabase project, auth settings, email, Vercel env vars, first admin, go-live checklist, costs |
 | [MEDIA_GUIDE.md](MEDIA_GUIDE.md) | Exporting, converting, de-identifying and uploading ultrasound loops; storage choice |
 | [EXAMBUILDER_MIGRATION.md](EXAMBUILDER_MIGRATION.md) | What ExamBuilder can export, and the authorized migration plan |

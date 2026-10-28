@@ -6,6 +6,39 @@
 | Database (RLS, secrecy, versioning, autosave, timing, grading, release, storage policy, evaluations) | `npm run test:db` | Postgres with Supabase roles + migrations applied |
 | End-to-end lifecycle in a real browser (incl. axe WCAG 2.1 AA checks, phone width, offline) | `npm run test:e2e` | the full stack serving `dist/` + a mail catcher |
 | Types | `npm run typecheck` | nothing |
+| **Visual report** (screenshots of every main screen) | `npm run visual` | Docker + Supabase CLI, `supabase start` |
+
+## Visual report — one command
+
+`npm run visual` runs the end-to-end test on a local copy of the portal and writes **`visual-report/index.html`**. The report groups the screenshots by screen: resident dashboard, requirements and scans, exam interface, faculty dashboard, learner workspace, exam management, and ITER Quick Copy. Pass or fail and the commit are shown at the top. On a Mac the report opens automatically.
+
+**One-time setup:**
+1. Install Docker: Docker Desktop, or the free OrbStack or Colima.
+2. Install the Supabase CLI: `brew install supabase/tap/supabase`.
+3. In this folder, run `npm ci`, then `npx playwright install chromium`.
+
+**Each time:** start Docker, then:
+- run `supabase start` (the first run downloads images for a few minutes; leave it running);
+- run `npm run visual`;
+- when finished, `supabase stop`.
+
+**What it does**, in `scripts/visual-report.mjs`:
+1. Reads the local stack's addresses from `supabase status`.
+2. Resets the **local** database (migrations + seed).
+3. Builds the site against it.
+4. Serves the site with `scripts/local-gateway.mjs`. The gateway puts the site, the API and the local mail catcher on one address, `http://127.0.0.1:4173`.
+5. Runs `npx playwright test` with `E2E_SHOTS`, then builds the page.
+
+**Options:**
+- `--no-reset` keeps the local data.
+- `--report-only` rebuilds the page from the last screenshots.
+- `--no-open` doesn't open the report.
+
+**Safety.** The runner and `playwright.config.ts` both refuse any address that isn't localhost. After building, the runner checks that the portal points only at the local stack, and stops if it mentions a hosted Supabase project. The demonstration and production databases are never touched.
+
+The local-only settings in `supabase/config.toml` (a higher email limit and the `:4173` redirect) affect only `supabase start`, not the hosted projects.
+
+**Status (Oct 28):** the gateway, mail adapter, safety checks and report page were each checked in the development workspace. That workspace can't download Supabase's container images, so the first complete run of `npm run visual` happens on a Mac with Docker.
 
 ## With the Supabase CLI (Docker)
 

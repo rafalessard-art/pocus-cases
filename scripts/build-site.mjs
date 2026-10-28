@@ -21,7 +21,7 @@ const EXCLUDE = new Set([
   'dist', 'node_modules', 'portal', 'supabase', 'scripts', 'tests', 'docs', 'tools', 'design-system', '_backups',
   '.git', '.github', '.claude', '.vercel', '.env', '.env.local', '.env.example', 'package.json', 'package-lock.json',
   'vitest.config.ts', 'playwright.config.ts', 'tsconfig.json', 'vercel.json', '.gitignore', '.vercelignore',
-  'test-results', 'playwright-report',
+  'test-results', 'playwright-report', 'visual-report', 'PROJECT_OVERVIEW.md', 'CLAUDE.md',
 ]);
 
 rmSync(dist, { recursive: true, force: true });

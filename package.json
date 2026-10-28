@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:unit": "vitest run portal/src",
     "test:db": "vitest run tests/db",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "visual": "node scripts/visual-report.mjs"
   },
   "engines": {
     "node": ">=20"
