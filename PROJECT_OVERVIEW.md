@@ -1,6 +1,6 @@
 # POCUS Portal — Project Overview
 
-*The one page to open first. Last updated: **Oct 28, 2026**. Updated after every meaningful change.*
+*The one page to open first. Last updated: **Oct 30, 2026**. Updated after every meaningful change.*
 
 > This repository is public. This page never contains answer keys, exam content, real learner data, passwords or keys.
 
@@ -52,7 +52,7 @@
 | Item | Status |
 |---|---|
 | Questions | 50 of 50 loaded as a draft exam (pass mark 75%); every question has an answer key |
-| Ultrasound loops | **2 of 28 done and approved** (Q1, Q2) · **26 to go**: Q3–20, 40, 43, 44, 45 (two loops), 46, 47, 48 |
+| Ultrasound loops | **3 of 28 uploaded**: Q1 and Q2 approved, **Q8 awaiting your approval** · **25 to go**: Q3–7, Q9–20, 40, 43, 44, 45 (two loops), 46, 47, 48 |
 | Still images | 8 uploaded (Q28, 35–40, 48), **awaiting your approval** in the media library |
 | Typos kept from the source | 3 to confirm with faculty |
 | Publishing | Waits for the loops, the media approvals and faculty sign-off |
@@ -62,6 +62,7 @@ How each loop is done: you export an MP4 from QPath. Claude blacks out the burne
 ## Open tasks and decisions
 
 - **You:**
+  - approve the Q8 loop (Admin → Media library → PT-08-loop → Authorized);
   - send the remaining QPath exports;
   - approve the 8 stills;
   - optional: set up your own email sender, so sign-in codes always arrive (Supabase → Authentication → SMTP).
@@ -81,6 +82,7 @@ How each loop is done: you export an MP4 from QPath. Claude blacks out the burne
 
 ## What Claude changed most recently
 
+- **Oct 30:** Q8 loop (apical 5-chamber) de-identified, uploaded and attached; awaiting approval.
 - **Oct 28:**
   - Set up your two Chrome windows: Faculty in your main profile, Resident (Jordan) in "POCUS Resident".
   - This overview.
