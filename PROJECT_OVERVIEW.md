@@ -52,7 +52,7 @@
 | Item | Status |
 |---|---|
 | Questions | 50 of 50 loaded as a draft exam (pass mark 75%); every question has an answer key |
-| Ultrasound loops | **4 of 28 uploaded**: Q1, Q2 and Q8 approved, **Q7 awaiting your approval** · **24 to go**: Q3–6, Q9–20, 40, 43, 44, 45 (two loops), 46, 47, 48 |
+| Ultrasound loops | **5 of 28 uploaded**: Q1, Q2, Q7 and Q8 approved, **Q12 awaiting your approval** · **23 to go**: Q3–6, Q9–11, Q13–20, 40, 43, 44, 45 (two loops), 46, 47, 48 |
 | Still images | 8 uploaded (Q28, 35–40, 48), **awaiting your approval** in the media library |
 | Typos kept from the source | 3 to confirm with faculty |
 | Publishing | Waits for the loops, the media approvals and faculty sign-off |
@@ -62,7 +62,7 @@ How each loop is done: you export an MP4 from QPath. Claude blacks out the burne
 ## Open tasks and decisions
 
 - **You:**
-  - approve the Q7 loop (Admin → Media library → PT-07-loop → Authorized);
+  - approve the Q12 loop (Admin → Media library → PT-12-loop → Authorized);
   - send the remaining QPath exports;
   - approve the 8 stills;
   - optional: set up your own email sender, so sign-in codes always arrive (Supabase → Authentication → SMTP).
@@ -82,7 +82,7 @@ How each loop is done: you export an MP4 from QPath. Claude blacks out the burne
 
 ## What Claude changed most recently
 
-- **Oct 30:** Q8 loop (apical 5-chamber) de-identified, uploaded and approved; Q7 loop (PSAX at the aortic valve) de-identified, uploaded and attached, awaiting approval.
+- **Oct 30:** Q7 and Q8 loops de-identified, uploaded and approved; Q12 loop (gastric antrum) de-identified, uploaded and attached, awaiting approval.
 - **Oct 28:**
   - Set up your two Chrome windows: Faculty in your main profile, Resident (Jordan) in "POCUS Resident".
   - This overview.
