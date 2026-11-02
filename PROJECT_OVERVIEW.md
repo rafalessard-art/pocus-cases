@@ -52,7 +52,7 @@
 | Item | Status |
 |---|---|
 | Questions | 50 of 50 loaded as a draft exam (pass mark 75%); every question has an answer key |
-| Ultrasound loops | **7 of 28 uploaded**: Q1, Q2, Q7, Q8, Q12 and Q13 approved, **Q3 awaiting your approval** · **21 to go**: Q4–6, Q9–11, Q14–20, 40, 43, 44, 45 (two loops), 46, 47, 48 |
+| Ultrasound loops | **8 of 28 uploaded**: Q1, Q2, Q7, Q8, Q12 and Q13 approved, **Q3 and Q4 awaiting your approval** · **20 to go**: Q5, Q6, Q9–11, Q14–20, 40, 43, 44, 45 (two loops), 46, 47, 48 |
 | Still images | 8 uploaded (Q28, 35–40, 48), **awaiting your approval** in the media library |
 | Typos kept from the source | 3 to confirm with faculty |
 | Publishing | Waits for the loops, the media approvals and faculty sign-off |
@@ -62,7 +62,7 @@ How each loop is done: you export an MP4 from QPath. Claude blacks out the burne
 ## Open tasks and decisions
 
 - **You:**
-  - approve the Q3 loop (Admin → Media library → PT-03-loop → Authorized);
+  - approve the Q3 and Q4 loops (Admin → Media library → PT-03-loop / PT-04-loop → Authorized);
   - send the remaining QPath exports;
   - approve the 8 stills;
   - optional: set up your own email sender, so sign-in codes always arrive (Supabase → Authentication → SMTP).
@@ -82,7 +82,7 @@ How each loop is done: you export an MP4 from QPath. Claude blacks out the burne
 
 ## What Claude changed most recently
 
-- **Nov 2:** Q3 loop (PLAX, pleural effusion) de-identified, uploaded and attached; awaiting approval.
+- **Nov 2:** Q3 (PLAX, pleural effusion) and Q4 (A4C, LV dysfunction) loops de-identified, uploaded and attached; awaiting approval.
 - **Oct 30:** Q7 and Q8 loops de-identified, uploaded and approved; Q12 and Q13 loops (gastric) de-identified, uploaded and approved.
 - **Oct 28:**
   - Set up your two Chrome windows: Faculty in your main profile, Resident (Jordan) in "POCUS Resident".
