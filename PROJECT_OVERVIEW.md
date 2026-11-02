@@ -52,7 +52,7 @@
 | Item | Status |
 |---|---|
 | Questions | 50 of 50 loaded as a draft exam (pass mark 75%); every question has an answer key |
-| Ultrasound loops | **14 of 28 done and approved** (Q1–8, Q10, Q12, Q13, Q15, Q16, Q18; Q5 reuses the Q3 loop; Q16 has an added arrow) · **Q9, Q11 and Q14 use approved still images instead** · **Q19 uploaded (Q18 clip with an added arrow), awaiting your approval** · **10 to go**: Q17, Q20, 40, 43, 44, 45 (two loops), 46, 47, 48 |
+| Ultrasound loops | **15 of 28 done and approved** (Q1–8, Q10, Q12, Q13, Q15, Q16, Q18, Q19; Q5 reuses the Q3 loop; Q19 is the Q18 clip with an added arrow; Q16 also has an added arrow) · **Q9, Q11 and Q14 use approved still images instead** · **10 to go**: Q17, Q20, 40, 43, 44, 45 (two loops), 46, 47, 48 |
 | Still images | 8 uploaded (Q28, 35–40, 48), **awaiting your approval** in the media library |
 | Typos kept from the source | 3 to confirm with faculty |
 | Publishing | Waits for the loops, the media approvals and faculty sign-off |
@@ -63,7 +63,7 @@ How each loop is done: you export an MP4 from QPath. Claude blacks out the burne
 
 - **You:**
   - send the remaining QPath exports;
-  - approve the Q19 loop and the 8 stills;
+  - approve the 8 stills;
   - optional: set up your own email sender, so sign-in codes always arrive (Supabase → Authentication → SMTP).
 - **Rotation director (12 decisions in [DIRECTOR_DECISIONS](docs/exam-platform/DIRECTOR_DECISIONS.md)):** among them, C6 EPA criteria, scan counts, the ITER template used in One45, exam attempts and feedback, and the case list.
 - **Faculty:** confirm the 3 exam typos; review the draft exam before it's published.
@@ -81,7 +81,7 @@ How each loop is done: you export an MP4 from QPath. Claude blacks out the burne
 
 ## What Claude changed most recently
 
-- **Nov 2:** Q19 reuses the Q18 clip with a yellow arrow added, awaiting approval. Q18 loop (PLAX) de-identified, uploaded and approved. Q16 loop (A4C) de-identified with a yellow arrow added, then the arrow moved slightly lateral at your request (version 2), approved. Q15 loop (subcostal) de-identified, uploaded and approved. Q11's question wording corrected. Q14 now uses a de-identified still from the existing exam image (source logo and player controls removed), approved. Q9's question now says "image" instead of "video clip". Q11 now uses two de-identified stills side by side (headers removed), approved. Q10 loop (lung) de-identified, uploaded and approved. Q9 now uses a de-identified still from the existing exam image (date/time and player controls removed), approved. Q3 loop (PLAX, pleural effusion) uploaded and approved. Q4 loop (A4C, LV dysfunction) uploaded, then replaced with the correct clip (version 2) and approved. Q5 now reuses the approved Q3 loop. Q6 loop (subcostal, pericardial effusion) uploaded and approved.
+- **Nov 2:** Q19 reuses the Q18 clip with a yellow arrow added, approved. Q18 loop (PLAX) de-identified, uploaded and approved. Q16 loop (A4C) de-identified with a yellow arrow added, then the arrow moved slightly lateral at your request (version 2), approved. Q15 loop (subcostal) de-identified, uploaded and approved. Q11's question wording corrected. Q14 now uses a de-identified still from the existing exam image (source logo and player controls removed), approved. Q9's question now says "image" instead of "video clip". Q11 now uses two de-identified stills side by side (headers removed), approved. Q10 loop (lung) de-identified, uploaded and approved. Q9 now uses a de-identified still from the existing exam image (date/time and player controls removed), approved. Q3 loop (PLAX, pleural effusion) uploaded and approved. Q4 loop (A4C, LV dysfunction) uploaded, then replaced with the correct clip (version 2) and approved. Q5 now reuses the approved Q3 loop. Q6 loop (subcostal, pericardial effusion) uploaded and approved.
 - **Oct 30:** Q7 and Q8 loops de-identified, uploaded and approved; Q12 and Q13 loops (gastric) de-identified, uploaded and approved.
 - **Oct 28:**
   - Set up your two Chrome windows: Faculty in your main profile, Resident (Jordan) in "POCUS Resident".
