@@ -52,7 +52,7 @@
 | Item | Status |
 |---|---|
 | Questions | 50 of 50 loaded as a draft exam (pass mark 75%); every question has an answer key |
-| Ultrasound loops | **8 of 28 done and approved** (Q1–4, Q7, Q8, Q12, Q13) · **20 to go**: Q5, Q6, Q9–11, Q14–20, 40, 43, 44, 45 (two loops), 46, 47, 48 |
+| Ultrasound loops | **9 of 28 done and approved** (Q1–5, Q7, Q8, Q12, Q13; Q5 reuses the Q3 loop) · **19 to go**: Q6, Q9–11, Q14–20, 40, 43, 44, 45 (two loops), 46, 47, 48 |
 | Still images | 8 uploaded (Q28, 35–40, 48), **awaiting your approval** in the media library |
 | Typos kept from the source | 3 to confirm with faculty |
 | Publishing | Waits for the loops, the media approvals and faculty sign-off |
@@ -81,7 +81,7 @@ How each loop is done: you export an MP4 from QPath. Claude blacks out the burne
 
 ## What Claude changed most recently
 
-- **Nov 2:** Q3 loop (PLAX, pleural effusion) uploaded and approved. Q4 loop (A4C, LV dysfunction) uploaded, then replaced with the correct clip (version 2) and approved.
+- **Nov 2:** Q3 loop (PLAX, pleural effusion) uploaded and approved. Q4 loop (A4C, LV dysfunction) uploaded, then replaced with the correct clip (version 2) and approved. Q5 now reuses the approved Q3 loop.
 - **Oct 30:** Q7 and Q8 loops de-identified, uploaded and approved; Q12 and Q13 loops (gastric) de-identified, uploaded and approved.
 - **Oct 28:**
   - Set up your two Chrome windows: Faculty in your main profile, Resident (Jordan) in "POCUS Resident".
