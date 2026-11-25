@@ -53,9 +53,17 @@ describe('accounts', () => {
   });
 
   it('a learner cannot promote themself', async () => {
-    await expect(as(learner, (q) => q(`update public.profiles set role = 'admin' where id = $1`, [learner.id]))).rejects.toThrow(
-      /Only an administrator/,
-    );
+    // No self-update policy exists (users can't rename themselves either), so the
+    // update matches no row; the guard trigger stays as a second line of defence.
+    const changed = await as(learner, (q) => q(`update public.profiles set role = 'admin' where id = $1 returning id`, [learner.id]));
+    expect(changed).toHaveLength(0);
+    const [p] = await sql(`select role from public.profiles where id = $1`, [learner.id]);
+    expect(p.role).toBe('learner');
+  });
+
+  it('a learner cannot rename themself', async () => {
+    const changed = await as(learner, (q) => q(`update public.profiles set full_name = 'Someone Else' where id = $1 returning id`, [learner.id]));
+    expect(changed).toHaveLength(0);
   });
 });
 

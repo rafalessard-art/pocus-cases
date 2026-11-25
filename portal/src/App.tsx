@@ -2,12 +2,13 @@ import { lazy, Suspense } from 'react';
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { Layout, TopNav } from './components/Layout';
 import { Spinner } from './components/ui';
-import { isAdmin, isStaff, useAuth } from './lib/auth';
+import { isAdmin, isReviewer, isStaff, useAuth } from './lib/auth';
 import { configured } from './lib/supabase';
 import { Curriculum } from './pages/Curriculum';
 import { ExamPlayer } from './pages/ExamPlayer';
 import { ExamsList, LearnerHome } from './pages/LearnerHome';
 import { Login } from './pages/Login';
+import { MfaChallenge } from './pages/Mfa';
 import { Result } from './pages/Result';
 // Staff-only screens are split into separate chunks so learners never download them.
 const AdminHome = lazy(() => import('./pages/admin/AdminHome').then((m) => ({ default: m.AdminHome })));
@@ -27,13 +28,18 @@ const BlockOverview = lazy(() => import('./pages/faculty/Itar').then((m) => ({ d
 const ItarWorkspace = lazy(() => import('./pages/faculty/Itar').then((m) => ({ default: m.ItarWorkspace })));
 const ItarSetup = lazy(() => import('./pages/admin/ItarSetup').then((m) => ({ default: m.ItarSetup })));
 const MyEvidence = lazy(() => import('./pages/MyEvidence').then((m) => ({ default: m.MyEvidence })));
+const AccountSecurity = lazy(() => import('./pages/Account').then((m) => ({ default: m.AccountSecurity })));
 const MyRequirements = lazy(() => import('./pages/Requirements').then((m) => ({ default: m.Requirements })));
 
 function RequireAuth({ role }: { role?: 'staff' | 'admin' }) {
-  const { loading, session, profile } = useAuth();
+  const { loading, session, profile, noAccess, mfaChallengeNeeded, mfaEnrollmentNeeded } = useAuth();
   const loc = useLocation();
   if (loading) return <Spinner />;
-  if (!session || !profile) return <Navigate to={{ pathname: "/login", hash: loc.hash }} replace state={{ from: loc.pathname }} />;
+  if (session && mfaChallengeNeeded) return <Navigate to="/mfa" replace state={{ from: loc.pathname }} />;
+  if (session && mfaEnrollmentNeeded && loc.pathname !== '/account') return <Navigate to="/account" replace />;
+  if (!session || !profile || noAccess) return <Navigate to={{ pathname: "/login", hash: loc.hash }} replace state={{ from: loc.pathname }} />;
+  // Reviewer (demonstration) views arrive with perspective switching; until then reviewers see only the landing page.
+  if (isReviewer(profile) && loc.pathname !== '/') return <Navigate to="/" replace />;
   if (role === 'staff' && !isStaff(profile)) return <Navigate to="/" replace />;
   if (role === 'admin' && !isAdmin(profile)) return <Navigate to="/" replace />;
   return role ? <Suspense fallback={<Spinner />}><Outlet /></Suspense> : <Outlet />;
@@ -41,7 +47,22 @@ function RequireAuth({ role }: { role?: 'staff' | 'admin' }) {
 
 function Home() {
   const { profile } = useAuth();
+  if (isReviewer(profile)) return <ReviewerHome />;
   return isStaff(profile) ? <Navigate to="/faculty" replace /> : <LearnerHome />;
+}
+
+function ReviewerHome() {
+  const { access } = useAuth();
+  return (
+    <div className="wrap narrow">
+      <p className="kicker">Demonstration access</p>
+      <h1>Welcome{access?.demo?.display_name ? `, ${access.demo.display_name}` : ''}</h1>
+      <p className="muted">
+        You have read-only access to a demonstration with fictional residents. The Resident, Faculty and Admin views are being prepared.
+        {access?.demo?.expires_at ? ` Your access ends ${new Date(access.demo.expires_at).toLocaleDateString()}.` : ''}
+      </p>
+    </div>
+  );
 }
 
 function NotConfigured() {
@@ -64,6 +85,7 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/mfa" element={<MfaChallenge />} />
       <Route element={<RequireAuth />}>
         {/* the exam player is full-screen, without the site nav */}
         <Route path="/exams/attempt/:attemptId" element={<ExamPlayer />} />
@@ -74,6 +96,7 @@ export function App() {
           <Route path="/exams/result/:attemptId" element={<Result />} />
           <Route path="/evidence" element={<Suspense fallback={<Spinner />}><MyEvidence /></Suspense>} />
           <Route path="/requirements" element={<Suspense fallback={<Spinner />}><MyRequirements /></Suspense>} />
+          <Route path="/account" element={<Suspense fallback={<Spinner />}><AccountSecurity /></Suspense>} />
           <Route element={<RequireAuth role="staff" />}>
             <Route path="/faculty" element={<FacultyDashboard />} />
             <Route path="/faculty/exams/:versionId" element={<ExamResults />} />

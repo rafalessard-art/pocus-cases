@@ -5,7 +5,9 @@ import { useAuth } from '../lib/auth';
 import { TopNav } from '../components/Layout';
 
 /**
- * Invitation-only sign-in with a 6-digit email code.
+ * Invitation-only sign-in: a 6-digit email code, or a password for accounts
+ * that have set one (Account → Security). Accounts with an authenticator app
+ * then confirm with it (see Mfa.tsx).
  * A code (rather than a magic link) is used because institutional mail
  * scanners (e.g. Microsoft Safe Links) often pre-open links and burn them.
  */
@@ -13,7 +15,8 @@ export function Login() {
   const { session, profile, loading, noAccess, signOut } = useAuth();
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
-  const [stage, setStage] = useState<'email' | 'code'>('email');
+  const [stage, setStage] = useState<'email' | 'code' | 'password'>('email');
+  const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -22,7 +25,7 @@ export function Login() {
     document.title = 'Sign in — POCUS Portal';
   }, []);
 
-  if (!loading && session && profile) return <Navigate to="/" replace />;
+  if (!loading && session && profile && !noAccess) return <Navigate to="/" replace />;
 
   async function sendCode(e?: FormEvent) {
     e?.preventDefault();
@@ -51,6 +54,24 @@ export function Login() {
     }
     setStage('code');
     setInfo(`We sent a sign-in email to ${addr}. Click the link in it, or enter the 6-digit code if the email shows one.`);
+  }
+
+  async function signInWithPassword(e: FormEvent) {
+    e.preventDefault();
+    setErr(null);
+    setBusy(true);
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+    setBusy(false);
+    setPassword('');
+    if (error) {
+      setErr(
+        /invalid login credentials/i.test(error.message)
+          ? 'Email or password not recognised. Use the email code instead if you have not set a password.'
+          : /rate limit|too many/i.test(error.message)
+            ? 'Too many attempts. Please wait a minute and try again.'
+            : friendly(error.message),
+      );
+    }
   }
 
   async function verify(e: FormEvent) {
@@ -89,6 +110,26 @@ export function Login() {
               </label>
               <button className="btn" disabled={busy} type="submit">
                 {busy ? 'Sending…' : 'Email me a sign-in code'}
+              </button>
+              <button type="button" className="btn ghost small" onClick={() => { setErr(null); setStage('password'); }} data-testid="use-password">
+                Sign in with a password instead
+              </button>
+            </form>
+          ) : stage === 'password' ? (
+            <form onSubmit={signInWithPassword} className="stack" data-testid="password-form">
+              <label className="field">
+                Institutional email
+                <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
+              </label>
+              <label className="field">
+                Password
+                <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={12} />
+              </label>
+              <button className="btn" disabled={busy || password.length < 12} type="submit">
+                {busy ? 'Signing in…' : 'Sign in'}
+              </button>
+              <button type="button" className="btn ghost small" onClick={() => { setErr(null); setPassword(''); setStage('email'); }}>
+                ← Use an email code instead
               </button>
             </form>
           ) : (

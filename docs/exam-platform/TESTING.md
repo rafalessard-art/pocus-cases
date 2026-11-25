@@ -57,6 +57,22 @@ E2E_BASE_URL=… E2E_MAIL_URL=<mail viewer JSON endpoint> DATABASE_URL=… npm r
 
 `E2E_RESET_CMD` (optional) runs before the suite, e.g. `"npx supabase db reset"`. `E2E_SHOTS=<dir>` saves a screenshot at each step of the walkthrough.
 
+## Without Docker (plain PostgreSQL 16)
+
+The database suites also run on a plain PostgreSQL 16 server (CI, or a machine without Docker). `scripts/local-stack/bootstrap.sql` provides the Supabase roles, schemas and `auth.*` functions the migrations need:
+
+```bash
+createdb portal
+psql postgresql://postgres:postgres@127.0.0.1:5432/portal -f scripts/local-stack/bootstrap.sql
+for f in supabase/migrations/*.sql; do psql postgresql://postgres:postgres@127.0.0.1:5432/portal -v ON_ERROR_STOP=1 -f "$f"; done
+psql postgresql://postgres:postgres@127.0.0.1:5432/portal -f supabase/seed.sql
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/portal npm run test:db
+```
+
+## Authentication against a live local stack
+
+`npm run test:auth` exercises the parts only a real Supabase Auth server can show: password sign-in, authenticator-app (TOTP) enrolment and verification, the staged administrator MFA requirement, and demonstration-code redemption through the `demo-redeem` function. It needs `supabase start` plus `supabase functions serve demo-redeem --env-file supabase/functions/.env.example`, and the variables listed at the top of `tests/auth/live-stack.test.ts`. Without `AUTH_STACK_URL` the suite is skipped.
+
 ## How the tests in this branch were run
 
 The development container could not pull Docker images, so it ran the real Supabase components natively:

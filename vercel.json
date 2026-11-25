@@ -2,6 +2,7 @@
   "buildCommand": "npm run build",
   "installCommand": "npm ci",
   "outputDirectory": "dist",
+  "ignoreCommand": "case \"$VERCEL_GIT_COMMIT_REF\" in wp/*) exit 0;; *) exit 1;; esac",
   "rewrites": [
     { "source": "/cases/glp1-gastric", "destination": "/GLP1_Gastric_Ultrasound_Learning_Case.html" },
     { "source": "/cases/diaphragm-first-rib", "destination": "/POCUS_Learning_Case_Diaphragm_FirstRibResection.html" },

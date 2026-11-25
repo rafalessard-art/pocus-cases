@@ -162,7 +162,11 @@ describe('computed from existing records', () => {
     expect(status(s, 'written_exam').detail).toMatch(/below the rotation pass mark of 75%/);
     let mine = (await rpc(resident, 'my_requirements'))[0].rotation;
     expect(status(mine, 'written_exam')).toMatchObject({ status: 'submitted', detail: 'Submitted — results not yet released' });
-    expect(JSON.stringify(status(mine, 'written_exam'))).not.toMatch(/70/);
+    // The score must not leak before release. Check the values only: ids are random and may contain "70".
+    const shown = status(mine, 'written_exam');
+    const { id: _id, ...visible } = shown as Record<string, unknown>;
+    expect(JSON.stringify(visible)).not.toMatch(/\b70\b/);
+    expect(shown).not.toHaveProperty('score_pct');
     await sql(`update public.attempts set score_pct = 80, released_at = now() where id = $1`, [id]);
     s = await rpc(faculty, 'rotation_status', { p_learner: resident.id, p_cohort: block });
     expect(status(s, 'written_exam')).toMatchObject({ status: 'verified', verified_by_name: 'the portal (automatic scoring)' });

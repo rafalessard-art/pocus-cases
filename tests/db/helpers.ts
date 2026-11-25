@@ -19,7 +19,13 @@ export const pool = new pg.Pool({
   max: 4,
 });
 
-export type User = { id: string; email: string; role: 'learner' | 'faculty' | 'admin' | 'none' };
+export type User = {
+  id: string;
+  email: string;
+  role: 'learner' | 'faculty' | 'admin' | 'reviewer' | 'none';
+  /** Extra JWT claims for this user's requests, e.g. { aal: 'aal2' } after MFA. */
+  claims?: Record<string, unknown>;
+};
 
 export async function sql<T = any>(text: string, params: unknown[] = []): Promise<T[]> {
   const r = await pool.query(text, params);
@@ -58,7 +64,7 @@ export async function as<T>(user: User | null, fn: (q: <R = any>(text: string, p
     await c.query('begin');
     await c.query(`set local role ${user ? 'authenticated' : 'anon'}`);
     await c.query(`select set_config('request.jwt.claims', $1, true)`, [
-      JSON.stringify(user ? { sub: user.id, role: 'authenticated', email: user.email } : { role: 'anon' }),
+      JSON.stringify(user ? { aal: 'aal1', ...user.claims, sub: user.id, role: 'authenticated', email: user.email } : { role: 'anon' }),
     ]);
     const q = async (text: string, params: unknown[] = []) => (await c.query(text, params)).rows;
     const out = await fn(q as any);
@@ -196,4 +202,49 @@ export function byStem(attempt: any) {
   const m: Record<string, any> = {};
   for (const it of attempt.items) m[it.stem] = it;
   return m;
+}
+
+/** Run fn as the service role (what the demo-redeem Edge Function's database calls do). */
+export async function asService<T>(fn: (q: <R = any>(text: string, params?: unknown[]) => Promise<R[]>) => Promise<T>): Promise<T> {
+  const c = await pool.connect();
+  try {
+    await c.query('begin');
+    await c.query('set local role service_role');
+    await c.query(`select set_config('request.jwt.claims', '{"role":"service_role"}', true)`);
+    const out = await fn((async (text: string, params: unknown[] = []) => (await c.query(text, params)).rows) as any);
+    await c.query('commit');
+    return out;
+  } catch (e) {
+    await c.query('rollback').catch(() => {});
+    throw e;
+  } finally {
+    c.release();
+  }
+}
+
+/** Same user, with an MFA-verified (aal2) session. */
+export const withAal2 = (u: User): User => ({ ...u, claims: { ...u.claims, aal: 'aal2' } });
+
+/** Insert the auth.users row the Auth admin API would create for this email (triggers create the profile). */
+export async function createAuthUser(email: string): Promise<string> {
+  const id = randomUUID();
+  await sql(
+    `insert into auth.users (id, instance_id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+     values ($1, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', $2, '{}', '{}', now(), now())`,
+    [id, email],
+  );
+  return id;
+}
+
+/**
+ * Redeem a demonstration code exactly as the Edge Function does:
+ * begin (validate + rate limit) -> create the Auth identity -> complete.
+ */
+export async function redeem(code: string, name = 'Test Reviewer', ipHash = uniq('ip')) {
+  const begin = await asService((q) => q(`select public.demo_redeem_begin($1, $2, $3) as r`, [ipHash, code, name]));
+  const r = begin[0].r as { ok: boolean; reason?: string; grant_id?: string; email?: string };
+  if (!r.ok) return { ...r, user: null as User | null };
+  const id = await createAuthUser(r.email!);
+  const done = await asService((q) => q(`select public.demo_redeem_complete($1, $2) as r`, [r.grant_id, id]));
+  return { ...r, completed: done[0].r as boolean, user: { id, email: r.email!, role: 'reviewer' } as User };
 }

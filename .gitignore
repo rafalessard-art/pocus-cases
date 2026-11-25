@@ -28,3 +28,4 @@ visual-report/
 .env.*
 !.env.example
 !.env.production
+supabase/.temp/

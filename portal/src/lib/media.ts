@@ -2,7 +2,7 @@ import { MEDIA_BUCKET, supabase } from './supabase';
 
 /** Signed-URL cache. URLs are short-lived and only issued if Storage RLS allows. */
 const cache = new Map<string, { url: string; exp: number }>();
-const TTL = 3 * 60 * 60; // seconds — covers a long exam; refreshed on error
+const TTL = 20 * 60; // seconds — short-lived bearer links; re-signed before expiry and on error
 
 export async function signedUrls(paths: string[]): Promise<Record<string, string>> {
   const now = Date.now();

@@ -52,6 +52,11 @@ if (usesDemoDb && process.env.VERCEL_ENV === 'production') {
   viteEnv.VITE_SUPABASE_ANON_KEY = '';
   viteEnv.VITE_SUPABASE_PUBLISHABLE_KEY = '';
 }
+// Demonstration (reviewer) sign-in is never compiled into a production build.
+if (process.env.VERCEL_ENV === 'production' && viteEnv.VITE_DEMO_ACCESS) {
+  console.warn('⚠ VITE_DEMO_ACCESS is ignored in production builds: demonstration sign-in is not included.');
+  delete viteEnv.VITE_DEMO_ACCESS;
+}
 execSync('npx vite build --config portal/vite.config.ts', { cwd: root, stdio: 'inherit', env: viteEnv });
 
 const required = ['index.html', 'tools.html', 'theme.css', 'theme.js', 'app/index.html', 'echo-simulator/index.html'];

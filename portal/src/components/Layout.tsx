@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { isAdmin, isStaff, useAuth } from '../lib/auth';
+import { isAdmin, isReviewer, isStaff, useAuth } from '../lib/auth';
 import { isDemoDatabase } from '../lib/supabase';
 
 function ThemeToggle() {
@@ -35,7 +35,8 @@ export function TopNav({ children }: { children?: ReactNode }) {
     <nav className="topnav" aria-label="Main">
       <div className="topnav-inner">
         <a href="/" className="brand" title="Back to the public case series">POCUS Cases</a>
-        {profile && (
+        {profile && isReviewer(profile) && <NavLink to="/" end>Demonstration</NavLink>}
+        {profile && !isReviewer(profile) && (
           <>
             {/* Faculty and admins land on their dashboard ("/" redirects there), so they get one link, not two. */}
             {isStaff(profile) ? <NavLink to="/faculty">Faculty Dashboard</NavLink> : <NavLink to="/" end>Home</NavLink>}
@@ -49,8 +50,9 @@ export function TopNav({ children }: { children?: ReactNode }) {
         <span className="spacer" />
         {profile && (
           <>
-            <span className="who" title={profile.email}>
-              {profile.full_name || profile.email} · {profile.role}
+            {!isReviewer(profile) && <NavLink to="/account">Account</NavLink>}
+            <span className="who" title={isReviewer(profile) ? 'Self-reported name' : profile.email}>
+              {profile.full_name || profile.email} · {isReviewer(profile) ? 'reviewer (read-only)' : profile.role}
             </span>
             <button
               className="navbtn"
