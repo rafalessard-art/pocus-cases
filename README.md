@@ -54,7 +54,7 @@ The public pages are plain static HTML — no framework, no server code. Any fol
 
 ## Learner & faculty portal (`/app`)
 
-A sign-in-protected portal for the POCUS rotation: curriculum, end-of-block examinations with ultrasound loops, a media library, faculty results and end-of-block evaluation drafting. It is built with React + TypeScript (`portal/`) on Supabase (Postgres + Auth + Storage, Canada region); the database schema and security rules are in `supabase/migrations/`.
+A sign-in-protected portal for the POCUS rotation: curriculum, end-of-block examinations with ultrasound loops, a media library, faculty results and end-of-block evaluation drafting. It is built with React + TypeScript (`portal/`) on Supabase (Postgres + Auth + Storage; the demonstration project is in the US, us-east-1, with fictional data only, and production is planned for Canada (Central)); the database schema and security rules are in `supabase/migrations/`.
 
 - `npm run build` copies the static site above **unchanged** into `dist/` and builds the portal into `dist/app` (Vercel runs this automatically; see `vercel.json`).
 - Without Supabase settings the portal shows "not configured"; the public pages are unaffected.

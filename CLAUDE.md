@@ -1,12 +1,45 @@
 # Working on this repository
 
 ## Ground rules
-- Work on `feature/exam-platform`. Never merge to `main`, deploy to production or enroll real learners.
-- There is a feature freeze from Oct 21, 2026, until the POCUS rotation director gives feedback. Only bug fixes, exam content and developer tooling are allowed.
-- The repo is **public**. Never commit exam content or answer keys, real learner data, passwords, service-role or secret keys, or Vercel share links.
-- Don't weaken authentication, RLS or deployment protection. Ask Rafa before changing anything about sign-in, permissions or preview access.
+- Work on `feature/exam-platform`. Never merge to `main`, deploy a production environment or enroll real learners.
+- The repo is **public**. Never commit exam content or answer keys, real learner data, passwords, demonstration access codes, service-role or secret keys, Vercel share links, or unpublished security findings.
 - Automated tests run against a local stack only (`tests/local-only.ts`, `scripts/visual-report.mjs`).
 - Approving media for teaching use is Rafa's decision.
+- Elentra remains the EPA system of record and One45 the ITER submission platform unless the institution approves otherwise.
+
+## Development policy (replaces the Oct 21, 2026 feature freeze; approved Nov 25, 2026)
+Principle: **freeze unapproved institutional deployment, not general product development.**
+Work proceeds under Rafa's direction. A Green zone is not permission to start unrelated features on your own.
+If it is unclear which zone applies, treat the work as the stricter zone and ask Rafa.
+
+### Green — proceed when Rafa asks
+- Usability, navigation, dashboards, accessibility, performance and bug fixes.
+- Demonstration access, perspective switching and stakeholder feedback (per the approved design).
+- Tests, CI, developer tooling and documentation.
+- Remediation of items in the private readiness register.
+- Generalising rotation components behind configuration; architecture that supports future scaling.
+
+**Explicit approval first:** anything that touches sign-in, sessions, roles, RLS policies, grants, SECURITY DEFINER functions, storage policies, Supabase Auth settings, deployment protection or Vercel access needs Rafa's approval *before* implementation, with the risks explained.
+
+### Amber — build as configurable drafts; policy stays pending
+New or changed educational and assessment workflows; faculty verification; rotation requirements; EPA criteria; scan counts; exam attempts, pass marks and feedback policy; ITER content and templates; administrative reporting; notifications and reminders; faculty and administrative responsibilities; other rotations.
+- Implement as settings. Mark placeholder values **Draft**; never present a value as program policy.
+- Add each open question to `docs/exam-platform/DIRECTOR_DECISIONS.md`.
+- Do not publish the real end-of-block exam, or release results from it, without faculty sign-off.
+
+### Red — blocked until institutional approval and Rafa's go-ahead
+- Enrolling real residents or faculty; collecting real learner assessments or evidence.
+- Any identifiable patient information.
+- Production deployment, merging to `main`, or setting up production Supabase or Vercel.
+- Integrations with institutional systems (Elentra, One45, Brightspace, QPath, SSO) beyond design documents.
+- Weakening any existing security control.
+- Describing the portal as an approved institutional system.
+
+## Demonstration environment
+- Fictional data only. Reviewer (demonstration-code) access is read-only and enforced in the database; perspectives change the view, never permissions.
+- Never create, display, log, commit or send demonstration codes. Rafa generates and distributes them.
+- The stable reviewer build changes only through a release Rafa approves; keep it working while development continues.
+- Reviewers see only exams and media marked reviewer-visible.
 
 ## After every development task
 1. Update `PROJECT_OVERVIEW.md`: status, exam progress, and "What Claude changed most recently".

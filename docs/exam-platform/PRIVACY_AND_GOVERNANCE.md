@@ -40,7 +40,8 @@ Not collected: student numbers, dates of birth, phone numbers, addresses, IP-bas
 
 ## 3. Hosting and residency
 
-- **Data at rest:** Supabase project in **Canada (Central), `ca-central-1`**. This covers the database, auth and file storage.
+- **Data at rest (production, planned):** a Supabase project in **Canada (Central), `ca-central-1`**. This covers the database, auth and file storage.
+- **Demonstration project (current):** in the **United States (`us-east-1`)**. A Supabase project's region can't be changed after creation. It holds fictional data only and must never hold real learner data; production will be a new Canadian project.
 - **Vercel** serves only static code. No learner data is stored there.
 - **Email:** sign-in codes go through the configured SMTP provider. Messages contain only the code. An institutional relay keeps them on-premise.
 - Supabase and Vercel are US-headquartered companies. Even with data in Canada, a privacy office may ask about foreign legal access (e.g. the US CLOUD Act). Ontario FIPPA has no blanket data-residency mandate (unlike, historically, BC and Nova Scotia), but institutional policy may impose one. Raise this explicitly in the PIA.

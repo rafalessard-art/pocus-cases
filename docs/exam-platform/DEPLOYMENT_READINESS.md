@@ -1,8 +1,8 @@
 # Institutional deployment readiness
 
-**Current state:** a preview only (Vercel preview of `feature/exam-platform` + Supabase project `ngnggoekezucadlwiomp`, Canada Central). It holds fictional data only, and no real residents are invited. **Keep it that way until the approvals below are in place.**
+**Current state:** a preview only (Vercel preview of `feature/exam-platform` + Supabase project `ngnggoekezucadlwiomp`, **United States, us-east-1**). It holds fictional data only, and no real residents are invited. **Keep it that way until the approvals below are in place.**
 
-**Feature freeze (Oct 21, 2026):** no further feature development until the POCUS rotation director and supervising staff have given feedback. Only fixes needed for the demonstration are allowed.
+**Development policy (Nov 25, 2026):** the Oct 21 feature freeze is replaced by the controlled policy in [`CLAUDE.md`](../../CLAUDE.md). Development may continue, but institutional deployment, real learners and identifiable clinical information stay blocked until the approvals below.
 
 ## Keeping demonstration data out of real records
 
@@ -18,9 +18,9 @@
 
 | Data | Who can see it | Stored in |
 |---|---|---|
-| Name, institutional email, role, training level | The person, admins, block evaluators | Supabase Postgres (ca-central-1) |
+| Name, institutional email, role, training level | The person, admins, block evaluators | Supabase Postgres (production: ca-central-1) |
 | Exam answers, scores, attempts | The resident (per release policy), block evaluators, admins | Postgres |
-| Brightspace completion screenshots/PDFs | The resident, block evaluators, admins | Supabase Storage, private bucket (ca-central-1) |
+| Brightspace completion screenshots/PDFs | The resident, block evaluators, admins | Supabase Storage, private bucket (production: ca-central-1) |
 | EPA verification: Elentra-review attestation and criteria decision | The resident (decision, reviewer and date only), block evaluators, admins | Postgres |
 | EPA notes, concerns, optional C6 counts and findings; faculty observations; ITAR/ITER drafts, ITER selections and approved versions | Block evaluators and admins only, **never residents** | Postgres |
 | Rotation requirement statuses; scan **counts** per category (no patient data) | The resident (own), block evaluators, admins | Postgres |

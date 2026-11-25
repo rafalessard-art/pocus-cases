@@ -23,7 +23,8 @@ Browser ──► Vercel (static CDN, Canada-agnostic: serves code only)
    │          ├── /, /cases/*, /tools …  unchanged static pages
    │          └── /app/*                 portal SPA (React + TypeScript, Vite build)
    │
-   └──► Supabase project in Canada (Central) — ca-central-1
+   └──► Supabase project — production: Canada (Central), ca-central-1
+        (the current demonstration project is in us-east-1, fictional data only)
           ├── Auth      invitation-only, 6-digit email code
           ├── Postgres  all data; row-level security + server-side functions
           └── Storage   private bucket "exam-media" (signed, expiring URLs)
@@ -32,7 +33,7 @@ Browser ──► Vercel (static CDN, Canada-agnostic: serves code only)
 **Why this design**
 
 - **Least disruption.** The static site still deploys exactly as before. `npm run build` copies the static files into `dist/` unchanged and builds the portal into `dist/app`.
-- **One backend service, in Canada.** Supabase provides the database, authentication and private file storage in one Canadian region. Identified learner data and exam media never leave `ca-central-1`; Vercel serves only code. Vercel Blob/Postgres were not chosen because Vercel has no Canadian region and private Blob delivery has to stream through serverless functions.
+- **One backend service, in Canada (for production).** Supabase provides the database, authentication and private file storage in one Canadian region. Identified learner data and exam media never leave `ca-central-1`; Vercel serves only code. Vercel Blob/Postgres were not chosen because Vercel has no Canadian region and private Blob delivery has to stream through serverless functions.
 - **No server code to run or secure.** All privileged logic runs inside Postgres as `SECURITY DEFINER` functions that check the caller's role explicitly. That covers scoring, timing, answer-key secrecy, versioning, result release and reporting. The browser holds only the public "anon" key. No service-role key exists in the app, and there are no serverless functions.
 
 ### Security model (enforced in the database, not the UI)
@@ -166,7 +167,7 @@ See [TESTING.md](TESTING.md).
 
 | # | Blocker | Why it needs you |
 |---|---|---|
-| B1 | **Create the Supabase project** in Canada (Central) and add the two Vercel env vars ([DEPLOYMENT.md](DEPLOYMENT.md) §1–5) | Your account, billing and credentials |
+| B1 | **Create the production Supabase project** in Canada (Central) (the demonstration project already exists, in us-east-1) and add the two Vercel env vars ([DEPLOYMENT.md](DEPLOYMENT.md) §1–5) | Your account, billing and credentials |
 | B2 | **SMTP sender** for sign-in codes (institutional relay or provider) | Supabase's default sender only reaches your own team |
 | B3 | **Privacy impact assessment and approvals** (uOttawa AIPO, IT security, PGME; TOH Privacy for clinical clips) | Institutional permission before live learner data |
 | B4 | **Confirm which ExamBuilder** and request the vendor export (question content + original clips + mapping) | Account owner or Super User access |

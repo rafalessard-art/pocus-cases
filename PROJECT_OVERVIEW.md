@@ -1,13 +1,15 @@
 # POCUS Portal — Project Overview
 
-*The one page to open first. Last updated: **Nov 2, 2026**. Updated after every meaningful change.*
+*The one page to open first. Last updated: **Nov 25, 2026**. Updated after every meaningful change.*
 
 > This repository is public. This page never contains answer keys, exam content, real learner data, passwords or keys.
 
 ## Where things stand
 
-- **Phase:** working demonstration, with the real end-of-block exam being loaded as a **draft**.
-- **Feature freeze** since Oct 21. There are no new resident or faculty features until the POCUS rotation director and supervising staff give feedback. Bug fixes, exam content and developer tooling still go ahead.
+- **Phase:** **collaborative development** with departmental stakeholders (since Nov 25). The working demonstration continues, with the real end-of-block exam loaded as a **draft**.
+- **Nov 24 meeting with DAPM program administration:** administration is interested in developing the portal as a potential formal departmental resource. It has asked uOttawa about institutional requirements (security, privacy, encryption); the answer is pending. Two administrators asked for their own access to explore the portal and give feedback. This is support for further evaluation, **not** approval for use with real residents.
+- **Development policy:** the Oct 21 feature freeze is replaced by a controlled policy (Green / Amber / Red, in [CLAUDE.md](CLAUDE.md)). The principle: freeze unapproved institutional deployment, not general product development. Educational policy changes stay drafts until faculty or the program confirm them.
+- **Next:** read-only reviewer access for the two administrators: a shared demonstration code, Resident / Faculty / Admin perspectives, in-app feedback, and fictional data only. The technical design is being finalized; nothing has been built or opened to anyone yet.
 - **Data:** fictional residents only. Nothing is merged to `main`, and no real learners are enrolled.
 
 ## Links
@@ -18,7 +20,7 @@
 | Faculty dashboard | …/app/faculty |
 | Admin: question bank · media library · exams | …/app/admin/questions · …/app/admin/media · …/app/admin/exams |
 | Deployments (Vercel) | https://vercel.com/rafalessard-8465s-projects/pocus-cases/deployments |
-| Database (Supabase demo project, Canada) | https://supabase.com/dashboard/project/ngnggoekezucadlwiomp |
+| Database (Supabase demo project, **United States, us-east-1**; fictional data only) | https://supabase.com/dashboard/project/ngnggoekezucadlwiomp |
 | Code | https://github.com/rafalessard-art/pocus-cases/tree/feature/exam-platform |
 | Public teaching site (unchanged, `main`) | https://pocus-cases.vercel.app |
 
@@ -62,7 +64,8 @@ How each loop is done: you export an MP4 from QPath. Claude blacks out the burne
 ## Open tasks and decisions
 
 - **You:**
-  - send the last QPath export (Q17);
+  - decisions on reviewer access (authentication design, infrastructure and paid plans), listed in Claude's Nov 25 report;
+  - the last QPath export (Q17) is on hold until the privacy review of the media workflow is settled;
   - optional: set up your own email sender, so sign-in codes always arrive (Supabase → Authentication → SMTP).
 - **Rotation director (12 decisions in [DIRECTOR_DECISIONS](docs/exam-platform/DIRECTOR_DECISIONS.md)):** among them, C6 EPA criteria, scan counts, the ITER template used in One45, exam attempts and feedback, and the case list.
 - **Faculty:** confirm the 3 exam typos; review the draft exam before it's published.
@@ -72,7 +75,7 @@ How each loop is done: you export an MP4 from QPath. Claude blacks out the burne
 1. Feedback and decisions from the rotation director and staff.
 2. Approvals: a privacy impact assessment (uOttawa AIPO/PGME), an IT security review, records retention and program approval. See [DEPLOYMENT_READINESS](docs/exam-platform/DEPLOYMENT_READINESS.md).
 3. Production setup:
-   - a **new** Supabase project (Pro, Canada), never a copy of the demo;
+   - a **new** Supabase project (Pro, **Canada (Central)**), never a copy of the demo. The current demo project is in the US (us-east-1); a project's region can't be changed after creation;
    - an institutional email sender;
    - production Vercel settings;
    - then merge to `main`.
@@ -80,6 +83,12 @@ How each loop is done: you export an MP4 from QPath. Claude blacks out the burne
 
 ## What Claude changed most recently
 
+- **Nov 25:** Documentation only:
+  - the new controlled development policy in `CLAUDE.md`, replacing the feature freeze;
+  - this page, with the Nov 24 meeting and the collaborative phase;
+  - the database region corrected to the United States (us-east-1) everywhere it said Canada. The demo holds only fictional data. Production is still planned for Canada.
+
+  No code, database, sign-in or deployment settings were changed.
 - **Nov 3:** Q44: the first QPath exports held a different clip from the one you were viewing; the wrong loop was taken off the question. From a full-study export, the clip matching your screenshot (subcostal, 20 cm) was de-identified, attached as version 2 and approved.
 - **Nov 2:** All 8 original stills approved (Q35's chest photo kept as is). Checked the 6 remaining stills for identifiers: removed a burned-in date/time from Q36 and Q38 (version 2); Q28, 37 and 39 clean; Q35 (a chest photo) flagged. Q47 and Q48 approved. Q48 loop (right anterior chest) de-identified and added before the original still; a cut-off header line was removed from the still (version 2); both approved. Q47 loop (large pleural effusion) de-identified, uploaded and approved. Q46 loop (curtain sign) and Q45's two loops (PLAX and A4C) de-identified, uploaded and approved. Q43 loop (colour Doppler, mitral regurgitation) de-identified, uploaded and approved. Q40 loop (PSAX at the aortic valve) de-identified and added before the original still; still confirmed de-identified; both approved. Q20 loop (subcostal) de-identified with a red arrow added, approved. Q19 reuses the Q18 clip with a yellow arrow added, approved. Q18 loop (PLAX) de-identified, uploaded and approved. Q16 loop (A4C) de-identified with a yellow arrow added, then the arrow moved slightly lateral at your request (version 2), approved. Q15 loop (subcostal) de-identified, uploaded and approved. Q11's question wording corrected. Q14 now uses a de-identified still from the existing exam image (source logo and player controls removed), approved. Q9's question now says "image" instead of "video clip". Q11 now uses two de-identified stills side by side (headers removed), approved. Q10 loop (lung) de-identified, uploaded and approved. Q9 now uses a de-identified still from the existing exam image (date/time and player controls removed), approved. Q3 loop (PLAX, pleural effusion) uploaded and approved. Q4 loop (A4C, LV dysfunction) uploaded, then replaced with the correct clip (version 2) and approved. Q5 now reuses the approved Q3 loop. Q6 loop (subcostal, pericardial effusion) uploaded and approved.
 - **Oct 30:** Q7 and Q8 loops de-identified, uploaded and approved; Q12 and Q13 loops (gastric) de-identified, uploaded and approved.
