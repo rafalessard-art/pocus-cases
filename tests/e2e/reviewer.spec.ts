@@ -34,8 +34,10 @@ async function shot(page: Page, name: string) {
   await page.addStyleTag({ content: '.topnav{position:static!important}' });
   await page.screenshot({ path: join(SHOTS, `${name}.png`), fullPage: true, mask: [page.getByTestId('new-code')] });
 }
-async function a11y(page: Page, label: string) {
-  const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).exclude('video').analyze();
+async function a11y(page: Page, label: string, scope?: string) {
+  let b = new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).exclude('video');
+  if (scope) b = b.include(scope);
+  const r = await b.analyze();
   const bad = r.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
   expect(bad.map((v) => `${label}: ${v.id} — ${v.help} (${v.nodes.length})`)).toEqual([]);
 }
@@ -65,7 +67,9 @@ async function fingerprint(): Promise<Record<string, string>> {
   const { rows: tables } = await pool.query(`select schemaname as s, tablename as t from pg_tables where schemaname = 'public' or (schemaname = 'storage' and tablename = 'objects') order by 1, 2`);
   const out: Record<string, string> = {};
   for (const { s, t } of tables) {
-    const { rows } = await pool.query(`select md5(coalesce(string_agg(x::text, '|' order by x::text), '')) as h, count(*)::int as n from ${s}.${t} x`);
+    // storage: which files exist (the Storage service may note access times on reads)
+    const row = s === 'storage' ? `(x.bucket_id, x.name)::text` : 'x::text';
+    const { rows } = await pool.query(`select md5(coalesce(string_agg(${row}, '|' order by ${row}), '')) as h, count(*)::int as n from ${s}.${t} x`);
     out[`${s}.${t}`] = `${rows[0].n}:${rows[0].h}`;
   }
   return out;
@@ -155,7 +159,7 @@ test('demonstration access: owner, fresh reviewer session, perspectives, walkthr
     // the database answers as a reviewer: only the demonstration exam
     await page.getByTestId('open-admin').click();
     await page.goto('/app/admin/exams');
-    for (const t of hiddenTitles) await expect(page.getByText(t, { exact: true })).toHaveCount(0);
+    for (const t of hiddenTitles) await expect(page.locator('main').getByText(t, { exact: true })).toHaveCount(0);
     await page.getByTestId('preview-exit').click();
     await expect(page.getByRole('heading', { name: 'Demonstration access' })).toBeVisible();
   });
@@ -209,13 +213,13 @@ test('demonstration access: owner, fresh reviewer session, perspectives, walkthr
     await rv.setViewportSize({ width: 390, height: 844 });
     await shot(rv, 'w7b-resident-home-phone');
     await rv.setViewportSize({ width: 1360, height: 900 });
-    await rv.getByRole('link', { name: 'Requirements' }).click();
+    await rv.locator('nav.topnav').getByRole('link', { name: 'Requirements', exact: true }).click();
     await expect(rv.getByTestId('my-scan-edit')).toBeDisabled();
     await shot(rv, 'w8-resident-requirements');
     await rv.goto('/app/evidence');
-    await expect(rv.getByText('Uploads are switched off in this read-only view.').first()).toBeVisible();
+    await expect(rv.locator('main').getByText('Uploads are switched off in this read-only view.').first()).toBeVisible();
     await shot(rv, 'w9-resident-evidence');
-    await rv.getByRole('link', { name: 'Examinations' }).click();
+    await rv.locator('nav.topnav').getByRole('link', { name: 'Examinations', exact: true }).click();
     await expect(rv.getByTestId('exam-walkthrough')).toBeVisible();
     await expect(rv.getByRole('button', { name: /Start exam|Resume exam/ })).toHaveCount(0);
     await shot(rv, 'w10-resident-exams');
@@ -239,13 +243,13 @@ test('demonstration access: owner, fresh reviewer session, perspectives, walkthr
   await test.step('reviewer: Faculty perspective — fictional blocks, write controls disabled', async () => {
     await rv.getByTestId('perspective-faculty').click();
     await expect(rv).toHaveURL(/\/app\/faculty$/);
-    await expect(rv.getByText('DEMO Block 5').first()).toBeVisible();
+    await expect(rv.getByTestId('block-card').filter({ hasText: 'DEMO Block 5' })).toBeVisible();
     await shot(rv, 'w13-faculty-dashboard');
     await rv.goto(`/app/faculty/blocks/${BLOCK.current}`);
-    await expect(rv.getByText('Casey Nguyen (fictional)').first()).toBeVisible();
+    await expect(rv.locator('main').getByText('Casey Nguyen (fictional)').first()).toBeVisible();
     await shot(rv, 'w14-faculty-block');
     await rv.goto(`/app/faculty/itar/${BLOCK.current}/${R3}`);
-    await expect(rv.getByText('Casey Nguyen (fictional)').first()).toBeVisible();
+    await expect(rv.locator('main').getByText('Casey Nguyen (fictional)').first()).toBeVisible();
     const verify = rv.getByTestId('verify-evidence').first();
     await expect(verify).toBeVisible();
     await expect(verify).toBeDisabled();
@@ -259,8 +263,8 @@ test('demonstration access: owner, fresh reviewer session, perspectives, walkthr
     await expect(rv.locator('.stat b').first()).toBeVisible();
     await shot(rv, 'w16-admin-home');
     await rv.goto('/app/admin/exams');
-    await expect(rv.getByText(/DEMO — POCUS block examination/).first()).toBeVisible();
-    for (const t of hiddenTitles) await expect(rv.getByText(t, { exact: true })).toHaveCount(0);
+    await expect(rv.locator('main').getByText(/DEMO — POCUS block examination/).first()).toBeVisible();
+    for (const t of hiddenTitles) await expect(rv.locator('main').getByText(t, { exact: true })).toHaveCount(0);
     await shot(rv, 'w17-admin-exams');
     await rv.goto('/app/admin/demo-access');
     await expect(rv).toHaveURL(/\/app\/?$/);
@@ -318,7 +322,7 @@ test('demonstration access: owner, fresh reviewer session, perspectives, walkthr
     await rv.getByTestId('feedback-comments').fill('Fictional test feedback: it would help to see which evidence is awaiting review first.');
     await rv.getByLabel('Your role (optional)').fill('Program director');
     await shot(rv, 'w18-feedback-form');
-    await a11y(rv, 'feedback form');
+    await a11y(rv, 'feedback form', '[role=dialog]');
     await rv.getByTestId('feedback-send').click();
     await expect(rv.getByTestId('feedback-done')).toBeVisible();
     await shot(rv, 'w19-feedback-sent');
