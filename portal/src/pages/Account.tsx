@@ -85,11 +85,11 @@ function PasswordCard() {
       <h3>Password</h3>
       <p className="muted small">Optional for faculty; recommended for administrators, together with an authenticator app. Use a password manager.</p>
       <form onSubmit={save} className="stack">
-        <label className="field">
-          New password
-          <input type="password" autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} minLength={MIN_PASSWORD} required />
-          <span className="hint">At least {MIN_PASSWORD} characters.</span>
-        </label>
+        <div className="field-labelled">
+          <label htmlFor="new-password">New password</label>
+          <input id="new-password" type="password" autoComplete="new-password" aria-describedby="new-password-hint" value={pw} onChange={(e) => setPw(e.target.value)} minLength={MIN_PASSWORD} required />
+          <span className="hint" id="new-password-hint">At least {MIN_PASSWORD} characters.</span>
+        </div>
         <label className="field">
           Repeat new password
           <input type="password" autoComplete="new-password" value={pw2} onChange={(e) => setPw2(e.target.value)} required />
