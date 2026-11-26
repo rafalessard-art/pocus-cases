@@ -468,3 +468,22 @@ describe('owner MFA (staged)', () => {
     expect(await roleOf(faculty)).toBe('faculty');
   });
 });
+
+describe('API compatibility', () => {
+  it('every UPDATE and DELETE inside a database function has a WHERE clause (Supabase rejects them otherwise, error 21000)', async () => {
+    const fns = await sql<{ name: string; src: string }>(
+      `select p.proname as name, p.prosrc as src from pg_proc p where p.pronamespace = 'public'::regnamespace and p.prolang in (select oid from pg_language where lanname in ('sql', 'plpgsql'))`,
+    );
+    const offenders: string[] = [];
+    for (const { name, src } of fns) {
+      const code = src.replace(/--[^\n]*/g, ' ').replace(/'(?:[^']|'')*'/g, "''");
+      for (const stmt of code.split(';')) {
+        const s = stmt.trim();
+        // a statement starts at the beginning or after a plpgsql keyword (then/else/loop/begin/...) or a CTE
+        const m = s.match(/(?:^|\b(?:then|else|loop|begin|\))\s+)(update\s+[\w."]+|delete\s+from\s+[\w."]+)/i);
+        if (m && !/\bwhere\b/i.test(s.slice(s.indexOf(m[1])))) offenders.push(`${name}: ${m[1]}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});

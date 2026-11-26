@@ -294,7 +294,7 @@ begin
   if not exists (select 1 from public.deployment_settings) then
     raise exception 'Deployment settings are not configured for this database' using errcode = '55000';
   end if;
-  update public.deployment_settings set admin_mfa_required = coalesce(p_on, false), updated_at = now();
+  update public.deployment_settings set admin_mfa_required = coalesce(p_on, false), updated_at = now() where id;  -- one row; Supabase rejects WHERE-less updates
   perform public.log_event('admin_mfa_required_set', 'deployment_settings', 'singleton', jsonb_build_object('on', p_on));
   return coalesce(p_on, false);
 end $$;
