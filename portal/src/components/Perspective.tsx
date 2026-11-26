@@ -208,7 +208,7 @@ export function FeedbackDialog({ onClose, page, perspective }: { onClose: () => 
           </label>
           <label className="field">
             Section of the page
-            <input value={section} onChange={(e) => setSection(e.target.value)} maxLength={120} />
+            <input type="text" value={section} onChange={(e) => setSection(e.target.value)} maxLength={120} />
           </label>
           <label className="field">
             Comments
@@ -217,11 +217,11 @@ export function FeedbackDialog({ onClose, page, perspective }: { onClose: () => 
           <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
             <label className="field" style={{ flex: 1, minWidth: 180 }}>
               Your name (as you'd like it shown)
-              <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required />
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required />
             </label>
             <label className="field" style={{ flex: 1, minWidth: 180 }}>
               Your role (optional)
-              <input value={roleLabel} onChange={(e) => setRoleLabel(e.target.value)} maxLength={80} placeholder="e.g. Program director" />
+              <input type="text" value={roleLabel} onChange={(e) => setRoleLabel(e.target.value)} maxLength={80} placeholder="e.g. Program director" />
             </label>
           </div>
           <p className="small muted" style={{ margin: 0 }}>Name and role are self-reported. The date, page, perspective and portal version ({APP_VERSION}) are added automatically.</p>

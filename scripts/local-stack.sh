@@ -56,7 +56,8 @@ case "$cmd" in
     bash "$SELF" status
     ;;
   status)
-    echo "node $(node -v 2>/dev/null || echo 'missing') $(case "$(node -v 2>/dev/null)" in v22.*) echo '(ok)';; *) echo '(Node 22 required: brew install node@22)';; esac)"
+    nv=$(node -v 2>/dev/null || echo missing)
+    if [[ "$nv" == v22.* ]]; then echo "node $nv (ok)"; else echo "node $nv (Node 22 required: brew install node@22)"; fi
     if docker_up; then echo "container runtime: running ($(docker info --format '{{.OperatingSystem}}' 2>/dev/null)) · other containers: $(other_containers)"; else echo "container runtime: stopped"; fi
     if supabase_up; then
       supabase status -o env 2>/dev/null | grep -E '^(API_URL|DB_URL|STUDIO_URL|MAILPIT_URL|INBUCKET_URL)=' | sed 's/^/supabase /; s/postgres:postgres@/…@/'

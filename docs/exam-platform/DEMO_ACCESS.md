@@ -1,6 +1,6 @@
 # Demonstration (reviewer) access
 
-Read-only access for program reviewers (for example, departmental administrators) to a demonstration of the portal with **fictional residents and synthetic documents**. Status: **built and tested locally (WP3); not deployed.** It goes live only in the separate review environment (WP4), after the owner approves the release.
+Read-only access for program reviewers (for example, departmental administrators) to a demonstration of the portal with **fictional residents and synthetic documents**. Status: **built and validated on a full local stack (WP3, Nov 25); not deployed.** It goes live only in the separate review environment (WP4), after the owner approves the release.
 
 This page describes the design. It contains no access codes, keys or links.
 
