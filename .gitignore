@@ -32,3 +32,4 @@ supabase/.temp/
 supabase/.branches/
 .wp2-validation/
 .wp3-validation/
+.local-backups/

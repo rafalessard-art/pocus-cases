@@ -21,13 +21,14 @@ if command -v brew >/dev/null && [ -d "$(brew --prefix node@22 2>/dev/null)/bin"
 fi
 say "== environment ($(date '+%Y-%m-%d %H:%M'))"
 say "node $(node -v) · npm $(npm -v) · $(supabase --version 2>/dev/null | head -1 | sed 's/^/supabase CLI /')"
-say "docker: $(docker info --format '{{.ServerVersion}} on {{.OperatingSystem}}' 2>/dev/null || echo 'NOT RUNNING')"
 say "playwright: $(npx --no-install playwright --version 2>/dev/null) · chromium cache: $(ls -d ~/Library/Caches/ms-playwright/chromium* 2>/dev/null | xargs -n1 basename | tr '\n' ' ')"
 say "git: $(git rev-parse --abbrev-ref HEAD) @ $(git rev-parse --short HEAD) · uncommitted: $(git status --porcelain | grep -vc '^??')"
 case "$(node -v)" in v22.*) ;; *) say "ABORT: Node 22 is required (brew install node@22)"; exit 1;; esac
 
 # --- local stack --------------------------------------------------------------
-supabase status >/dev/null 2>&1 || { say "starting local Supabase stack…"; supabase start >"$OUT/supabase-start.log" 2>&1; }
+# start OrbStack and the local stack if needed (nothing already running is restarted)
+bash scripts/local-stack.sh up >"$OUT/local-stack-up.log" 2>&1 || { say "ABORT: could not start the local stack (see $OUT/local-stack-up.log)"; exit 1; }
+say "docker: $(docker info --format '{{.ServerVersion}} on {{.OperatingSystem}}' 2>/dev/null || echo 'NOT RUNNING')"
 eval "$(supabase status -o env 2>/dev/null | grep -E '^(API_URL|DB_URL|ANON_KEY|SERVICE_ROLE_KEY|PUBLISHABLE_KEY|SECRET_KEY|MAILPIT_URL|INBUCKET_URL)=')"
 ANON="${ANON_KEY:-${PUBLISHABLE_KEY:-}}"
 SERVICE="${SERVICE_ROLE_KEY:-${SECRET_KEY:-}}"
@@ -54,6 +55,8 @@ run() { # name, command…
 say ""
 say "== suites"
 run npm-ci npm ci --no-audit --no-fund
+# the suites reset the local database: keep a copy of what was there first
+run local-backup bash scripts/local-stack.sh backup
 run db-reset supabase db reset
 run typecheck npm run -s typecheck
 run unit npx vitest run portal/src

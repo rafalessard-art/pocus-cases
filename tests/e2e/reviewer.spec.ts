@@ -60,6 +60,22 @@ async function latestCode(email: string, after: number): Promise<string> {
   }
   throw new Error(`no email code received for ${email}`);
 }
+/** Every application row and stored file, hashed: proves that browsing changes nothing. */
+async function fingerprint(): Promise<Record<string, string>> {
+  const { rows: tables } = await pool.query(`select schemaname as s, tablename as t from pg_tables where schemaname = 'public' or (schemaname = 'storage' and tablename = 'objects') order by 1, 2`);
+  const out: Record<string, string> = {};
+  for (const { s, t } of tables) {
+    const { rows } = await pool.query(`select md5(coalesce(string_agg(x::text, '|' order by x::text), '')) as h, count(*)::int as n from ${s}.${t} x`);
+    out[`${s}.${t}`] = `${rows[0].n}:${rows[0].h}`;
+  }
+  return out;
+}
+async function reviewerSignIn(p: Page, name: string, c: string) {
+  await p.goto('/app/login');
+  await p.getByTestId('demo-name').fill(name);
+  await p.getByTestId('demo-code').fill(c);
+  await p.getByTestId('demo-submit').click();
+}
 async function freshContext(browser: Browser) {
   return browser.newContext({ baseURL: BASE, viewport: { width: 1360, height: 900 } });
 }
@@ -67,6 +83,8 @@ async function freshContext(browser: Browser) {
 let code = '';
 let demoAssignment = '';
 let hiddenTitles: string[] = [];
+let hiddenMedia = '';
+let baseline: Record<string, string> = {};
 
 test.beforeAll(async () => {
   await loadFixtures(pool, { storageUrl: process.env.E2E_STORAGE_URL, serviceKey: process.env.E2E_SERVICE_KEY });
@@ -75,6 +93,8 @@ test.beforeAll(async () => {
   demoAssignment = (await pool.query(`select a.id from public.assignments a join public.exam_versions v on v.id = a.exam_version_id join public.exams e on e.id = v.exam_id
                                        where e.reviewer_visible and a.cohort_id = $1`, [BLOCK.current])).rows[0].id;
   hiddenTitles = (await pool.query(`select title from public.exams where not reviewer_visible`)).rows.map((r) => r.title);
+  hiddenMedia = (await pool.query(`select mv.storage_path from public.media_versions mv join public.media_assets ma on ma.id = mv.asset_id
+                                    where not ma.reviewer_visible and mv.upload_status = 'uploaded' limit 1`)).rows[0]?.storage_path ?? '';
 });
 test.afterAll(async () => {
   await pool.end();
@@ -121,6 +141,7 @@ test('demonstration access: owner, fresh reviewer session, perspectives, walkthr
     await expect(page.getByRole('heading', { name: /Welcome, Casey/ })).toBeVisible();
     await expect(page.getByTestId('mode-badge')).toContainText('Viewing a fictional resident');
     await expect(page.getByTestId('readonly-note')).toBeVisible();
+    await expect(page.locator('.seclabel', { hasText: 'DEMO Block 5' })).toBeVisible();
     await shot(page, 'w2-owner-resident-perspective');
     await page.getByRole('button', { name: 'Back to my view' }).click();
     await expect(page).toHaveURL(/\/app\/faculty/);
@@ -164,17 +185,30 @@ test('demonstration access: owner, fresh reviewer session, perspectives, walkthr
     await expect(rv.getByTestId('demo-banner')).toBeVisible();
     await rv.reload();
     await expect(rv.getByTestId('reviewer-intro')).toBeVisible();
+    await expect(rv.getByTestId('resident-choices').getByRole('button')).toHaveCount(6);
     await shot(rv, 'w6-reviewer-landing');
     await a11y(rv, 'reviewer landing');
+    // this browser holds only the reviewer's session, never the owner's
+    const who = await rv.evaluate(() => JSON.parse(localStorage.getItem('pocus-portal-auth') ?? '{}').user?.email ?? '');
+    expect(who).toMatch(/^reviewer-[0-9a-f-]{36}@demo\.invalid$/);
+    await rv.setViewportSize({ width: 390, height: 844 });
+    await shot(rv, 'w6b-reviewer-landing-phone');
+    await rv.setViewportSize({ width: 1360, height: 900 });
+    baseline = await fingerprint();
     // the account page and the exam player are not for reviewers
     await rv.goto('/app/account');
-    await expect(rv).toHaveURL(/\/app\/$/);
+    await expect(rv).toHaveURL(/\/app\/?$/);
   });
 
   await test.step('reviewer: Resident perspective', async () => {
     await rv.getByTestId('resident-choices').getByRole('button', { name: /Casey Nguyen/ }).click();
     await expect(rv.getByRole('heading', { name: /Welcome, Casey/ })).toBeVisible();
+    await expect(rv.locator('.seclabel', { hasText: 'DEMO Block 5' })).toBeVisible();
     await shot(rv, 'w7-resident-home');
+    await a11y(rv, 'resident home (reviewer)');
+    await rv.setViewportSize({ width: 390, height: 844 });
+    await shot(rv, 'w7b-resident-home-phone');
+    await rv.setViewportSize({ width: 1360, height: 900 });
     await rv.getByRole('link', { name: 'Requirements' }).click();
     await expect(rv.getByTestId('my-scan-edit')).toBeDisabled();
     await shot(rv, 'w8-resident-requirements');
@@ -194,6 +228,7 @@ test('demonstration access: owner, fresh reviewer session, perspectives, walkthr
     await expect(rv.locator('video').first()).toBeVisible();
     await rv.getByTestId('walk-option-0').click();
     await shot(rv, 'w11-walkthrough-question');
+    await a11y(rv, 'walkthrough');
     for (let i = 0; i < 5; i++) await rv.getByTestId('walkthrough-next').click();
     await rv.getByTestId('walkthrough-finish').click();
     await expect(rv.getByTestId('walkthrough-result')).toBeVisible();
@@ -221,18 +256,19 @@ test('demonstration access: owner, fresh reviewer session, perspectives, walkthr
     await rv.getByTestId('perspective-admin').click();
     await expect(rv).toHaveURL(/\/app\/admin$/);
     await expect(rv.getByRole('link', { name: /Demonstration access/ })).toHaveCount(0);
+    await expect(rv.locator('.stat b').first()).toBeVisible();
     await shot(rv, 'w16-admin-home');
     await rv.goto('/app/admin/exams');
     await expect(rv.getByText(/DEMO — POCUS block examination/).first()).toBeVisible();
     for (const t of hiddenTitles) await expect(rv.getByText(t, { exact: true })).toHaveCount(0);
     await shot(rv, 'w17-admin-exams');
     await rv.goto('/app/admin/demo-access');
-    await expect(rv).toHaveURL(/\/app\/$/);
+    await expect(rv).toHaveURL(/\/app\/?$/);
   });
 
   await test.step('reviewer: writes sent straight to the API from this browser are refused by the database', async () => {
     const anon = process.env.E2E_ANON_KEY ?? '';
-    const results = await rv.evaluate(async ({ anon, assignment, learner, block }) => {
+    const results = await rv.evaluate(async ({ anon, assignment, learner, block, hidden }) => {
       const s = JSON.parse(localStorage.getItem('pocus-portal-auth') ?? '{}');
       const h = { apikey: anon, Authorization: `Bearer ${s.access_token}`, 'content-type': 'application/json', Prefer: 'return=representation' };
       const call = async (path: string, method: string, body?: unknown) => {
@@ -250,14 +286,27 @@ test('demonstration access: owner, fresh reviewer session, perspectives, walkthr
         await call(`/rest/v1/faculty_notes?learner_id=eq.${learner}`, 'DELETE'),
         await call('/rest/v1/review_feedback', 'POST', { display_name: 'x', category: 'bug', comments: 'direct insert' }),
         await call('/rest/v1/review_feedback?select=*', 'GET'),
+        ...(hidden ? [await call(`/storage/v1/object/sign/exam-media/${hidden}`, 'POST', { expiresIn: 60 })] : []),
+        await call('/rest/v1/questions?select=*', 'GET'),
+        await call('/rest/v1/question_keys?select=*', 'GET'),
       ];
-    }, { anon, assignment: demoAssignment, learner: R3, block: BLOCK.current });
+    }, { anon, assignment: demoAssignment, learner: R3, block: BLOCK.current, hidden: hiddenMedia });
+    if (hiddenMedia) expect(results[8].status, 'signed URL for hidden exam media').toBeGreaterThanOrEqual(400);
+    const keys = results[results.length - 1].rows as { question_version_id: string }[];
+    const demoQv = (await pool.query(`select ei.question_version_id from public.exam_items ei join public.exam_versions v on v.id = ei.exam_version_id
+                                       join public.exams e on e.id = v.exam_id where e.reviewer_visible`)).rows.map((r) => r.question_version_id);
+    expect(keys.length).toBe(demoQv.length);
+    for (const k of keys) expect(demoQv).toContain(k.question_version_id);
+    const qs = results[results.length - 2].rows as unknown[];
+    expect(qs.length).toBe(demoQv.length); // the demonstration questions, nothing else
     for (const r of results.slice(0, 4)) expect(r.status, r.path).toBeGreaterThanOrEqual(400);
     for (const r of results.slice(4, 6)) expect(r.status >= 400 || (Array.isArray(r.rows) && r.rows.length === 0), r.path).toBe(true);
     expect(results[6].status, 'direct feedback insert').toBeGreaterThanOrEqual(400);
     expect(results[7].rows, 'reading feedback').toEqual([]);
     const { rows } = await pool.query(`select count(*)::int as n from public.attempts where assignment_id = $1 and user_id not in (select id from public.profiles where is_fixture)`, [demoAssignment]);
     expect(rows[0].n).toBe(0);
+    // browsing every perspective, the walkthrough and the refused writes changed no record and no file
+    expect(await fingerprint()).toEqual(baseline);
   });
 
   await test.step('reviewer: contextual feedback', async () => {
@@ -295,6 +344,35 @@ test('demonstration access: owner, fresh reviewer session, perspectives, walkthr
     await expect(rv.getByTestId('demo-ended')).toBeVisible();
     await shot(rv, 'w21-reviewer-access-ended');
   });
-
   await ctx.close();
+
+  // ---------------------------------------------------------------- rotation and expiry
+  const ctx2 = await freshContext(browser);
+  const rv2 = await ctx2.newPage();
+  await test.step('code rotation ends every session issued under the old code; the old code stops working', async () => {
+    await reviewerSignIn(rv2, 'Second reviewer (test)', code);
+    await expect(rv2.getByTestId('reviewer-intro')).toBeVisible();
+    await page.goto('/app/admin/demo-access');
+    await page.getByTestId('rotate-code').click();
+    await page.getByTestId('confirm-code-action').click();
+    await expect(page.getByTestId('new-code')).toBeVisible();
+    const fresh = (await page.getByTestId('new-code').innerText()).trim();
+    expect(fresh).not.toBe(code);
+    await rv2.goto('/app/');
+    await expect(rv2.getByTestId('demo-ended')).toBeVisible();
+    await rv2.getByTestId('demo-name').fill('Second reviewer (test)');
+    await rv2.getByTestId('demo-code').fill(code);
+    await rv2.getByTestId('demo-submit').click();
+    await expect(rv2.getByTestId('demo-error')).toContainText('not valid');
+    await rv2.getByTestId('demo-code').fill(fresh);
+    await rv2.getByTestId('demo-submit').click();
+    await expect(rv2.getByTestId('reviewer-intro')).toBeVisible();
+  });
+
+  await test.step('an expired grant ends the session', async () => {
+    await pool.query(`update public.demo_grants set expires_at = now() - interval '1 minute' where display_name = 'Second reviewer (test)' and revoked_at is null`);
+    await rv2.goto('/app/');
+    await expect(rv2.getByTestId('demo-ended')).toBeVisible();
+  });
+  await ctx2.close();
 });

@@ -41,6 +41,14 @@ New or changed educational and assessment workflows; faculty verification; rotat
 - The stable reviewer build changes only through a release Rafa approves; keep it working while development continues.
 - Reviewers see only exams and media marked reviewer-visible.
 
+## Local development lifecycle (Mac)
+- Develop and test only in `~/pocus-portal`; never modify `~/pocus-cases`, its ignored files or its unpushed branches.
+- Node.js 22 (Homebrew `node@22`); the scripts put it on the PATH themselves.
+- `npm run local:up` starts OrbStack and the local Supabase stack if they are not running, and leaves anything already running alone. `npm run local:status` shows what runs (no keys). `npm run local:down` stops only this project's Supabase containers; data volumes are kept. `npm run local:down -- --runtime` also quits OrbStack, but only if nothing else runs in it.
+- Full validation: `npm run validate:<wp>` (currently `validate:wp3`) does the above itself, saves a copy of the local database (`npm run local:backup` → `.local-backups/`, git-ignored) before the suites reset it, and ends with the demonstration fixtures loaded. It leaves the stack running.
+- Claude cannot start services on the Mac (its shell there can't reach the Mac's own processes or localhost, and Terminal is click-only). Ask Rafa for one consolidated command; read results from the validation folder.
+- Never `supabase db reset` against anything but the local stack, never delete Docker volumes, never stop containers that are not this project's, never `npm audit fix --force`.
+
 ## After every development task
 1. Update `PROJECT_OVERVIEW.md`: status, exam progress, and "What Claude changed most recently".
 2. Report to Rafa in this format, kept short:
