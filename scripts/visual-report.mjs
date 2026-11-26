@@ -18,7 +18,7 @@
  * Needs: Docker (Docker Desktop, OrbStack or Colima) and the Supabase CLI, with
  * `supabase start` already run in this folder. See docs/exam-platform/TESTING.md.
  */
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -225,9 +225,15 @@ async function main() {
   rmSync(shotsDir, { recursive: true, force: true });
   mkdirSync(shotsDir, { recursive: true });
   const startedAt = Date.now();
-  const run = spawnSync('npx', ['playwright', 'test'], {
-    cwd: root, stdio: 'inherit',
-    env: { ...process.env, E2E_BASE_URL: site, E2E_MAIL_URL: `${site}/__mail/messages`, DATABASE_URL: stack.db, E2E_SHOTS: shotsDir, E2E_RESET_CMD: '' },
+  // Asynchronous on purpose: the gateway runs in this process, so a blocking
+  // spawnSync would stop it from answering the browser (every page load hangs).
+  const run = await new Promise((done) => {
+    const child = spawn('npx', ['playwright', 'test'], {
+      cwd: root, stdio: 'inherit',
+      env: { ...process.env, E2E_BASE_URL: site, E2E_MAIL_URL: `${site}/__mail/messages`, DATABASE_URL: stack.db, E2E_SHOTS: shotsDir, E2E_RESET_CMD: '' },
+    });
+    child.on('exit', (code) => done({ status: code }));
+    child.on('error', () => done({ status: 1 }));
   });
   const finishedAt = Date.now();
   await gw.close();
