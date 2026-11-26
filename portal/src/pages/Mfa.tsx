@@ -6,6 +6,11 @@ import { Spinner } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { friendly, supabase } from '../lib/supabase';
 
+/** Only same-app paths: never a full URL, protocol-relative or backslash path. */
+export function safeReturnPath(v: unknown): string {
+  return typeof v === 'string' && /^\/(?![\/\\])[^\\]*$/.test(v) ? v : '/';
+}
+
 /** Second step of sign-in for accounts with an authenticator app (TOTP). */
 export function MfaChallenge() {
   const { loading, session, mfaChallengeNeeded, refresh, signOut } = useAuth();
@@ -28,7 +33,7 @@ export function MfaChallenge() {
 
   if (loading) return <Spinner />;
   if (!session) return <Navigate to="/login" replace />;
-  if (!mfaChallengeNeeded) return <Navigate to={(loc.state as any)?.from ?? '/'} replace />;
+  if (!mfaChallengeNeeded) return <Navigate to={safeReturnPath((loc.state as any)?.from)} replace />;
 
   async function verify(e: FormEvent) {
     e.preventDefault();
@@ -42,7 +47,7 @@ export function MfaChallenge() {
       return;
     }
     await refresh();
-    nav((loc.state as any)?.from ?? '/', { replace: true });
+    nav(safeReturnPath((loc.state as any)?.from), { replace: true });
   }
 
   return (

@@ -12,10 +12,11 @@
     "test:db": "vitest run tests/db",
     "test:e2e": "playwright test",
     "visual": "node scripts/visual-report.mjs",
-    "test:auth": "vitest run tests/auth"
+    "test:auth": "vitest run tests/auth",
+    "validate:wp2": "bash scripts/wp2-validate.sh"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20 <25"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.118.0",

@@ -29,3 +29,5 @@ visual-report/
 !.env.example
 !.env.production
 supabase/.temp/
+supabase/.branches/
+.wp2-validation/

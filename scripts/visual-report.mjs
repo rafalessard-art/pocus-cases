@@ -32,6 +32,15 @@ const PORT = Number(process.env.VISUAL_PORT ?? 4173);
 
 /** The screens Rafa asked for, mapped to the screenshots tests/e2e/lifecycle.spec.ts takes. */
 export const SECTIONS = [
+  ['Sign-in and account security', [
+    ['a1-password-sign-in', 'Sign in with a password'],
+    ['a5-authenticator-challenge', 'Authenticator confirmation at sign-in'],
+    ['a2-account-security', 'Account → Security'],
+    ['a3-add-authenticator', 'Adding an authenticator app'],
+    ['a4-two-authenticators', 'Two authenticators (main and backup)'],
+    ['a6-mfa-required', 'Administrator MFA required'],
+    ['a7-reauthentication-code', 'Password change confirmed by an emailed code'],
+  ]],
   ['Resident dashboard', [
     ['r1-resident-next-steps', 'Home — “Your next steps”'],
     ['r2-curriculum-cases', 'Curriculum — Brightspace cases'],
