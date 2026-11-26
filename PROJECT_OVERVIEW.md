@@ -1,6 +1,6 @@
 # POCUS Portal — Project Overview
 
-*The one page to open first. Last updated: **Nov 25, 2026** (night). Updated after every meaningful change.*
+*The one page to open first. Last updated: **Nov 25, 2026** (late night). Updated after every meaningful change.*
 
 > This repository is public. This page never contains answer keys, exam content, real learner data, passwords or keys.
 
@@ -11,7 +11,8 @@
 - **Development policy:** the Oct 21 feature freeze is replaced by a controlled policy (Green / Amber / Red, in [CLAUDE.md](CLAUDE.md)). The principle: freeze unapproved institutional deployment, not general product development. Educational policy changes stay drafts until faculty or the program confirm them.
 - **Next:** read-only reviewer access for the two administrators: a shared demonstration code, Resident / Faculty / Admin perspectives, in-app feedback, and fictional data only.
   - **WP2 complete and validated locally, not yet live:** sign-in with a password plus an authenticator app for your own account, and the database foundation for read-only reviewer access. It is on branch `wp/2-owner-auth-demo-access`. Every suite passes against a full local Supabase stack on the Mac. Nothing on the demo portal or its database has changed.
-  - **Then:** WP3 (perspective switching, more fictional residents, read-only screens, feedback button); WP4 (a separate review environment in Canada, on free plans, then acceptance testing); WP5 (access for the administrators, after your approval).
+  - **WP3 complete and validated locally, not yet live:** reviewer sign-in with a name and the shared code, Resident / Faculty / Admin perspectives over fictional data, read-only screens, a demonstration exam walkthrough that records nothing, and in-app feedback (the approved reviewer feedback channel) with an owner inbox. It is on branch `wp/3-reviewer-experience`; details in that branch's overview.
+  - **Then:** WP4 (a separate review environment in Canada, on free plans, then acceptance testing); WP5 (access for the administrators, after your approval).
 - **Infrastructure:** free plans only for now (Supabase Free, Vercel Hobby). The existing US project stays the development demo; a second, Canadian project is planned for stakeholder review.
 - **Data:** fictional residents only. Nothing is merged to `main`, and no real learners are enrolled.
 
