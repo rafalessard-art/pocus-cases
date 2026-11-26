@@ -35,12 +35,24 @@ case "$POOL" in
   postgresql://postgres.$REF:\[YOUR-PASSWORD\]@*.pooler.supabase.com:5432/postgres*) ;;
   *) echo "That is not the session-pooler string for project $REF (port 5432, with [YOUR-PASSWORD])."; exit 1;;
 esac
-read -rs -p "2) Database password (hidden; from your password manager): " PW; echo
+# The password is checked before anything else runs (3 tries).
+for try in 1 2 3; do
+  read -rs -p "2) Database password (hidden; from your password manager): " PW; echo
+  [ -n "$PW" ] || { echo "   (empty — try again)"; continue; }
+  ENC=$(PW="$PW" node -e 'process.stdout.write(encodeURIComponent(process.env.PW))')
+  DBURL="${POOL/\[YOUR-PASSWORD\]/$ENC}"
+  unset PW ENC
+  if DB_URL="$DBURL" node -e '
+    const pg = require("pg");
+    const c = new pg.Client({ connectionString: process.env.DB_URL, ssl: { rejectUnauthorized: false } });
+    c.connect().then(() => c.query("select 1")).then(() => c.end()).then(() => process.exit(0),
+      (e) => { console.error("   connection failed: " + (/password/i.test(e.message) ? "the password was not accepted" : e.message)); process.exit(1); });
+  '; then echo "   password accepted"; break; fi
+  DBURL=""
+done
+[ -n "${DBURL:-}" ] || { echo "Stopped: the database password was not accepted. Reset it under Project Settings → Database, save it in your password manager, then run this again."; rmdir "$OUT" 2>/dev/null; exit 1; }
 read -rs -p "3) Secret key (Project Settings → API Keys → secret / service_role; hidden): " SK; echo
-[ -n "$PW" ] && [ -n "$SK" ] || { echo "Both are needed."; exit 1; }
-ENC=$(PW="$PW" node -e 'process.stdout.write(encodeURIComponent(process.env.PW))')
-DBURL="${POOL/\[YOUR-PASSWORD\]/$ENC}"
-unset PW ENC
+[ -n "$SK" ] || { echo "The secret key is needed for the stored files."; exit 1; }
 
 echo "→ database dumps (read-only)…"
 supabase db dump --db-url "$DBURL" -f "$OUT/schema.sql" >/dev/null
