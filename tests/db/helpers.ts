@@ -25,6 +25,8 @@ export type User = {
   role: 'learner' | 'faculty' | 'admin' | 'reviewer' | 'none';
   /** Extra JWT claims for this user's requests, e.g. { aal: 'aal2' } after MFA. */
   claims?: Record<string, unknown>;
+  /** Request headers PostgREST would expose to SQL (request.headers), e.g. the owner's reviewer preview. */
+  headers?: Record<string, string>;
 };
 
 export async function sql<T = any>(text: string, params: unknown[] = []): Promise<T[]> {
@@ -66,6 +68,7 @@ export async function as<T>(user: User | null, fn: (q: <R = any>(text: string, p
     await c.query(`select set_config('request.jwt.claims', $1, true)`, [
       JSON.stringify(user ? { aal: 'aal1', ...user.claims, sub: user.id, role: 'authenticated', email: user.email } : { role: 'anon' }),
     ]);
+    if (user?.headers) await c.query(`select set_config('request.headers', $1, true)`, [JSON.stringify(user.headers)]);
     const q = async (text: string, params: unknown[] = []) => (await c.query(text, params)).rows;
     const out = await fn(q as any);
     await c.query('commit');

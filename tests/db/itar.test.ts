@@ -241,7 +241,9 @@ describe('retention', () => {
     await expect(as(faculty, (q) => q(`update public.retention_settings set retain_days = 1`))).resolves.toEqual([]);
     await as(admin, (q) => q(`update public.retention_settings set retain_days = 7 where key = 'itar_evidence_files'`));
     const due = await rpc(admin, 'evidence_due_for_deletion');
-    const ids = due.map((d: any) => d.id);
+    // only this test's block (other suites, e.g. the demonstration fixtures, have their own past blocks)
+    const [{ name: blockName }] = await sql(`select name from public.cohorts where id = $1`, [block]);
+    const ids = due.filter((d: any) => d.block === blockName).map((d: any) => d.id);
     expect(ids.length).toBeGreaterThanOrEqual(1);
     const [{ storage_path: path }] = await sql(`select storage_path from public.evidence_submissions where id = $1`, [ids[0]]);
     // not yet marked: even an admin's storage delete matches nothing
@@ -256,7 +258,7 @@ describe('retention', () => {
     expect(row.status).toBe('verified');
     expect(row.file_deleted_at).not.toBeNull();
     expect(row.sha256).toBe('abc');
-    expect(await rpc(admin, 'evidence_due_for_deletion')).toEqual([]);
+    expect((await rpc(admin, 'evidence_due_for_deletion')).filter((d: any) => d.block === blockName)).toEqual([]);
     await as(admin, (q) => q(`update public.retention_settings set retain_days = null where key = 'itar_evidence_files'`));
   });
 });

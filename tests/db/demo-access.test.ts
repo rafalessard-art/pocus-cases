@@ -228,25 +228,31 @@ describe('a reviewer cannot extend, reactivate or escalate their own access', ()
     }
   });
 
-  it('a reviewer can read only their own profile and their own grant', async () => {
+  it('of real records, a reviewer can read only their own profile and their own grant', async () => {
+    // WP3 adds read access to fictional (fixture) people and blocks and to reviewer-visible
+    // exams and media — see reviewer-views.test.ts. Nothing real is readable.
     const code = await newCode();
     const other = await redeem(code, 'Other reviewer');
     const r = await redeem(code, 'Me');
-    await makePublishedExam(admin);
+    const ex = await makePublishedExam(admin);
+    const real = [other.user!.id, other.grant_id!, admin.id, learner.id, faculty.id, ex.examId, ex.versionId, ex.media.assetId, ex.media.versionId,
+                  ...ex.q.map((q: any) => q.question_version_id)];
     const tables = await sql<{ t: string }>(`select tablename as t from pg_tables where schemaname = 'public' order by 1`);
     for (const { t } of tables) {
       const rows = await as(r.user!, (q) => q(`select * from public.${t}`)).catch((e) => {
         expect(String(e), t).toMatch(/permission denied/);
         return [];
       });
-      if (t === 'profiles') expect(rows.map((x: any) => x.id), t).toEqual([r.user!.id]);
+      const text = JSON.stringify(rows).replace(/"(updated_by|confirmed_by)":"[0-9a-f-]{36}"/g, '');
+      expect(real.filter((id) => text.includes(id)), t).toEqual([]);
+      if (t === 'profiles') expect(rows.filter((x: any) => !x.is_fixture).map((x: any) => x.id), t).toEqual([r.user!.id]);
       else if (t === 'demo_grants') expect(rows.map((x: any) => x.id), t).toEqual([r.grant_id]);
       else if (t === 'deployment_settings') expect(rows, t).toHaveLength(1);
-      else expect(rows, t).toHaveLength(0);
+      else if (['invitations', 'audit_log', 'demo_codes', 'demo_redeem_attempts', 'review_feedback'].includes(t)) expect(rows, t).toHaveLength(0);
     }
     expect(other.user).not.toBeNull();
     const objs = await as(r.user!, (q) => q(`select name from storage.objects`));
-    expect(objs).toHaveLength(0);
+    expect(objs.map((o: any) => o.name)).not.toContain(ex.media.path);
     // cannot see the code hash column at all
     await expect(as(r.user!, (q) => q(`select code_hash from public.demo_codes`))).rejects.toThrow(/permission denied/);
   });
@@ -272,18 +278,24 @@ describe('read-only enforcement: direct API sweep as a reviewer', () => {
   let reviewer: User;
   let ids: string[] = [];
 
-  beforeAll(async () => {
-    await setSettings('development', true, false);
-    await sql(`update public.demo_codes set revoked_at = now() where revoked_at is null`);
+  // The file-level beforeEach revokes every code, so the sweep's reviewer is issued
+  // afresh before each test (an earlier version swept an already-revoked reviewer).
+  beforeEach(async () => {
     const code = (await rpc(withAal2(admin), 'rotate_demo_code', { p_valid_days: 30 })).code;
     reviewer = (await redeem(code, 'Sweep reviewer')).user!;
+    ids[8] = reviewer.id;
+    expect(await roleOf(reviewer)).toBe('reviewer');
+  });
+
+  beforeAll(async () => {
+    await setSettings('development', true, false);
     // realistic data to attack: a published exam with an open assignment and an attempt by a learner
     const block = await makeCohort();
     await sql(`insert into public.cohort_members (cohort_id, user_id, member_role) values ($1, $2, 'learner'), ($1, $3, 'evaluator')`, [block, learner.id, faculty.id]);
     const ex = await makePublishedExam(admin);
     const [asg] = await sql(`insert into public.assignments (exam_version_id, cohort_id) values ($1, $2) returning id`, [ex.versionId, block]);
     const att = await rpc(learner, 'start_attempt', { p_assignment: asg.id });
-    ids = [block, ex.examId, ex.versionId, asg.id, att, learner.id, faculty.id, admin.id, reviewer.id, ex.media.versionId, ex.media.assetId];
+    ids = [block, ex.examId, ex.versionId, asg.id, att, learner.id, faculty.id, admin.id, admin.id, ex.media.versionId, ex.media.assetId];
   });
 
   it('every table refuses INSERT, UPDATE and DELETE', async () => {
@@ -357,12 +369,15 @@ describe('read-only enforcement: direct API sweep as a reviewer', () => {
     }
     // A reviewer changed nothing anywhere.
     expect(await fingerprint()).toEqual(before);
-    // And only these functions return anything meaningful to a reviewer today.
-    // Reviewer read views are added explicitly in later releases; extend this list deliberately.
+    // And only these functions return anything meaningful to a reviewer given real ids.
+    // Extend this list deliberately (WP3 views are swept with fictional ids in reviewer-views.test.ts).
     const allowed = new Set([
       'my_role', 'my_access', 'is_reviewer', 'current_aal', 'can_view_learner', 'can_evaluate',
       // pure helpers that only transform their arguments
       'score_item', 'assert_no_identifiers',
+      // WP3 reviewer views: fictional blocks and residents, the configuration template, the
+      // demonstration walkthrough's not-found note for other questions
+      'itar_blocks', 'demo_fixture_learners', 'iter_template_for', 'question_issues',
     ]);
     const unexpected = [...new Set(answered)].filter((f) => !allowed.has(f));
     expect(unexpected).toEqual([]);
