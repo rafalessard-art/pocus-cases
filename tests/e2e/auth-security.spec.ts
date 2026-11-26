@@ -76,7 +76,7 @@ async function passwordSignIn(page: Page, password: string, screenshot?: string)
   await page.goto('/app/login');
   await page.getByTestId('use-password').click();
   await page.getByLabel('Institutional email').fill(OWNER);
-  await page.getByLabel('Password').fill(password);
+  await page.getByLabel('Password', { exact: true }).fill(password);
   if (screenshot) await shot(page, screenshot);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 }
@@ -95,7 +95,7 @@ async function addAuthenticator(page: Page, name: string, screenshot?: string): 
   if (screenshot) await shot(page, screenshot);
   await form.getByLabel('Code from the app').fill(await totp(secret));
   await form.getByRole('button', { name: 'Confirm and add' }).click();
-  await expect(page.getByTestId('mfa-card').getByText(name, { exact: false })).toBeVisible();
+  await expect(page.getByTestId('mfa-card').locator('li', { hasText: name })).toHaveCount(1);
   return secret;
 }
 
@@ -107,7 +107,7 @@ async function confirmWithAuthenticator(page: Page, secret: string, factorLabel?
     const value = await sel.locator('option', { hasText: factorLabel }).first().getAttribute('value');
     await sel.selectOption(value!);
   }
-  await form.getByLabel('Code').fill(await totp(secret));
+  await form.getByLabel('Code', { exact: true }).fill(await totp(secret));
   await form.getByRole('button', { name: 'Confirm' }).click();
   await expect(page.getByRole('button', { name: 'Sign out' }).first()).toBeVisible();
   await expect(page).not.toHaveURL(/\/app\/mfa/);
@@ -135,7 +135,7 @@ test('owner: password, two authenticators, staged MFA requirement and recovery',
     await expect(page.getByRole('heading', { name: 'Security' })).toBeVisible();
     await shot(page, 'a2-account-security');
     await a11y(page, 'account security');
-    await page.getByLabel('New password').fill(PW1);
+    await page.getByLabel('New password', { exact: true }).fill(PW1);
     await page.getByLabel('Repeat new password').fill(PW1);
     await page.getByRole('button', { name: 'Save password' }).click();
     await expect(page.getByText(/Password saved/)).toBeVisible();
@@ -158,7 +158,7 @@ test('owner: password, two authenticators, staged MFA requirement and recovery',
     await page.goto('/app/admin');
     await expect(page).toHaveURL(/\/app\/mfa/);
     await confirmWithAuthenticator(page, phone, /Phone/);
-    await expect(page).toHaveURL(/\/app\/faculty/);
+    await expect(page).toHaveURL(/\/app\/admin/); // back to the page that was asked for
   });
 
   await test.step('require an authenticator for administrators (database-enforced)', async () => {
@@ -177,7 +177,7 @@ test('owner: password, two authenticators, staged MFA requirement and recovery',
     await expect(page).toHaveURL(/\/app\/mfa/);
     await confirmWithAuthenticator(page, backup, /Backup/);
     await page.getByRole('link', { name: 'Account' }).click();
-    await page.getByLabel('New password').fill(PW2);
+    await page.getByLabel('New password', { exact: true }).fill(PW2);
     await page.getByLabel('Repeat new password').fill(PW2);
     await page.getByRole('button', { name: 'Save password' }).click();
     await expect(page.getByText(/Password saved/)).toBeVisible();
@@ -192,7 +192,7 @@ test('owner: password, two authenticators, staged MFA requirement and recovery',
     const u = await db.query(`select id from auth.users where email = $1`, [OWNER]);
     await db.query(`update auth.sessions set created_at = now() - interval '25 hours' where user_id = $1`, [u.rows[0].id]);
     await page.getByRole('link', { name: 'Account' }).click();
-    await page.getByLabel('New password').fill(PW3);
+    await page.getByLabel('New password', { exact: true }).fill(PW3);
     await page.getByLabel('Repeat new password').fill(PW3);
     const t = Date.now() - 1000;
     await page.getByRole('button', { name: 'Save password' }).click();

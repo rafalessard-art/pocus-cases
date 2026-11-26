@@ -676,7 +676,7 @@ test('full examination lifecycle', async ({ page, context }) => {
   });
 });
 
-test('an invited person can also sign in by clicking the emailed link', async ({ page }) => {
+test('sign-in emails carry a code and no clickable link (mail scanners pre-open and burn links)', async ({ page }) => {
   const email = `link-${RUN}@e2e.test`;
   const db = new pg.Client({ connectionString: process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:5432/postgres' });
   await db.connect();
@@ -687,17 +687,16 @@ test('an invited person can also sign in by clicking the emailed link', async ({
   const t = Date.now() - 1000;
   await page.getByRole('button', { name: 'Email me a sign-in code' }).click();
   await expect(page.getByText(/We sent a sign-in email/)).toBeVisible();
-  let link: string | undefined;
-  for (let i = 0; i < 40 && !link; i++) {
+  let text: string | undefined;
+  for (let i = 0; i < 40 && !text; i++) {
     const msgs = (await (await fetch(`${MAIL}?to=${encodeURIComponent(email)}`)).json()) as { text: string; at: number }[];
-    link = msgs.filter((m) => m.at >= t).pop()?.text.match(/https?:\/\/\S+verify\?token=[^\s\]]+/)?.[0];
-    if (!link) await new Promise((r) => setTimeout(r, 250));
+    text = msgs.filter((m) => m.at >= t).pop()?.text;
+    if (!text) await new Promise((r) => setTimeout(r, 250));
   }
-  expect(link).toBeTruthy();
-  // the local auth server omits its /auth/v1 prefix in links; hosted Supabase does not
-  const url = new URL(link!.replace(/&amp;/g, '&'));
-  if (!url.pathname.startsWith('/auth/v1')) url.pathname = '/auth/v1' + url.pathname;
-  await page.goto(url.toString());
-  await expect(page).toHaveURL(/\/app\/?#?$/);
+  expect(text).toBeTruthy();
+  expect(text).toMatch(/\b\d{6}\b/);
+  expect(text).not.toMatch(/verify\?token=|https?:\/\/\S+\/auth\/v1/);
+  await page.getByLabel('Sign-in code').fill(text!.match(/\b(\d{6})\b/)![1]);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('heading', { name: /Welcome, Link/ })).toBeVisible();
 });
