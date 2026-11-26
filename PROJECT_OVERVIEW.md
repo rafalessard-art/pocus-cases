@@ -1,6 +1,6 @@
 # POCUS Portal — Project Overview
 
-*The one page to open first. Last updated: **Nov 25, 2026** (evening). Updated after every meaningful change.*
+*The one page to open first. Last updated: **Nov 25, 2026** (night). Updated after every meaningful change.*
 
 > This repository is public. This page never contains answer keys, exam content, real learner data, passwords or keys.
 
@@ -10,7 +10,7 @@
 - **Nov 24 meeting with DAPM program administration:** administration is interested in developing the portal as a potential formal departmental resource. It has asked uOttawa about institutional requirements (security, privacy, encryption); the answer is pending. Two administrators asked for their own access to explore the portal and give feedback. This is support for further evaluation, **not** approval for use with real residents.
 - **Development policy:** the Oct 21 feature freeze is replaced by a controlled policy (Green / Amber / Red, in [CLAUDE.md](CLAUDE.md)). The principle: freeze unapproved institutional deployment, not general product development. Educational policy changes stay drafts until faculty or the program confirm them.
 - **Next:** read-only reviewer access for the two administrators: a shared demonstration code, Resident / Faculty / Admin perspectives, in-app feedback, and fictional data only.
-  - **Done locally (WP2, not yet live):** sign-in with a password plus an authenticator app for your own account, and the database foundation for read-only reviewer access. It is on branch `wp/2-owner-auth-demo-access` and tested on a local database only. Nothing on the demo portal or its database has changed.
+  - **WP2 complete and validated locally, not yet live:** sign-in with a password plus an authenticator app for your own account, and the database foundation for read-only reviewer access. It is on branch `wp/2-owner-auth-demo-access`. Every suite passes against a full local Supabase stack on the Mac. Nothing on the demo portal or its database has changed.
   - **Then:** WP3 (perspective switching, more fictional residents, read-only screens, feedback button); WP4 (a separate review environment in Canada, on free plans, then acceptance testing); WP5 (access for the administrators, after your approval).
 - **Infrastructure:** free plans only for now (Supabase Free, Vercel Hobby). The existing US project stays the development demo; a second, Canadian project is planned for stakeholder review.
 - **Data:** fictional residents only. Nothing is merged to `main`, and no real learners are enrolled.
@@ -91,7 +91,15 @@ How each loop is done: you export an MP4 from QPath. Claude blacks out the burne
   - the database foundation for read-only demonstration access and the server-side code check;
   - related hardening: users can no longer rename themselves, faculty review notes are staff-only, video links last 20 minutes instead of 3 hours;
   - a rollback script for the new database changes, and a way to run the database tests without Docker;
-  - tests: 62 unit and 113 database tests pass locally. The live sign-in tests (`npm run test:auth`) still need a local Supabase stack on your Mac;
+  - **validated on the Mac's local Supabase stack** (`npm run validate:wp2`): typecheck, 64 unit, 114 database, 6 live sign-in tests (real Auth server and Edge Function), and 3 browser tests (exam lifecycle, sign-in emails, owner sign-in security). The visual report captured 34 of 34 screens;
+  - **fixed during validation:**
+    - switching the administrator MFA requirement failed through the API (the update had no WHERE clause, which Supabase rejects);
+    - `npm run visual` could never load a page (its server was blocked while the browser ran);
+    - the older emailed-link test was out of date with the code-only email;
+    - the password hint is no longer part of the field's name for screen readers;
+    - the authenticator step now shows no portal navigation;
+    - the authenticator step only returns to pages inside the portal;
+  - Node 22 pinned (`.nvmrc`); the Playwright browser install stalls on Node 26;
   - branches starting with `wp/` are not deployed by Vercel, so the demo portal is unchanged.
 - **Nov 25:** Documentation only:
   - the new controlled development policy in `CLAUDE.md`, replacing the feature freeze;
