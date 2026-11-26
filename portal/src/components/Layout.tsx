@@ -29,7 +29,9 @@ function ThemeToggle() {
 }
 
 export function TopNav({ children }: { children?: ReactNode }) {
-  const { profile, signOut } = useAuth();
+  const { profile: signedIn, signOut, mfaChallengeNeeded } = useAuth();
+  // Until the authenticator step is done, show no portal navigation at all.
+  const profile = mfaChallengeNeeded ? null : signedIn;
   const nav = useNavigate();
   return (
     <nav className="topnav" aria-label="Main">

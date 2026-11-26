@@ -22,7 +22,9 @@ const PW3 = `Correct-Horse-${RUN}-3`;
 const db = new pg.Client({ connectionString: process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:5432/postgres' });
 
 async function shot(page: Page, name: string) {
-  if (SHOTS) await page.screenshot({ path: join(SHOTS, `${name}.png`), fullPage: true });
+  if (!SHOTS) return;
+  await page.addStyleTag({ content: '.topnav{position:static!important}' }); // no sticky header mid-page in full-page shots
+  await page.screenshot({ path: join(SHOTS, `${name}.png`), fullPage: true });
 }
 async function a11y(page: Page, label: string) {
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();

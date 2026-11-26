@@ -146,7 +146,7 @@ function EnrollTotp({ existing, onDone }: { existing: number; onDone: () => void
   async function start() {
     setErr(null);
     setBusy(true);
-    const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp', friendlyName: `${name} ${new Date().toISOString().slice(0, 10)}` });
+    const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp', friendlyName: `${name.trim()} (${new Date().toLocaleDateString('en-CA')})` });
     setBusy(false);
     if (error || !data) return setErr(friendly(error?.message ?? 'Could not start'));
     setPending({ id: data.id, qr: data.totp.qr_code, secret: data.totp.secret });
@@ -176,7 +176,7 @@ function EnrollTotp({ existing, onDone }: { existing: number; onDone: () => void
       <div className="row" style={{ marginTop: 12 }}>
         <label className="field" style={{ flex: '1 1 200px' }}>
           Name
-          <input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} />
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} />
         </label>
         <button className="btn secondary" disabled={busy || !name.trim()} onClick={start} data-testid="mfa-add">
           {existing ? 'Add a backup authenticator' : 'Add an authenticator app'}

@@ -103,7 +103,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 :root[data-theme="dark"] .badge.warn { background: #2a2312; }
 label.field, .field-labelled { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 700; color: var(--ink-soft); }
 label.field .hint, .field-labelled .hint { font-weight: 400; font-size: 12px; }
-input[type=text], input[type=email], input[type=number], input[type=search], input[type=datetime-local], input[type=date], select, textarea {
+input[type=text], input[type=email], input[type=password], input[type=number], input[type=search], input[type=datetime-local], input[type=date], select, textarea {
   border: 1px solid var(--rule); background: var(--paper2); border-radius: 8px; padding: 9px 11px; font-weight: 400; color: var(--ink); width: 100%; }
 textarea { min-height: 90px; resize: vertical; line-height: 1.45; }
 input:focus, select:focus, textarea:focus { border-color: var(--petrol); outline: 2px solid color-mix(in srgb, var(--petrol) 25%, transparent); }
