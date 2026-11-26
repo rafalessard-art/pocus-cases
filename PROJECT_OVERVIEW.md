@@ -1,6 +1,6 @@
 # POCUS Portal — Project Overview
 
-*The one page to open first. Last updated: **Nov 25, 2026** (night). Updated after every meaningful change.*
+*The one page to open first. Last updated: **Nov 26, 2026**. Updated after every meaningful change.*
 
 > This repository is public. This page never contains answer keys, exam content, real learner data, passwords or keys.
 
@@ -10,8 +10,9 @@
 - **Nov 24 meeting with DAPM program administration:** administration is interested in developing the portal as a potential formal departmental resource. It has asked uOttawa about institutional requirements (security, privacy, encryption); the answer is pending. Two administrators asked for their own access to explore the portal and give feedback. This is support for further evaluation, **not** approval for use with real residents.
 - **Development policy:** the Oct 21 feature freeze is replaced by a controlled policy (Green / Amber / Red, in [CLAUDE.md](CLAUDE.md)). The principle: freeze unapproved institutional deployment, not general product development. Educational policy changes stay drafts until faculty or the program confirm them.
 - **Next:** read-only reviewer access for the two administrators: a shared demonstration code, Resident / Faculty / Admin perspectives, in-app feedback, and fictional data only.
-  - **WP2 complete and validated locally, not yet live:** sign-in with a password plus an authenticator app for your own account, and the database foundation for read-only reviewer access. It is on branch `wp/2-owner-auth-demo-access`. Every suite passes against a full local Supabase stack on the Mac. Nothing on the demo portal or its database has changed.
-  - **Then:** WP3 (perspective switching, more fictional residents, read-only screens, feedback button); WP4 (a separate review environment in Canada, on free plans, then acceptance testing); WP5 (access for the administrators, after your approval).
+  - **WP2 complete and validated locally, not yet live:** sign-in with a password plus an authenticator app for your own account, and the database foundation for read-only reviewer access (branch `wp/2-owner-auth-demo-access`).
+  - **WP3 built locally, Mac validation pending** (branch `wp/3-reviewer-experience`, not deployed): reviewer sign-in with a name and the shared code; Resident / Faculty / Admin perspectives over fictional data; read-only screens with disabled write controls; a demonstration exam walkthrough that records nothing; in-app feedback with an owner inbox; your own "Demonstration access" page and "Preview as reviewer". Dependencies updated (0 known vulnerabilities). See [DEMO_ACCESS](docs/exam-platform/DEMO_ACCESS.md).
+  - **Then:** WP4 (a separate review environment in Canada, on free plans, then acceptance testing), only after you approve the WP3 report; WP5 (access for the administrators, after your approval).
 - **Infrastructure:** free plans only for now (Supabase Free, Vercel Hobby). The existing US project stays the development demo; a second, Canadian project is planned for stakeholder review.
 - **Data:** fictional residents only. Nothing is merged to `main`, and no real learners are enrolled.
 
@@ -86,6 +87,18 @@ How each loop is done: you export an MP4 from QPath. Claude blacks out the burne
 
 ## What Claude changed most recently
 
+- **Nov 26 — WP3, local only, on branch `wp/3-reviewer-experience` (not deployed):**
+  - **dependencies**, one commit each: vite 6.4.6, vitest 4.1.12, react-router-dom 7.18.7 (compatibility checked: the portal uses only basic routing). `npm audit`: 0 vulnerabilities, production and development;
+  - **reviewer sign-in**: name + shared code on the sign-in page, no email; the session persists; clear messages for a wrong code and for access that has ended;
+  - **perspectives**: Resident (pick a fictional resident) / Faculty / Admin, with a "read-only · fictional residents" badge and a Feedback button. Perspectives never change permissions;
+  - **read-only screens**: the existing pages, with 65 write buttons disabled and explained; uploads hidden; the database refuses any write regardless;
+  - **demonstration exam walkthrough**: six synthetic questions with simulator loops, then the feedback view. No attempt is recorded;
+  - **feedback**: name and role (self-reported), date, perspective, page, section, version, category and comments; only you can read it;
+  - **for you**: Admin → Demonstration access (issue, rotate and revoke the code; see and end reviewer sessions; feedback inbox), the same perspectives, and "Preview as reviewer";
+  - **fictional data**: 6 residents, 3 faculty, 3 blocks (past, current, upcoming) with exam results, scans, evidence, requirements, EPA reviews, observations and ITERs (`npm run fixtures:demo`);
+  - **guards**: what reviewers can see is set only in SQL; the departmental post-test, its keys and media with unresolved provenance stay hidden; real and fictional people never share a block; questions can't be shared between the demonstration exam and other exams;
+  - **tests in the development workspace**: typecheck, 70 unit and 137 database tests pass (23 new reviewer tests that sweep every table, every function and storage for hidden content; a check that the earlier WP2 sweep was testing an already-revoked reviewer, now fixed). The new database changes roll back cleanly (WP2 suite 114/114 after rollback);
+  - **still to run on the Mac**: `npm run validate:wp3` (live sign-in, the reviewer journey in a fresh browser, and screenshots of each perspective).
 - **Nov 25 (evening) — WP2, local only, on branch `wp/2-owner-auth-demo-access`:**
   - your account can sign in with a password plus an authenticator app (Account → Security), with a backup authenticator. "Require an authenticator for administrators" stays off until you've tested recovery;
   - the database foundation for read-only demonstration access and the server-side code check;
@@ -151,7 +164,8 @@ How each loop is done: you export an MP4 from QPath. Claude blacks out the burne
 | [DIRECTOR_DECISIONS](docs/exam-platform/DIRECTOR_DECISIONS.md) | Decisions needed from the rotation director |
 | [DEPLOYMENT_READINESS](docs/exam-platform/DEPLOYMENT_READINESS.md) · [DEPLOYMENT](docs/exam-platform/DEPLOYMENT.md) | Approvals and production setup |
 | [MEDIA_GUIDE](docs/exam-platform/MEDIA_GUIDE.md) | Exporting and de-identifying loops |
-| [TESTING](docs/exam-platform/TESTING.md) | All tests, and `npm run visual` |
+| [TESTING](docs/exam-platform/TESTING.md) | All tests, `npm run visual` and `npm run validate:wp3` |
+| [DEMO_ACCESS](docs/exam-platform/DEMO_ACCESS.md) | Read-only reviewer access: design, fictional data and tests |
 | [VALIDATION_REPORT](docs/exam-platform/VALIDATION_REPORT.md) | Last full validation (Oct 21) |
 
 Answer keys and exam-content notes are kept privately in the claude.ai project, not here.

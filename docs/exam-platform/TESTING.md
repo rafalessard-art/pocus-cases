@@ -8,9 +8,18 @@
 | Types | `npm run typecheck` | nothing |
 | **Visual report** (screenshots of every main screen) | `npm run visual` | Docker + Supabase CLI, `supabase start` |
 
+## Supported versions
+
+- **Node.js 22** (LTS) is the supported local version; `.nvmrc` pins it and `package.json` allows 20–24. On a Mac: `brew install node@22`, then `export PATH="$(brew --prefix node@22)/bin:$PATH"`. Playwright's browser install stalls on Node 26.
+- Supabase CLI 3.x with Docker (OrbStack, Docker Desktop or Colima) for the full local stack.
+
+## Full validation on a Mac (WP3)
+
+`npm run validate:wp3` (`scripts/wp3-validate.sh`) runs every suite against the **local** stack and writes the results to `.wp3-validation/` (git-ignored): `npm ci`, database reset, typecheck, unit, database (including the reviewer sweeps), the live sign-in tests with the `demo-redeem` function, and the visual report with all three browser suites (lifecycle, owner sign-in security, reviewer journey). It finishes by loading the demonstration fixtures (with their synthetic files) into the local database for exploring by hand. It aborts unless every address is local, and never links, pushes or deploys.
+
 ## Visual report — one command
 
-`npm run visual` runs the end-to-end test on a local copy of the portal and writes **`visual-report/index.html`**. The report groups the screenshots by screen: resident dashboard, requirements and scans, exam interface, faculty dashboard, learner workspace, exam management, and ITER Quick Copy. Pass or fail and the commit are shown at the top. On a Mac the report opens automatically.
+`npm run visual` runs the end-to-end tests on a local copy of the portal and writes **`visual-report/index.html`**. The report groups the screenshots by screen: sign-in and account security, resident dashboard, requirements and scans, exam interface, faculty dashboard, learner workspace, exam management, demonstration access (owner and reviewer), and ITER Quick Copy. The local build includes demonstration sign-in (`VITE_DEMO_ACCESS=true`); the reviewer journey needs `supabase functions serve demo-redeem` running (the validation script starts it). Access codes are masked in screenshots. Pass or fail and the commit are shown at the top. On a Mac the report opens automatically.
 
 **One-time setup:**
 1. Install Docker: Docker Desktop, or the free OrbStack or Colima.
@@ -68,6 +77,10 @@ for f in supabase/migrations/*.sql; do psql postgresql://postgres:postgres@127.0
 psql postgresql://postgres:postgres@127.0.0.1:5432/portal -f supabase/seed.sql
 DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/portal npm run test:db
 ```
+
+## Demonstration fixtures
+
+`npm run fixtures:demo` (with `DATABASE_URL` of the local database) loads the fictional cast, blocks, demonstration exam and synthetic evidence described in [DEMO_ACCESS](DEMO_ACCESS.md). Add `STORAGE_URL` and `SERVICE_ROLE_KEY` of the local stack to upload the synthetic files too. `tests/db/reviewer-views.test.ts` and `tests/e2e/reviewer.spec.ts` load them themselves.
 
 ## Authentication against a live local stack
 
