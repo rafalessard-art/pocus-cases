@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Page } from '../../components/Layout';
 import { useLoad } from '../../components/ui';
 import { supabase } from '../../lib/supabase';
+import { isAdmin, useAuth } from '../../lib/auth';
 
 async function count(table: string, filter?: (q: any) => any) {
   let q = supabase.from(table).select('*', { count: 'exact', head: true });
@@ -20,6 +21,8 @@ export function AdminHome() {
     invites: await count('invitations', (q) => q.is('accepted_at', null).is('revoked_at', null)),
   }), []);
   const d = c.data;
+  const { profile, access } = useAuth();
+  const owner = isAdmin(profile) && !!access?.demo_access_enabled;
   const tiles = [
     { to: '/admin/exams', title: 'Examinations', body: 'Build, version, publish and assign exams.', stat: d?.exams, label: 'exams', accent: 'var(--clay)' },
     { to: '/admin/questions', title: 'Question bank', body: 'Versioned questions mapped to domains and objectives.', stat: d?.questions, label: 'questions', accent: 'var(--petrol)' },
@@ -27,6 +30,7 @@ export function AdminHome() {
     { to: '/admin/people', title: 'People & cohorts', body: 'Invitations, roles, rotation cohorts, accommodations.', stat: d?.people, label: `active · ${d?.invites ?? 0} pending invites`, accent: 'var(--moss)' },
     { to: '/admin/itar', title: 'ITAR setup', body: 'Required learning-case evidence and evidence retention.', stat: undefined, label: '', accent: 'var(--moss)' },
     { to: '/admin/import', title: 'Import', body: 'Migrate an existing exam from CSV/JSON with validation.', stat: undefined, label: '', accent: 'var(--gold)' },
+    ...(owner ? [{ to: '/admin/demo-access', title: 'Demonstration access', body: 'Reviewer access code, reviewer sessions and the feedback inbox.', stat: undefined, label: '', accent: 'var(--clay)' }] : []),
   ];
   return (
     <Page kicker="Administration" title="Admin" subtitle="Content, people and governance">

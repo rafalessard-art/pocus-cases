@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { guardedFetch } from './viewMode';
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) as string | undefined;
@@ -17,6 +18,8 @@ export const supabase: SupabaseClient = configured
       // flow means the link works even when opened in a different browser or
       // device from the one that requested it.
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'implicit', storageKey: 'pocus-portal-auth' },
+      // Applies the current view (read-only, fictional resident, owner preview) to every API request; see viewMode.ts.
+      global: { fetch: guardedFetch },
     })
   : (null as unknown as SupabaseClient);
 

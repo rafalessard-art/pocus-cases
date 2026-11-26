@@ -1,8 +1,9 @@
+import { useReadOnly } from '../lib/viewMode';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Page } from '../components/Layout';
 import { EvidencePreview } from '../components/EvidencePreview';
-import { Badge, Empty, ErrorNote, Spinner, fmtDate, useLoad } from '../components/ui';
+import { Badge, Empty, ErrorNote, Spinner, fmtDate, useLoad, WriteButton } from '../components/ui';
 import { EVIDENCE_ACCEPT, uploadEvidence } from '../lib/evidence';
 import { STATUS_LABEL, TONE, latestSubmission, requirementState, type Requirement } from '../lib/itar';
 import { formatBytes } from '../lib/media';
@@ -47,6 +48,7 @@ function BlockCard({ b, reload }: { b: Block; reload: () => void }) {
 }
 
 function RequirementRow({ r, cohortId, reload }: { r: Requirement; cohortId: string; reload: () => void }) {
+  const readOnly = useReadOnly();
   const state = requirementState(r);
   const loc = useLocation();
   const target = loc.hash === `#case-${r.id}`;
@@ -97,7 +99,8 @@ function RequirementRow({ r, cohortId, reload }: { r: Requirement; cohortId: str
           {r.submissions.length > 1 && <span className="muted"> · {r.submissions.length} uploads in total</span>}
         </div>
       )}
-      {canUpload && (
+      {canUpload && readOnly && <p className="small muted" style={{ marginTop: 10 }}>Uploads are switched off in this read-only view.</p>}
+      {canUpload && !readOnly && (
         <div className="row" style={{ marginTop: 10 }}>
           <label className="btn secondary small" style={{ cursor: 'pointer' }}>
             {file ? 'Change file' : last ? 'Upload a new file' : 'Choose file'}
@@ -106,7 +109,7 @@ function RequirementRow({ r, cohortId, reload }: { r: Requirement; cohortId: str
           </label>
           {file && <span className="small">{file.name} · {formatBytes(file.size)}</span>}
           {file && <input type="text" placeholder="Note for faculty (optional)" value={note} onChange={(e) => setNote(e.target.value)} style={{ flex: 1, minWidth: 180 }} aria-label="Note for faculty" />}
-          {file && <button className="btn small" disabled={busy} onClick={send} data-testid="evidence-upload">{busy ? 'Uploading…' : 'Upload'}</button>}
+          {file && <WriteButton className="btn small" disabled={busy} onClick={send} data-testid="evidence-upload">{busy ? 'Uploading…' : 'Upload'}</WriteButton>}
         </div>
       )}
       {msg && <div className="notice ok small" style={{ marginTop: 8 }} role="status">{msg}</div>}

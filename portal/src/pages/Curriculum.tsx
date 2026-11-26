@@ -1,3 +1,4 @@
+import { READ_ONLY_TITLE, useReadOnly } from '../lib/viewMode';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Page } from '../components/Layout';
@@ -22,6 +23,7 @@ export function Curriculum() {
   const { profile } = useAuth();
   const { data, error, loading, setData } = useLoad(() => rpc<any>('my_curriculum', { p_course_slug: 'pocus' }), []);
   const [busy, setBusy] = useState<string | null>(null);
+  const readOnly = useReadOnly();
   const ev = useLoad(() => rpc<{ cohort: { id: string }; requirements: Requirement[] }[]>('my_evidence').catch(() => []), []);
   // the required teaching cases ARE the Brightspace learning cases: their completion comes from verified uploads
   const caseByTitle = new Map(caseStates((ev.data ?? [])[0]?.requirements ?? []).map((c) => [norm(c.title), c]));
@@ -82,7 +84,7 @@ export function Curriculum() {
                       }
                       return (
                         <label className="check">
-                          <input type="checkbox" checked={!!i.completed_at} disabled={busy === i.id} onChange={() => toggle(i)} />
+                          <input type="checkbox" checked={!!i.completed_at} disabled={readOnly || busy === i.id} title={readOnly ? READ_ONLY_TITLE : undefined} onChange={() => toggle(i)} />
                           Completed
                         </label>
                       );

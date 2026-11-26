@@ -2,7 +2,7 @@
   "name": "pocus-cases",
   "private": true,
   "type": "module",
-  "description": "POCUS Learning Case Series — static teaching site + learner/faculty portal (/app).",
+  "description": "POCUS Learning Case Series \u2014 static teaching site + learner/faculty portal (/app).",
   "scripts": {
     "dev": "vite --config portal/vite.config.ts",
     "build": "node scripts/build-site.mjs",
@@ -13,7 +13,9 @@
     "test:e2e": "playwright test",
     "visual": "node scripts/visual-report.mjs",
     "test:auth": "vitest run tests/auth",
-    "validate:wp2": "bash scripts/wp2-validate.sh"
+    "validate:wp2": "bash scripts/wp2-validate.sh",
+    "validate:wp3": "bash scripts/wp3-validate.sh",
+    "fixtures:demo": "node scripts/demo-fixtures.mjs"
   },
   "engines": {
     "node": ">=20 <25"

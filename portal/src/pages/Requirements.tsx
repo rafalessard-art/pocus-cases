@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { NextSteps } from '../components/NextSteps';
 import { Page } from '../components/Layout';
-import { Badge, Empty, ErrorNote, Spinner, fmtDate, useLoad } from '../components/ui';
+import { Badge, Empty, ErrorNote, Spinner, fmtDate, useLoad, WriteButton } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { REQ_LABEL, REQ_TONE, completion, scanPct, type Rotation, type RotationReq } from '../lib/requirements';
 import { rpc } from '../lib/supabase';
@@ -101,14 +101,14 @@ function ReqCard({ r, cohortId, rotation, onChange }: { r: RotationReq; cohortId
             placeholder={r.stages.length ? 'Note to faculty (optional, e.g. topic and planned date) — no patient details' : 'Note to faculty (optional) — no patient details'} data-testid={`my-req-note-${r.key}`} />
           <div className="row">
             {residentStages.map((s) => (
-              <button key={s.key} className="btn secondary small" disabled={busy} onClick={() => set('in_progress', s.key)} data-testid={`my-req-stage-${r.key}-${s.key}`}>
+              <WriteButton key={s.key} className="btn secondary small" disabled={busy} onClick={() => set('in_progress', s.key)} data-testid={`my-req-stage-${r.key}-${s.key}`}>
                 {r.stage === s.key ? '✓ ' : ''}{s.label}
-              </button>
+              </WriteButton>
             ))}
-            {r.status === 'not_started' && !residentStages.length && <button className="btn secondary small" disabled={busy} onClick={() => set('in_progress')}>Mark in progress</button>}
-            <button className="btn small" disabled={busy || r.status === 'submitted'} onClick={() => set('submitted')} data-testid={`my-req-submit-${r.key}`}>
+            {r.status === 'not_started' && !residentStages.length && <WriteButton className="btn secondary small" disabled={busy} onClick={() => set('in_progress')}>Mark in progress</WriteButton>}
+            <WriteButton className="btn small" disabled={busy || r.status === 'submitted'} onClick={() => set('submitted')} data-testid={`my-req-submit-${r.key}`}>
               {r.status === 'submitted' ? 'Submitted — awaiting faculty' : 'Submit for faculty confirmation'}
-            </button>
+            </WriteButton>
             {r.evidence_requirement_id && <Link className="btn ghost small" to="/evidence">Optional: upload evidence</Link>}
           </div>
         </div>
@@ -171,8 +171,8 @@ function ScanProgress({ rotation, cohortId, onChange }: { rotation: Rotation; co
       </div>
       <div className="row" style={{ marginTop: 8 }}>
         <span className="small"><strong>{rotation.scans.verified_total}/{rotation.scans.target_total}</strong> verified</span>
-        {!edit && <button className="btn small" onClick={() => setEdit(true)} data-testid="my-scan-edit">Report scan counts</button>}
-        {edit && <button className="btn small" disabled={busy} onClick={save} data-testid="my-scan-save">Save — ask faculty to review</button>}
+        {!edit && <WriteButton className="btn small" onClick={() => setEdit(true)} data-testid="my-scan-edit">Report scan counts</WriteButton>}
+        {edit && <WriteButton className="btn small" disabled={busy} onClick={save} data-testid="my-scan-save">Save — ask faculty to review</WriteButton>}
         {edit && <button className="btn ghost small" onClick={() => setEdit(false)}>Cancel</button>}
       </div>
       <p className="small muted" style={{ margin: '6px 0 0' }}>

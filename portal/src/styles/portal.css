@@ -303,3 +303,25 @@ details.todo > div { margin-top: 4px; max-width: 320px; }
   table.stackable td[data-label="To do"] { min-width: 2.2in; }
   table.stackable td[data-label="Resident"] { min-width: 1.1in; }
 }
+
+/* ---------- WP3: demonstration perspectives (read-only reviewer access) ---------- */
+.perspective-bar { background: var(--sky-soft); border-top: 1px solid var(--rule); }
+.perspective-bar.ro { background: #fbf1da; }
+:root[data-theme="dark"] .perspective-bar { background: #142230; }
+:root[data-theme="dark"] .perspective-bar.ro { background: #2a2312; }
+.perspective-inner { max-width: 1180px; margin: 0 auto; padding: 6px 28px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 13px; }
+.perspective-inner .spacer { flex: 1; }
+.perspective-inner .mode { color: var(--ink); }
+.seg { display: inline-flex; border: 1px solid var(--petrol); border-radius: 8px; overflow: hidden; background: var(--paper2); }
+.seg-item { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border: 0; background: none; color: var(--petrol); font-weight: 700;
+  font-size: 13px; cursor: pointer; border-right: 1px solid var(--petrol); }
+.seg-item:last-child { border-right: 0; }
+.seg-item.on { background: var(--petrol); color: #fff; }
+.seg-item select { font-size: 12px; max-width: 230px; border: 1px solid var(--rule); border-radius: 6px; padding: 2px 4px; background: var(--paper2); color: var(--ink); }
+.readonly-note { display: flex; justify-content: space-between; align-items: center; gap: 12px; max-width: 1180px; margin: 14px auto 0; padding: 8px 14px;
+  border-left: 4px solid var(--gold); background: #fbf1da; border-radius: 6px; font-size: 13px; }
+:root[data-theme="dark"] .readonly-note { background: #2a2312; }
+.toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); z-index: 300; max-width: 560px; background: var(--ink); color: var(--paper2);
+  padding: 12px 18px; border-radius: 8px; box-shadow: var(--shadow); font-size: 14px; }
+.choice-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+button:disabled[data-readonly-reason], .btn:disabled[data-readonly-reason] { cursor: not-allowed; }

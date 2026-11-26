@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Page } from '../../components/Layout';
 import { MediaView } from '../../components/MediaView';
-import { Badge, Empty, ErrorNote, Modal, Spinner, fmtDate, useLoad } from '../../components/ui';
+import { Badge, Empty, ErrorNote, Modal, Spinner, fmtDate, useLoad, WriteButton } from '../../components/ui';
 import { domains as loadDomains, mediaLibrary, mediaReady, objectives as loadObjectives, pocusCourse, type MediaAsset } from '../../lib/content';
 import { rpc, supabase } from '../../lib/supabase';
 
@@ -299,7 +299,7 @@ export function QuestionEditor() {
             <label className="check"><input type="checkbox" checked={f.needs_review} onChange={(e) => set('needs_review', e.target.checked)} /> Flag for faculty review (blocks publishing)</label>
             {f.needs_review && <label className="field">Review note<input type="text" value={f.review_note} onChange={(e) => set('review_note', e.target.value)} /></label>}
           </div>
-          <button className="btn" onClick={save} disabled={saving || !course.data} data-testid="save-question">{saving ? 'Saving…' : meta.locked ? 'Save as new version' : 'Save question'}</button>
+          <WriteButton className="btn" onClick={save} disabled={saving || !course.data} data-testid="save-question">{saving ? 'Saving…' : meta.locked ? 'Save as new version' : 'Save question'}</WriteButton>
           {notice && <div className="notice ok small" role="status">{notice}</div>}
           <ErrorNote error={err} />
           {issues && (

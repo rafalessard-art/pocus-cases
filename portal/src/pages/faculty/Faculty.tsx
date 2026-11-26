@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Page } from '../../components/Layout';
-import { Badge, DomainBars, Empty, ErrorNote, Spinner, fmtDate, pct, useLoad } from '../../components/ui';
+import { Badge, DomainBars, Empty, ErrorNote, Spinner, fmtDate, pct, useLoad, WriteButton } from '../../components/ui';
 import { download, toCSV } from '../../lib/csv';
 import { cohorts as loadCohorts, pocusCourse } from '../../lib/content';
 import { rpc, supabase } from '../../lib/supabase';
@@ -178,8 +178,8 @@ export function ExamResults() {
       {msg && <div className="notice ok small" role="status">{msg}</div>}
       <ErrorNote error={err} />
       <div className="row no-print" style={{ marginBottom: 10 }}>
-        <button className="btn small" disabled={!sel.length} onClick={() => release(sel)} data-testid="release-selected">Release selected ({sel.length})</button>
-        <button className="btn small secondary" disabled={!releasable.length} onClick={() => release(releasable)}>Release all graded ({releasable.length})</button>
+        <WriteButton className="btn small" disabled={!sel.length} onClick={() => release(sel)} data-testid="release-selected">Release selected ({sel.length})</WriteButton>
+        <WriteButton className="btn small secondary" disabled={!releasable.length} onClick={() => release(releasable)}>Release all graded ({releasable.length})</WriteButton>
       </div>
       <div className="tablewrap">
         <table className="data">
@@ -289,8 +289,8 @@ export function AttemptReview() {
             <dt>Released</dt><dd>{a.released_at ? fmtDate(a.released_at) : 'No'}</dd>
           </dl>
           <div className="row" style={{ marginTop: 12 }}>
-            {a.status === 'submitted' && a.grading_status === 'complete' && !a.released_at && <button className="btn" onClick={release} data-testid="release-one">Release results</button>}
-            {a.status === 'in_progress' && <button className="btn secondary" onClick={async () => { await rpc('staff_close_attempt', { p_attempt: attemptId }); d.reload(); }}>Close attempt now</button>}
+            {a.status === 'submitted' && a.grading_status === 'complete' && !a.released_at && <WriteButton className="btn" onClick={release} data-testid="release-one">Release results</WriteButton>}
+            {a.status === 'in_progress' && <WriteButton className="btn secondary" onClick={async () => { await rpc('staff_close_attempt', { p_attempt: attemptId }); d.reload(); }}>Close attempt now</WriteButton>}
           </div>
           {msg && <div className="notice ok small" style={{ marginTop: 10 }}>{msg}</div>}
           <ErrorNote error={err} />
@@ -337,7 +337,7 @@ export function AttemptReview() {
                       <input type="text" placeholder="Comment (visible to learner with full review)" style={{ flex: 1 }}
                         value={grades[it.item_id]?.comment ?? it.grader_comment ?? ''}
                         onChange={(e) => setGrades({ ...grades, [it.item_id]: { ...(grades[it.item_id] ?? { points: '' }), comment: e.target.value } })} />
-                      <button className="btn small" disabled={!grades[it.item_id]?.points} onClick={() => grade(it.item_id)} data-testid="save-grade">Save grade</button>
+                      <WriteButton className="btn small" disabled={!grades[it.item_id]?.points} onClick={() => grade(it.item_id)} data-testid="save-grade">Save grade</WriteButton>
                     </div>
                   )}
                 </div>
@@ -419,7 +419,7 @@ export function LearnerView() {
       <p className="seclabel">Faculty notes</p>
       <div className="panel stack">
         <textarea placeholder="Add an observation (visible to faculty only)…" value={note} onChange={(e) => setNote(e.target.value)} />
-        <div><button className="btn small" disabled={!note.trim()} onClick={addNote}>Add note</button></div>
+        <div><WriteButton className="btn small" disabled={!note.trim()} onClick={addNote}>Add note</WriteButton></div>
         <ErrorNote error={err} />
         {r.notes.map((n: any) => (
           <div key={n.id} className="small" style={{ borderTop: '1px solid var(--rule-soft)', paddingTop: 8 }}>

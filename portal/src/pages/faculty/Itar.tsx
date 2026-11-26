@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Page } from '../../components/Layout';
 import { EvidencePreview } from '../../components/EvidencePreview';
-import { Badge, Confirm, DomainBars, Empty, ErrorNote, Spinner, fmtDate, pct, useLoad } from '../../components/ui';
+import { Badge, Confirm, DomainBars, Empty, ErrorNote, Spinner, fmtDate, pct, useLoad, WriteButton } from '../../components/ui';
 import { isAdmin, useAuth } from '../../lib/auth';
 import { download, toCSV } from '../../lib/csv';
 import { deleteEvidenceFiles } from '../../lib/evidence';
@@ -464,10 +464,10 @@ function EvidenceRow({ r, w, reload }: { r: Requirement; w: Ws; reload: () => vo
           {last.reviewed_at && <div className="muted" style={{ marginTop: 4 }}>{STATUS_LABEL[last.status]} by {last.reviewer_name ?? 'faculty'} · {fmtDate(last.reviewed_at)}{last.reviewer_message ? ` — “${last.reviewer_message}”` : ''}</div>}
           {!last.file_deleted_at && w.me !== w.learner.id && (
             <div className="row" style={{ marginTop: 10 }}>
-              {last.status !== 'verified' && <button className="btn small" disabled={busy} onClick={() => decide('verified')} data-testid="verify-evidence">Verify</button>}
-              <button className="btn secondary small" disabled={busy} onClick={() => setMode('clarification_requested')}>Needs clarification…</button>
-              <button className="btn secondary small" disabled={busy} onClick={() => setMode('rejected')}>Reject…</button>
-              {isAdmin(profile) && <button className="btn ghost small" disabled={busy} onClick={() => setMode('delete')}>Delete file…</button>}
+              {last.status !== 'verified' && <WriteButton className="btn small" disabled={busy} onClick={() => decide('verified')} data-testid="verify-evidence">Verify</WriteButton>}
+              <WriteButton className="btn secondary small" disabled={busy} onClick={() => setMode('clarification_requested')}>Needs clarification…</WriteButton>
+              <WriteButton className="btn secondary small" disabled={busy} onClick={() => setMode('rejected')}>Reject…</WriteButton>
+              {isAdmin(profile) && <WriteButton className="btn ghost small" disabled={busy} onClick={() => setMode('delete')}>Delete file…</WriteButton>}
             </div>
           )}
           {mode && (
@@ -478,8 +478,8 @@ function EvidenceRow({ r, w, reload }: { r: Requirement; w: Ws; reload: () => vo
               </label>
               <div className="row">
                 {mode === 'delete'
-                  ? <button className="btn danger small" disabled={busy || !message.trim()} onClick={removeFile}>Delete file permanently</button>
-                  : <button className="btn small" disabled={busy || !message.trim()} onClick={() => decide(mode)}>{mode === 'rejected' ? 'Reject' : 'Request clarification'}</button>}
+                  ? <WriteButton className="btn danger small" disabled={busy || !message.trim()} onClick={removeFile}>Delete file permanently</WriteButton>
+                  : <WriteButton className="btn small" disabled={busy || !message.trim()} onClick={() => decide(mode)}>{mode === 'rejected' ? 'Reject' : 'Request clarification'}</WriteButton>}
                 <button className="btn ghost small" onClick={() => setMode(null)}>Cancel</button>
               </div>
             </div>
@@ -503,7 +503,7 @@ function EvidenceRow({ r, w, reload }: { r: Requirement; w: Ws; reload: () => vo
       {view && (
         <EvidencePreview {...view} onClose={() => setView(null)}
           actions={last && view.path === last.storage_path && last.status !== 'verified' && !last.file_deleted_at && w.me !== w.learner.id
-            ? <button className="btn small" disabled={busy} data-testid="verify-in-preview" onClick={async () => { await decide('verified'); setView(null); }}>Verify</button>
+            ? <WriteButton className="btn small" disabled={busy} data-testid="verify-in-preview" onClick={async () => { await decide('verified'); setView(null); }}>Verify</WriteButton>
             : undefined} />
       )}
     </div>
@@ -583,7 +583,7 @@ function EpaSection({ w, reload }: { w: Ws; reload: () => void }) {
           {r!.key_findings && <div className="small"><strong>Findings:</strong> {r!.key_findings}</div>}
           {r!.concerns && <div className="notice warn small"><strong>Concerns:</strong> {r!.concerns} <span className="muted">(carried into the ITAR draft)</span></div>}
           {(r!.entries?.length ?? 0) > 0 && <div className="small muted">{r!.entries.length} optional EPA detail row(s) recorded.</div>}
-          <div><button className="btn secondary small" onClick={() => setEditing(true)} data-testid="epa-update">Update verification</button></div>
+          <div><WriteButton className="btn secondary small" onClick={() => setEditing(true)} data-testid="epa-update">Update verification</WriteButton></div>
         </div>
       )}
       {editing && (
@@ -654,7 +654,7 @@ function EpaSection({ w, reload }: { w: Ws; reload: () => void }) {
             </div>
           )}
           <div className="row">
-            <button className="btn small" disabled={busy || !canSave} onClick={save} data-testid="epa-save">Save verification</button>
+            <WriteButton className="btn small" disabled={busy || !canSave} onClick={save} data-testid="epa-save">Save verification</WriteButton>
             {verified && <button className="btn ghost small" onClick={() => setEditing(false)}>Cancel</button>}
             <span className="small muted">Your name and today's date are recorded automatically.</span>
           </div>
@@ -732,7 +732,7 @@ function ObservationsSection({ w, reload, locked }: { w: Ws; reload: () => void;
             <input type="text" value={f.context} maxLength={500} onChange={(e) => setF({ ...f, context: e.target.value })} />
           </label>
           <label className="field">What you observed<textarea rows={4} value={f.body} onChange={(e) => setF({ ...f, body: e.target.value })} data-testid="obs-body" /></label>
-          <div><button className="btn small" disabled={busy || !f.body.trim()} onClick={add} data-testid="obs-add">Add observation</button></div>
+          <div><WriteButton className="btn small" disabled={busy || !f.body.trim()} onClick={add} data-testid="obs-add">Add observation</WriteButton></div>
           <ErrorNote error={err} />
         </aside>
       </div>
@@ -991,7 +991,7 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
             <strong>New evidence since this draft was approved ({fmtDate(ev?.approved_at)}).</strong> The approved draft is unchanged and preserved. If you already submitted the ITER in One45, any correction is made in One45.
             <ul style={{ margin: '6px 0' }}>{changes.map((c, i) => <li key={i}>{c.area}: {c.what} — {fmtDate(c.at)}</li>)}</ul>
             If this affects the evaluation, start a revision: re-open, regenerate, review and approve again (a new version is kept alongside the original).
-            <div style={{ marginTop: 8 }}><button className="btn small" onClick={() => setConfirm('reopen')} data-testid="start-revision">Start a revision…</button></div>
+            <div style={{ marginTop: 8 }}><WriteButton className="btn small" onClick={() => setConfirm('reopen')} data-testid="start-revision">Start a revision…</WriteButton></div>
           </div>
         )}
         <VersionHistory evaluationId={ev?.id ?? null} count={rotation?.itar?.versions ?? 0} />
@@ -1054,10 +1054,10 @@ function DraftSection({ w, reload, selectedAttempt, rotation, template }: { w: W
           </div>
         )}
         <div className="row" style={{ marginTop: 14 }}>
-          {!locked && <button className="btn secondary" disabled={busy || !f.sections.length} onClick={() => save(false)} data-testid="save-eval">Save draft</button>}
-          {!locked && <button className="btn" disabled={busy || !f.sections.length || placeholders} onClick={() => setConfirm('approve')} data-testid="approve-eval"
-            title={placeholders ? 'Complete the fields marked “Faculty to complete / confirm” first' : undefined}>Approve draft…</button>}
-          {locked && <button className="btn secondary" onClick={() => setConfirm('reopen')}>Re-open for editing</button>}
+          {!locked && <WriteButton className="btn secondary" disabled={busy || !f.sections.length} onClick={() => save(false)} data-testid="save-eval">Save draft</WriteButton>}
+          {!locked && <WriteButton className="btn" disabled={busy || !f.sections.length || placeholders} onClick={() => setConfirm('approve')} data-testid="approve-eval"
+            title={placeholders ? 'Complete the fields marked “Faculty to complete / confirm” first' : undefined}>Approve draft…</WriteButton>}
+          {locked && <WriteButton className="btn secondary" onClick={() => setConfirm('reopen')}>Re-open for editing</WriteButton>}
           {iterMode && quick.length > 0 && <button className="btn secondary" onClick={() => copy(composeIter(quick), 'copy_all', 'All One45 fields')} data-testid="copy-all">Copy all One45 fields</button>}
           {!iterMode && f.sections.length > 0 && <button className="btn secondary" onClick={() => copy(composeSummary(f.sections), 'copy_all', 'Whole draft')} data-testid="copy-all">Copy all</button>}
           {shown.length > 0 && <button className="btn secondary" onClick={() => {
@@ -1185,7 +1185,7 @@ function ReqRow({ r, w, setRot, lastScan }: { r: RotationReq; w: Ws; setRot: (r:
       <td className="small">
         {SECTION_FOR[r.kind] && <a href={SECTION_FOR[r.kind]} className="btn ghost small">{r.kind === 'scan_log' ? 'Attest scans ↓' : 'Open ↓'}</a>}
         {canAct && attest && r.status !== 'verified' && (
-          <button className="btn small" disabled={busy} onClick={() => set('verified')} data-testid={`req-verify-${r.key}`}>Confirm complete</button>
+          <WriteButton className="btn small" disabled={busy} onClick={() => set('verified')} data-testid={`req-verify-${r.key}`}>Confirm complete</WriteButton>
         )}
         {canAct && (
           <select aria-label={`More actions for ${r.title}`} value="" disabled={busy} onChange={(e) => other(e.target.value)} data-testid={`req-more-${r.key}`} style={{ marginLeft: 6, maxWidth: 170 }}>
@@ -1202,7 +1202,7 @@ function ReqRow({ r, w, setRot, lastScan }: { r: RotationReq; w: Ws; setRot: (r:
           <div className="stack" style={{ marginTop: 8 }}>
             <input type="text" maxLength={500} placeholder="Message to the resident (no patient details)" value={message} onChange={(e) => setMessage(e.target.value)} aria-label="Message to the resident" data-testid={`req-message-${r.key}`} />
             <div className="row">
-              <button className="btn small" disabled={busy || !message.trim()} onClick={() => set('clarification_requested', null, message)}>Send</button>
+              <WriteButton className="btn small" disabled={busy || !message.trim()} onClick={() => set('clarification_requested', null, message)}>Send</WriteButton>
               <button className="btn ghost small" onClick={() => setMsgFor(false)}>Cancel</button>
             </div>
           </div>
@@ -1294,7 +1294,7 @@ function ScanLog({ w, rot, setRot, reload }: { w: Ws; rot: Rotation; setRot: (r:
       {canAct && (
         <>
           <div className="row" style={{ alignItems: 'flex-end' }}>
-            {pending && <button className="btn secondary small" onClick={acceptReported} data-testid="scan-accept-reported">Fill in resident-reported counts</button>}
+            {pending && <WriteButton className="btn secondary small" onClick={acceptReported} data-testid="scan-accept-reported">Fill in resident-reported counts</WriteButton>}
             <label className="field" style={{ maxWidth: 170 }}>Reviewed on<input type="date" value={reviewedOn} max={today()} onChange={(e) => setReviewedOn(e.target.value)} /></label>
             <label className="field" style={{ flex: 1, minWidth: 200 }}>{negative ? 'Reason for the correction (required)' : 'Note (optional, no patient details)'}
               <input type="text" maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} data-testid="scan-note"
@@ -1304,9 +1304,9 @@ function ScanLog({ w, rot, setRot, reload }: { w: Ws; rot: Rotation; setRot: (r:
               <input type="checkbox" checked={attested} onChange={(e) => setAttested(e.target.checked)} data-testid="scan-attest" />{' '}
               I reviewed these studies (images) in QPath or another approved system and accept them as meeting program requirements. This records completion, not competence.
             </label>
-            <button className="btn" disabled={busy || !entries.length || !attested || (negative && !note.trim())} onClick={record} data-testid="scan-record">
+            <WriteButton className="btn" disabled={busy || !entries.length || !attested || (negative && !note.trim())} onClick={record} data-testid="scan-record">
               {negative ? 'Record correction' : `Record attestation${entries.length ? ` (${entries.length})` : ''}`}
-            </button>
+            </WriteButton>
           </div>
           {msg && <div className="notice ok small" role="status">{msg}</div>}
           <ErrorNote error={err} />

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Page } from '../../components/Layout';
-import { Badge, Empty, ErrorNote, Spinner, fmtDate, useLoad } from '../../components/ui';
+import { Badge, Empty, ErrorNote, Spinner, fmtDate, useLoad, WriteButton } from '../../components/ui';
 import { cohorts as loadCohorts, pocusCourse } from '../../lib/content';
 import { sideClient, supabase } from '../../lib/supabase';
 
@@ -94,7 +94,7 @@ function Invitations() {
             </select>
           </label>
         </div>
-        <div className="row"><button className="btn" onClick={invite} data-testid="invite">Save invitation(s)</button></div>
+        <div className="row"><WriteButton className="btn" onClick={invite} data-testid="invite">Save invitation(s)</WriteButton></div>
         <p className="small muted">
           Invited people sign in at <span className="mono">{portal}</span> with their email; they receive a 6-digit code. Nobody else can create an account.
         </p>
@@ -112,10 +112,10 @@ function Invitations() {
                 <td>{i.revoked_at ? <Badge tone="bad">Revoked</Badge> : i.accepted_at ? <Badge tone="ok">Joined {fmtDate(i.accepted_at, false)}</Badge> : <Badge tone="info">Invited</Badge>}</td>
                 <td style={{ whiteSpace: 'nowrap' }}>
                   {!i.revoked_at && !i.accepted_at && (
-                    <button className="btn ghost small" disabled={sending === i.email} onClick={() => sendSignIn(i.email)}>{sending === i.email ? 'Sending…' : 'Email sign-in link'}</button>
+                    <WriteButton className="btn ghost small" disabled={sending === i.email} onClick={() => sendSignIn(i.email)}>{sending === i.email ? 'Sending…' : 'Email sign-in link'}</WriteButton>
                   )}
                   {!i.revoked_at && !i.accepted_at && (
-                    <button className="btn ghost small" onClick={async () => { await supabase.from('invitations').update({ revoked_at: new Date().toISOString() }).eq('email', i.email); list.reload(); }}>Revoke</button>
+                    <WriteButton className="btn ghost small" onClick={async () => { await supabase.from('invitations').update({ revoked_at: new Date().toISOString() }).eq('email', i.email); list.reload(); }}>Revoke</WriteButton>
                   )}
                 </td>
               </tr>
@@ -214,7 +214,7 @@ function Cohorts() {
           <label className="field">Block<input type="text" value={f.block_label} onChange={(e) => setF({ ...f, block_label: e.target.value })} /></label>
           <label className="field">Start<input type="date" value={f.start_date} onChange={(e) => setF({ ...f, start_date: e.target.value })} /></label>
           <label className="field">End<input type="date" value={f.end_date} onChange={(e) => setF({ ...f, end_date: e.target.value })} /></label>
-          <button className="btn" disabled={!f.name || !course.data} onClick={create} data-testid="create-cohort">Create cohort</button>
+          <WriteButton className="btn" disabled={!f.name || !course.data} onClick={create} data-testid="create-cohort">Create cohort</WriteButton>
         </div>
         <ErrorNote error={err} />
       </section>
@@ -224,16 +224,16 @@ function Cohorts() {
         <section key={c.id} className="panel stack">
           <div className="row between">
             <div><strong>{c.name}</strong> <span className="small muted">{c.academic_year} {c.block_label} · {c.start_date ?? '—'} → {c.end_date ?? '—'}</span></div>
-            <button className="btn ghost small" onClick={async () => { await supabase.from('cohorts').update({ archived_at: c.archived_at ? null : new Date().toISOString() }).eq('id', c.id); list.reload(); }}>
+            <WriteButton className="btn ghost small" onClick={async () => { await supabase.from('cohorts').update({ archived_at: c.archived_at ? null : new Date().toISOString() }).eq('id', c.id); list.reload(); }}>
               {c.archived_at ? 'Unarchive' : 'Archive'}
-            </button>
+            </WriteButton>
           </div>
           <div className="chips">
             {c.cohort_members.map((m: any) => (
               <span key={m.user_id} className={`badge ${m.member_role === 'evaluator' ? 'info' : ''}`}>
                 {m.profiles?.full_name || m.profiles?.email} · {m.member_role}{' '}
-                <button className="btn ghost small" style={{ minHeight: 0, padding: 0 }} aria-label="Remove from cohort"
-                  onClick={async () => { await supabase.from('cohort_members').delete().eq('cohort_id', c.id).eq('user_id', m.user_id); list.reload(); }}>✕</button>
+                <WriteButton className="btn ghost small" style={{ minHeight: 0, padding: 0 }} aria-label="Remove from cohort"
+                  onClick={async () => { await supabase.from('cohort_members').delete().eq('cohort_id', c.id).eq('user_id', m.user_id); list.reload(); }}>✕</WriteButton>
               </span>
             ))}
           </div>
@@ -244,7 +244,7 @@ function Cohorts() {
                 <option key={p.id} value={p.id}>{p.full_name || p.email} ({p.role})</option>
               ))}
             </select>
-            <button className="btn secondary small" onClick={() => addMember(c.id)}>Add</button>
+            <WriteButton className="btn secondary small" onClick={() => addMember(c.id)}>Add</WriteButton>
           </div>
         </section>
       ))}
@@ -293,7 +293,7 @@ function Accommodations() {
           <label className="field">+ minutes<input type="number" min={0} value={f.extra_minutes} onChange={(e) => setF({ ...f, extra_minutes: Number(e.target.value) })} /></label>
           <label className="field">+ attempts<input type="number" min={0} max={10} value={f.extra_attempts} onChange={(e) => setF({ ...f, extra_attempts: Number(e.target.value) })} /></label>
           <label className="field">Note<input type="text" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></label>
-          <button className="btn" disabled={!f.user_id} onClick={add}>Add</button>
+          <WriteButton className="btn" disabled={!f.user_id} onClick={add}>Add</WriteButton>
         </div>
         <ErrorNote error={err} />
       </section>
@@ -302,7 +302,7 @@ function Accommodations() {
           <tr key={a.id}>
             <td>{a.profiles?.full_name || a.profiles?.email}</td><td>{a.exams?.title ?? 'All exams'}</td>
             <td>{Number(a.time_multiplier)}×{a.extra_minutes ? ` + ${a.extra_minutes} min` : ''}</td><td>{a.extra_attempts}</td><td>{a.notes}</td>
-            <td><button className="btn ghost small" onClick={async () => { await supabase.from('accommodations').delete().eq('id', a.id); list.reload(); }}>Remove</button></td>
+            <td><WriteButton className="btn ghost small" onClick={async () => { await supabase.from('accommodations').delete().eq('id', a.id); list.reload(); }}>Remove</WriteButton></td>
           </tr>
         ))}
       </tbody></table></div>

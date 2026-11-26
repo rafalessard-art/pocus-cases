@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { Page } from '../../components/Layout';
-import { Badge, Empty, ErrorNote, Spinner, fmtDate, useLoad } from '../../components/ui';
+import { Badge, Empty, ErrorNote, Spinner, fmtDate, useLoad, WriteButton } from '../../components/ui';
 import { pocusCourse } from '../../lib/content';
 import { rpc, supabase } from '../../lib/supabase';
 
@@ -51,7 +51,7 @@ export function EvaluationWorkspace() {
           <strong>{ev ? 'Attach this draft to a rotation block' : 'Choose the rotation block'}</strong>
           <div className="row">
             {cohorts.map((c) => ev && ev.status === 'draft'
-              ? <button key={c.id} className="btn secondary small" onClick={() => attach(c.id)}>{c.name}</button>
+              ? <WriteButton key={c.id} className="btn secondary small" onClick={() => attach(c.id)}>{c.name}</WriteButton>
               : <Link key={c.id} className="btn secondary small" to={`/faculty/itar/${c.id}/${L.id}`}>{c.name}</Link>)}
           </div>
         </section>

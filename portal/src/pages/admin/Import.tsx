@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Page } from '../../components/Layout';
-import { Badge, ErrorNote, Spinner, useLoad } from '../../components/ui';
+import { Badge, ErrorNote, Spinner, useLoad, WriteButton } from '../../components/ui';
 import { download, toCSV } from '../../lib/csv';
 import { domains as loadDomains, mediaLibrary, objectives as loadObjectives, pocusCourse } from '../../lib/content';
 import { CSV_TEMPLATE_COLUMNS, buildRows, importable, readSource, type ImportRow, type MediaLookup } from '../../lib/importer';
@@ -118,9 +118,9 @@ export function ImportExam() {
           {rows && (
             <>
               <label className="field">Draft exam title<input type="text" value={title} onChange={(e) => setTitle(e.target.value)} /></label>
-              <button className="btn" disabled={!!progress || !title || !rows.some((r) => importable(r) && !r.duplicateOf)} onClick={runImport} data-testid="run-import">
+              <WriteButton className="btn" disabled={!!progress || !title || !rows.some((r) => importable(r) && !r.duplicateOf)} onClick={runImport} data-testid="run-import">
                 Import {rows.filter((r) => importable(r) && !r.duplicateOf).length} question(s) as a draft exam
-              </button>
+              </WriteButton>
               <p className="small muted">Blocked rows and duplicates are skipped. Nothing is published; you review the draft before publishing.</p>
             </>
           )}

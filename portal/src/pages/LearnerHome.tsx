@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Page } from '../components/Layout';
-import { Badge, Confirm, Empty, ErrorNote, Spinner, fmtDate, useLoad } from '../components/ui';
+import { Badge, Confirm, Empty, ErrorNote, Spinner, fmtDate, useLoad, WriteButton } from '../components/ui';
 import { isStaff, useAuth } from '../lib/auth';
+import { useView } from '../lib/viewMode';
 import { NextSteps } from '../components/NextSteps';
 import { rpc } from '../lib/supabase';
 import { caseStates, type Requirement } from '../lib/itar';
@@ -18,6 +19,8 @@ export type MyExam = {
   n_items: number;
   time_limit_minutes: number | null;
   accommodated: boolean;
+  /** A reviewer or the owner is viewing a fictional resident: no attempts, a walkthrough instead. */
+  preview?: boolean;
   max_attempts: number;
   attempts_used: number;
   allow_resume: boolean;
@@ -81,15 +84,18 @@ export function ExamCard({ exam, onStarted }: { exam: MyExam; onStarted?: () => 
       </dl>
       <ErrorNote error={err} />
       <div className="row" style={{ marginTop: 14 }}>
-        {exam.state === 'available' && (
-          <button className="btn" onClick={() => setConfirm(true)} disabled={busy}>
-            {exam.attempts_used ? 'Start new attempt' : 'Start exam'}
-          </button>
+        {exam.preview && (
+          <Link className="btn" to={`/demo/walkthrough/${exam.exam_version_id}`} data-testid="exam-walkthrough">Walk through (nothing recorded)</Link>
         )}
-        {exam.state === 'in_progress' && exam.open_attempt_id && (
-          <button className="btn" onClick={start} disabled={busy}>
+        {!exam.preview && exam.state === 'available' && (
+          <WriteButton className="btn" onClick={() => setConfirm(true)} disabled={busy}>
+            {exam.attempts_used ? 'Start new attempt' : 'Start exam'}
+          </WriteButton>
+        )}
+        {!exam.preview && exam.state === 'in_progress' && exam.open_attempt_id && (
+          <WriteButton className="btn" onClick={start} disabled={busy}>
             Resume exam
-          </button>
+          </WriteButton>
         )}
         {exam.last_attempt && (
           <Link className="btn secondary" to={`/exams/result/${exam.last_attempt.id}`}>
@@ -121,7 +127,10 @@ export function ExamCard({ exam, onStarted }: { exam: MyExam; onStarted?: () => 
 }
 
 export function LearnerHome() {
-  const { profile } = useAuth();
+  const { profile: me } = useAuth();
+  const acting = useView().actingLearner;
+  // In the Resident perspective, the fictional resident being viewed.
+  const profile = acting ? { ...me!, full_name: acting.name, role: 'learner' as const } : me;
   const exams = useLoad(() => rpc<MyExam[]>('my_exams'), []);
   const cur = useLoad(() => rpc<any>('my_curriculum', { p_course_slug: 'pocus' }), []);
   const required = (cur.data?.items ?? []).filter((i: any) => i.required);

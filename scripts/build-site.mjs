@@ -57,6 +57,16 @@ if (process.env.VERCEL_ENV === 'production' && viteEnv.VITE_DEMO_ACCESS) {
   console.warn('⚠ VITE_DEMO_ACCESS is ignored in production builds: demonstration sign-in is not included.');
   delete viteEnv.VITE_DEMO_ACCESS;
 }
+// Version shown with reviewer feedback: branch@commit unless the build sets one.
+if (!viteEnv.VITE_APP_VERSION) {
+  try {
+    const sha = execSync('git rev-parse --short HEAD', { cwd: root, encoding: 'utf8' }).trim();
+    const br = (process.env.VERCEL_GIT_COMMIT_REF || execSync('git rev-parse --abbrev-ref HEAD', { cwd: root, encoding: 'utf8' }).trim()).slice(0, 24);
+    viteEnv.VITE_APP_VERSION = `${br}@${sha}`;
+  } catch {
+    /* not a git checkout */
+  }
+}
 execSync('npx vite build --config portal/vite.config.ts', { cwd: root, stdio: 'inherit', env: viteEnv });
 
 const required = ['index.html', 'tools.html', 'theme.css', 'theme.js', 'app/index.html', 'echo-simulator/index.html'];

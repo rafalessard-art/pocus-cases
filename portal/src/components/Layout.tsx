@@ -1,7 +1,9 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { isAdmin, isReviewer, isStaff, useAuth } from '../lib/auth';
 import { isDemoDatabase } from '../lib/supabase';
+import { useView } from '../lib/viewMode';
+import { PerspectiveBar, ReadOnlyGuard, ReadOnlyNotice } from './Perspective';
 
 function ThemeToggle() {
   const [dark, setDark] = useState(() => document.documentElement.dataset.theme === 'dark');
@@ -29,22 +31,37 @@ function ThemeToggle() {
 }
 
 export function TopNav({ children }: { children?: ReactNode }) {
-  const { profile: signedIn, signOut, mfaChallengeNeeded } = useAuth();
+  const { profile: signedIn, signOut, mfaChallengeNeeded, noAccess } = useAuth();
   // Until the authenticator step is done, show no portal navigation at all.
   const profile = mfaChallengeNeeded ? null : signedIn;
   const nav = useNavigate();
+  const view = useView();
+  const residentNav = !!profile && (!!view.actingLearner || !isStaff(profile)) && (!isReviewer(profile) || !!view.actingLearner);
   return (
     <nav className="topnav" aria-label="Main">
       <div className="topnav-inner">
         <a href="/" className="brand" title="Back to the public case series">POCUS Cases</a>
-        {profile && isReviewer(profile) && <NavLink to="/" end>Demonstration</NavLink>}
-        {profile && !isReviewer(profile) && (
+        {profile && isReviewer(profile) && !view.actingLearner && (
           <>
-            {/* Faculty and admins land on their dashboard ("/" redirects there), so they get one link, not two. */}
-            {isStaff(profile) ? <NavLink to="/faculty">Faculty Dashboard</NavLink> : <NavLink to="/" end>Home</NavLink>}
+            <NavLink to="/" end>Demonstration</NavLink>
+            {view.perspective === 'faculty' && <NavLink to="/faculty">Faculty Dashboard</NavLink>}
+            {view.perspective === 'admin' && <NavLink to="/admin">Admin</NavLink>}
+          </>
+        )}
+        {residentNav && (
+          <>
+            <NavLink to="/" end>Home</NavLink>
             <NavLink to="/curriculum">Curriculum</NavLink>
             <NavLink to="/exams">Examinations</NavLink>
-            {!isStaff(profile) && <NavLink to="/requirements">Requirements</NavLink>}
+            <NavLink to="/requirements">Requirements</NavLink>
+          </>
+        )}
+        {profile && !isReviewer(profile) && !residentNav && (
+          <>
+            {/* Faculty and admins land on their dashboard ("/" redirects there), so they get one link, not two. */}
+            <NavLink to="/faculty">Faculty Dashboard</NavLink>
+            <NavLink to="/curriculum">Curriculum</NavLink>
+            <NavLink to="/exams">Examinations</NavLink>
             {isAdmin(profile) && <NavLink to="/admin">Admin</NavLink>}
           </>
         )}
@@ -69,7 +86,8 @@ export function TopNav({ children }: { children?: ReactNode }) {
         )}
         <ThemeToggle />
       </div>
-      {isDemoDatabase && (
+      {profile && !noAccess && <PerspectiveBar />}
+      {(isDemoDatabase || (isReviewer(profile) && !noAccess)) && (
         <div className="demo-banner" role="note" data-testid="demo-banner">
           Demonstration environment — fictional residents and synthetic documents only. Nothing here is a learner record.
         </div>
@@ -79,12 +97,18 @@ export function TopNav({ children }: { children?: ReactNode }) {
 }
 
 export function Layout() {
+  const view = useView();
   return (
     <>
       <TopNav />
       <main id="main">
-        <Outlet />
+        <ReadOnlyNotice />
+        {/* a different fictional resident is a different page: reload everything */}
+        <Fragment key={view.actingLearner?.id ?? 'me'}>
+          <Outlet />
+        </Fragment>
       </main>
+      <ReadOnlyGuard />
     </>
   );
 }

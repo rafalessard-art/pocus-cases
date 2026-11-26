@@ -1,4 +1,5 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { READ_ONLY_TITLE, useReadOnly } from '../lib/viewMode';
 
 export function Spinner({ label = 'Loading…' }: { label?: string }) {
   return (
@@ -130,5 +131,22 @@ export function Confirm({ title, body, confirmLabel, danger, onConfirm, onCancel
         </div>
       </div>
     </Modal>
+  );
+}
+
+/**
+ * A button that changes data. In read-only views (demonstration reviewers, the
+ * owner's previews) it is disabled and says why; the database refuses the write anyway.
+ */
+export function WriteButton(props: ButtonHTMLAttributes<HTMLButtonElement>) {
+  const ro = useReadOnly();
+  return (
+    <button
+      {...props}
+      disabled={ro || props.disabled}
+      title={ro ? READ_ONLY_TITLE : props.title}
+      aria-description={ro ? READ_ONLY_TITLE : undefined}
+      data-readonly-reason={ro ? 'read-only' : undefined}
+    />
   );
 }

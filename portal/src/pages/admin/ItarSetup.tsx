@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Page } from '../../components/Layout';
-import { Badge, Confirm, Empty, ErrorNote, Spinner, fmtDate, useLoad } from '../../components/ui';
+import { Badge, Confirm, Empty, ErrorNote, Spinner, fmtDate, useLoad, WriteButton } from '../../components/ui';
 import { cohorts as loadCohorts, pocusCourse } from '../../lib/content';
 import { deleteEvidenceFiles } from '../../lib/evidence';
 import { rpc, supabase } from '../../lib/supabase';
@@ -89,7 +89,7 @@ function Requirements() {
                 <td>{r.archived_at ? <Badge>archived</Badge> : r.required ? <Badge tone="petrol">required</Badge> : <Badge>optional</Badge>}</td>
                 <td style={{ whiteSpace: 'nowrap' }}>
                   <button className="btn ghost small" onClick={() => setEdit({ ...r })}>Edit</button>
-                  <button className="btn ghost small" onClick={() => archive(r, !r.archived_at)}>{r.archived_at ? 'Restore' : 'Archive'}</button>
+                  <WriteButton className="btn ghost small" onClick={() => archive(r, !r.archived_at)}>{r.archived_at ? 'Restore' : 'Archive'}</WriteButton>
                 </td>
               </tr>
             ))}
@@ -122,10 +122,10 @@ function Requirements() {
         <div className="row">
           {edit ? (
             <>
-              <button className="btn" disabled={!edit.title.trim()} onClick={saveEdit}>Save</button>
+              <WriteButton className="btn" disabled={!edit.title.trim()} onClick={saveEdit}>Save</WriteButton>
               <button className="btn ghost" onClick={() => setEdit(null)}>Cancel</button>
             </>
-          ) : <button className="btn" disabled={!f.title.trim() || !course.data} onClick={add} data-testid="req-add">Add requirement</button>}
+          ) : <WriteButton className="btn" disabled={!f.title.trim() || !course.data} onClick={add} data-testid="req-add">Add requirement</WriteButton>}
         </div>
         <ErrorNote error={err} />
       </div>
@@ -179,7 +179,7 @@ function Retention() {
             <label className="field" style={{ maxWidth: 260 }}>Keep evidence files for (days after the block ends)
               <input type="number" min={0} placeholder="Keep until deleted" value={days ?? (s.data?.retain_days ?? '')} onChange={(e) => setDays(e.target.value)} data-testid="retain-days" />
             </label>
-            <button className="btn secondary" disabled={days === null} onClick={save}>Save</button>
+            <WriteButton className="btn secondary" disabled={days === null} onClick={save}>Save</WriteButton>
           </div>
           <p className="small" style={{ margin: 0 }}>
             Deleting a file keeps the record (who uploaded what, when, its fingerprint and who verified it), so approved ITARs stay traceable. To remove one file
@@ -200,7 +200,7 @@ function Retention() {
               </tbody>
             </table>
           </div>
-          <div><button className="btn danger" onClick={() => setConfirm(true)}>Delete these {(due.data ?? []).length} file(s)</button></div>
+          <div><WriteButton className="btn danger" onClick={() => setConfirm(true)}>Delete these {(due.data ?? []).length} file(s)</WriteButton></div>
         </div>
       )}
       {msg && <div className="notice ok small" role="status" style={{ marginTop: 10 }}>{msg}</div>}
@@ -304,7 +304,7 @@ function RotationConfig() {
                     </div>
                   ) : '—'}
                 </td>
-                <td><button className="btn ghost small" onClick={() => save('rotation_requirements', r.id, { archived_at: r.archived_at ? null : new Date().toISOString() })}>{r.archived_at ? 'Restore' : 'Archive'}</button></td>
+                <td><WriteButton className="btn ghost small" onClick={() => save('rotation_requirements', r.id, { archived_at: r.archived_at ? null : new Date().toISOString() })}>{r.archived_at ? 'Restore' : 'Archive'}</WriteButton></td>
               </tr>
             ))}
           </tbody>
@@ -319,7 +319,7 @@ function RotationConfig() {
           </select>
         </label>
         <label className="check small"><input type="checkbox" checked={nr.resident_submits} onChange={(e) => setNr({ ...nr, resident_submits: e.target.checked })} /> Resident can submit</label>
-        <button className="btn secondary" disabled={!nr.title.trim() || !course.data} onClick={addReq}>Add</button>
+        <WriteButton className="btn secondary" disabled={!nr.title.trim() || !course.data} onClick={addReq}>Add</WriteButton>
       </div>
 
       <p className="seclabel" style={{ marginTop: 24 }}>Minimum reviewed-scan targets</p>
@@ -335,7 +335,7 @@ function RotationConfig() {
                 <td><input type="text" defaultValue={c.views_note} aria-label={`Required views for ${c.label}`} style={{ minWidth: 260 }}
                   onBlur={(e) => e.target.value !== c.views_note && save('scan_categories', c.id, { views_note: e.target.value })} /></td>
                 <td className="small">{blockName(c.cohort_id)}</td>
-                <td><button className="btn ghost small" onClick={() => save('scan_categories', c.id, { archived_at: c.archived_at ? null : new Date().toISOString() })}>{c.archived_at ? 'Restore' : 'Archive'}</button></td>
+                <td><WriteButton className="btn ghost small" onClick={() => save('scan_categories', c.id, { archived_at: c.archived_at ? null : new Date().toISOString() })}>{c.archived_at ? 'Restore' : 'Archive'}</WriteButton></td>
               </tr>
             ))}
           </tbody>
@@ -352,7 +352,7 @@ function RotationConfig() {
             {(coh.data ?? []).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </label>
-        <button className="btn secondary" disabled={!nc.label.trim() || !course.data} onClick={addCat}>Add</button>
+        <WriteButton className="btn secondary" disabled={!nc.label.trim() || !course.data} onClick={addCat}>Add</WriteButton>
       </div>
       {msg && <p className="small" role="status">{msg}</p>}
       <ErrorNote error={err} />
@@ -440,7 +440,7 @@ function TemplateEditor({ row, reload }: { row: TplRow; reload: () => void }) {
       <label className="check"><input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} data-testid="tpl-confirmed" />{' '}
         The rotation director confirmed this layout matches the current POCUS block ITER.</label>
       <div className="row">
-        <button className="btn small" disabled={busy || !name.trim() || !t.outcome.options.length} onClick={save} data-testid="tpl-save">Save template</button>
+        <WriteButton className="btn small" disabled={busy || !name.trim() || !t.outcome.options.length} onClick={save} data-testid="tpl-save">Save template</WriteButton>
         <span className="small muted">Editing a confirmed template returns it to draft unless you confirm again.</span>
       </div>
       {msg && <div className="notice ok small" role="status">{msg}</div>}

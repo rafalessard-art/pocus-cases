@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { supabase, friendly } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { TopNav } from '../components/Layout';
+import { demoAccessEnabled, redeemDemoCode } from '../lib/demoAccess';
 
 /**
  * Invitation-only sign-in: a 6-digit email code, or a password for accounts
@@ -95,7 +96,14 @@ export function Login() {
             That sign-in link is invalid or has expired (some email security scanners open links before you do). Request a new one below.
           </div>
         )}
-        {noAccess && (
+        {noAccess && /@demo\.invalid$/.test(session?.user.email ?? '') && (
+          <div className="notice warn" style={{ margin: '16px 0' }} data-testid="demo-ended">
+            Your demonstration access has ended — it expired, was ended by the portal owner, or the access code was changed.
+            Ask the person who invited you for the current code.{' '}
+            <button className="btn small secondary" onClick={signOut}>Sign out</button>
+          </div>
+        )}
+        {noAccess && !/@demo\.invalid$/.test(session?.user.email ?? '') && (
           <div className="notice warn" style={{ margin: '16px 0' }}>
             You are signed in as {session?.user.email}, but this account has no active portal access.{' '}
             <button className="btn small secondary" onClick={signOut}>Sign out</button>
@@ -167,10 +175,61 @@ export function Login() {
           )}
           {err && <div className="notice error" role="alert" style={{ marginTop: 14 }}>{err}</div>}
         </div>
+        {demoAccessEnabled && <DemoSignIn />}
         <p className="small muted" style={{ marginTop: 18 }}>
           The public teaching cases and interactive tools remain open to everyone at <a href="/">pocus-cases.vercel.app</a>.
         </p>
       </div>
     </>
+  );
+}
+
+/**
+ * Demonstration reviewers: a name (self-reported) and the shared access code. No
+ * email; each sign-in gets its own read-only identity. Compiled in only for
+ * demonstration builds (VITE_DEMO_ACCESS=true).
+ */
+function DemoSignIn() {
+  const { session, signOut } = useAuth();
+  const [name, setName] = useState('');
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  async function go(e: FormEvent) {
+    e.preventDefault();
+    setErr(null);
+    setBusy(true);
+    try {
+      if (session) await signOut(); // an ended demonstration session, for instance
+      await redeemDemoCode(name, code);
+      setCode('');
+    } catch (x) {
+      setErr(x instanceof Error ? x.message : String(x));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="card" style={{ marginTop: 18, ['--accent' as any]: 'var(--clay)' }} data-testid="demo-signin">
+      <h3>Demonstration reviewers</h3>
+      <p className="small muted" style={{ marginTop: 0 }}>
+        Read-only access to a demonstration with fictional residents. Enter your name and the access code you were given — no email needed.
+      </p>
+      <form className="stack" onSubmit={go}>
+        <label className="field">
+          Your name
+          <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required autoComplete="name" data-testid="demo-name" />
+        </label>
+        <label className="field">
+          Access code
+          <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} required autoComplete="off" spellCheck={false}
+            className="mono" placeholder="XXXX-XXXX-XXXX-XXXX" maxLength={24} data-testid="demo-code" />
+        </label>
+        <button className="btn" type="submit" disabled={busy || !name.trim() || code.replace(/[^A-Za-z0-9]/g, '').length < 16} data-testid="demo-submit">
+          {busy ? 'Checking…' : 'Enter the demonstration'}
+        </button>
+        {err && <div className="notice error" role="alert" data-testid="demo-error">{err}</div>}
+      </form>
+    </div>
   );
 }

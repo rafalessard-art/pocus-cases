@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+import { getView, resetView, setView, useView } from './viewMode';
 
 export type Role = 'learner' | 'faculty' | 'admin' | 'reviewer';
 export type Profile = {
@@ -24,6 +25,10 @@ export type Access = {
   aal: 'aal1' | 'aal2';
   admin_mfa_required: boolean;
   environment: string | null;
+  /** Demonstration access is switched on for this database (never in production). */
+  demo_access_enabled?: boolean;
+  /** The owner is previewing the reviewer experience (requests carry the preview header). */
+  preview?: boolean;
   demo: { display_name: string; expires_at: string } | null;
 };
 
@@ -63,8 +68,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       supabase.rpc('my_access'),
       supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
     ]);
-    setProfile(data && data.active ? (data as Profile) : null);
-    setAccess(acc.error ? null : (acc.data as Access));
+    const a = acc.error ? null : (acc.data as Access);
+    // In the owner's reviewer preview the database answers as a reviewer; show the reviewer interface.
+    setProfile(data && data.active ? ({ ...(data as Profile), role: a?.role === 'reviewer' ? 'reviewer' : (data as Profile).role }) : null);
+    setAccess(a);
+    if (a && a.role !== 'reviewer' && getView().previewAsReviewer) setView({ previewAsReviewer: false });
     setAal({ current: lvl.data?.currentLevel ?? null, next: lvl.data?.nextLevel ?? null });
   }, []);
 
@@ -89,6 +97,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [loadProfile]);
 
+  // Read-only whenever a reviewer (or the owner's preview) is signed in, or the owner is viewing a fictional resident.
+  const view = useView();
+  const readOnly = profile?.role === 'reviewer' || view.previewAsReviewer || !!view.actingLearner;
+  useEffect(() => {
+    if (getView().readOnly !== readOnly) setView({ readOnly });
+  }, [readOnly]);
+
   const mfaChallengeNeeded = !!session && aal.next === 'aal2' && aal.current !== 'aal2';
   const mfaEnrollmentNeeded =
     !!session && !mfaChallengeNeeded && access?.profile_role === 'admin' && access.admin_mfa_required && access.aal !== 'aal2';
@@ -103,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refresh: () => loadProfile(session),
     signOut: async () => {
       await supabase.auth.signOut();
+      resetView();
       setProfile(null);
       setAccess(null);
     },
@@ -114,3 +130,5 @@ export const useAuth = () => useContext(Ctx);
 export const isStaff = (p: Profile | null) => p?.role === 'faculty' || p?.role === 'admin';
 export const isAdmin = (p: Profile | null) => p?.role === 'admin';
 export const isReviewer = (p: Profile | null) => p?.role === 'reviewer';
+/** The signed-in person is the owner (an administrator), whatever view they are in. */
+export const isOwner = (a: Access | null) => a?.profile_role === 'admin';

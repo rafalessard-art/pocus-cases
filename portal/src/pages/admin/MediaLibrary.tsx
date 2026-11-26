@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Page } from '../../components/Layout';
 import { UltrasoundPlayer } from '../../components/UltrasoundPlayer';
-import { Badge, Empty, ErrorNote, Modal, Spinner, fmtDate, useLoad } from '../../components/ui';
+import { Badge, Empty, ErrorNote, Modal, Spinner, fmtDate, useLoad, WriteButton } from '../../components/ui';
 import { AUTH_LABEL, domains as loadDomains, mediaLibrary, mediaReady, pocusCourse, type Domain, type MediaAsset, type MediaVersion } from '../../lib/content';
 import { ACCEPTED, NEEDS_CONVERSION, formatBytes, keyFromFilename, sha256, signedUrls } from '../../lib/media';
 import { supabase } from '../../lib/supabase';
@@ -194,9 +194,9 @@ export function MediaLibrary() {
               </table>
             </div>
             <div className="row">
-              <button className="btn" onClick={uploadAll} disabled={busy || !queue.some((x) => x.status === 'ready')} data-testid="upload-all">
+              <WriteButton className="btn" onClick={uploadAll} disabled={busy || !queue.some((x) => x.status === 'ready')} data-testid="upload-all">
                 {busy ? 'Uploading…' : `Upload ${queue.filter((x) => x.status === 'ready').length} file(s)`}
-              </button>
+              </WriteButton>
               <button className="btn secondary" onClick={() => setQueue((qq) => qq.filter((x) => x.status === 'uploading'))} disabled={busy}>Clear list</button>
             </div>
           </div>
@@ -332,9 +332,9 @@ function AssetModal({ asset, domains, onClose, onChanged }: { asset: MediaAsset;
             <label className="field">Attribution<input type="text" value={a.attribution} onChange={(e) => setA({ ...a, attribution: e.target.value })} /></label>
             <label className="field">Licence / permission<input type="text" value={a.license} onChange={(e) => setA({ ...a, license: e.target.value })} /></label>
           </div>
-          <button className="btn secondary" onClick={() => save({ title: a.title, description: a.description, domain_key: a.domain_key, tags: a.tags, source: a.source, attribution: a.attribution, license: a.license })}>
+          <WriteButton className="btn secondary" onClick={() => save({ title: a.title, description: a.description, domain_key: a.domain_key, tags: a.tags, source: a.source, attribution: a.attribution, license: a.license })}>
             Save details
-          </button>
+          </WriteButton>
           <div className="panel stack">
             <strong>Governance</strong>
             <label className="field">Authorization for educational use
@@ -358,9 +358,9 @@ function AssetModal({ asset, domains, onClose, onChanged }: { asset: MediaAsset;
               {replacing !== null ? `Uploading ${replacing}%…` : 'Replace with new version…'}
               <input type="file" hidden accept={a.kind === 'video' ? 'video/mp4,video/webm' : 'image/*'} onChange={(e) => e.target.files?.[0] && replace(e.target.files[0])} />
             </label>
-            <button className="btn ghost small" onClick={() => save({ archived_at: a.archived_at ? null : new Date().toISOString() } as Partial<MediaAsset>)}>
+            <WriteButton className="btn ghost small" onClick={() => save({ archived_at: a.archived_at ? null : new Date().toISOString() } as Partial<MediaAsset>)}>
               {a.archived_at ? 'Unarchive' : 'Archive'}
-            </button>
+            </WriteButton>
           </div>
           <p className="small muted">Replacing creates a new version. Questions in published exams keep the version learners saw; drafts can be updated.</p>
         </div>

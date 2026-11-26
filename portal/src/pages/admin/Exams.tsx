@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Page } from '../../components/Layout';
-import { Badge, Confirm, Empty, ErrorNote, Modal, Spinner, fmtDate, useLoad } from '../../components/ui';
+import { Badge, Confirm, Empty, ErrorNote, Modal, Spinner, fmtDate, useLoad, WriteButton } from '../../components/ui';
 import { cohorts as loadCohorts, pocusCourse } from '../../lib/content';
 import { rpc, supabase } from '../../lib/supabase';
 
@@ -32,7 +32,7 @@ export function ExamsAdmin() {
         <div className="row">
           <input type="text" placeholder="New exam title, e.g. POCUS End-of-Block Examination" value={title} onChange={(e) => setTitle(e.target.value)}
             style={{ flex: 1, minWidth: 260 }} aria-label="New exam title" data-testid="new-exam-title" />
-          <button className="btn" disabled={!title.trim() || !course.data} onClick={create} data-testid="create-exam">Create exam</button>
+          <WriteButton className="btn" disabled={!title.trim() || !course.data} onClick={create} data-testid="create-exam">Create exam</WriteButton>
         </div>
         <ErrorNote error={err} />
       </div>
@@ -194,9 +194,9 @@ function VersionPanel({ v, onChanged }: { v: Version; onChanged: (selectId?: str
         <div className="notice">
           Version {v.version} is <strong>{v.status}</strong>{v.published_at ? ` (published ${fmtDate(v.published_at)})` : ''}. It is frozen so that learners'
           results remain reproducible.{' '}
-          <button className="btn small secondary" onClick={async () => { try { const id = await rpc<string>('new_exam_draft', { p_exam_id: v.exam_id }); onChanged(id); } catch (e) { setErr(e); } }}>
+          <WriteButton className="btn small secondary" onClick={async () => { try { const id = await rpc<string>('new_exam_draft', { p_exam_id: v.exam_id }); onChanged(id); } catch (e) { setErr(e); } }}>
             Create new draft from this version
-          </button>
+          </WriteButton>
         </div>
       )}
       <div className="split">
@@ -239,7 +239,7 @@ function VersionPanel({ v, onChanged }: { v: Version; onChanged: (selectId?: str
             {draft && (
               <div className="row" style={{ marginTop: 12 }}>
                 <button className="btn secondary" onClick={() => setAdding(true)} data-testid="add-questions">+ Add questions</button>
-                <button className="btn" disabled={!dirty} onClick={() => saveItems()}>Save question list</button>
+                <WriteButton className="btn" disabled={!dirty} onClick={() => saveItems()}>Save question list</WriteButton>
                 {dirty && <span className="small muted">Unsaved changes</span>}
               </div>
             )}
@@ -281,7 +281,7 @@ function VersionPanel({ v, onChanged }: { v: Version; onChanged: (selectId?: str
               <label className="check"><input type="checkbox" checked={s.allow_resume} onChange={(e) => setS({ ...s, allow_resume: e.target.checked })} /> Allow resuming an interrupted attempt</label>
               <label className="check"><input type="checkbox" checked={s.shuffle_questions} onChange={(e) => setS({ ...s, shuffle_questions: e.target.checked })} /> Shuffle question order</label>
               <label className="check"><input type="checkbox" checked={s.shuffle_options} onChange={(e) => setS({ ...s, shuffle_options: e.target.checked })} /> Shuffle answer options</label>
-              {draft && <button className="btn secondary" onClick={saveSettings} data-testid="save-settings">Save settings</button>}
+              {draft && <WriteButton className="btn secondary" onClick={saveSettings} data-testid="save-settings">Save settings</WriteButton>}
             </fieldset>
           </section>
           {draft && (
@@ -292,15 +292,15 @@ function VersionPanel({ v, onChanged }: { v: Version; onChanged: (selectId?: str
                   {issues.map((i, k) => <li key={k} style={{ color: i.level === 'error' ? 'var(--crisis)' : 'var(--warn-ink)' }}>{i.position ? `Q${i.position}: ` : ''}{i.message}</li>)}
                 </ul>
               )}
-              <button className="btn" disabled={busy || errorsCount > 0 || items.length === 0} onClick={() => setConfirmPub(true)} data-testid="publish">
+              <WriteButton className="btn" disabled={busy || errorsCount > 0 || items.length === 0} onClick={() => setConfirmPub(true)} data-testid="publish">
                 Publish version {v.version}
-              </button>
+              </WriteButton>
             </section>
           )}
           {v.status === 'published' && (
-            <button className="btn ghost small" onClick={async () => { try { await rpc('retire_exam_version', { p_exam_version_id: v.id }); onChanged(v.id); } catch (e) { setErr(e); } }}>
+            <WriteButton className="btn ghost small" onClick={async () => { try { await rpc('retire_exam_version', { p_exam_version_id: v.id }); onChanged(v.id); } catch (e) { setErr(e); } }}>
               Retire this version (closes it to new attempts)
-            </button>
+            </WriteButton>
           )}
           {msg && <div className="notice ok small" role="status">{msg}</div>}
           <ErrorNote error={err} />
@@ -402,7 +402,7 @@ function Assignments({ version }: { version: Version }) {
           </label>
           <label className="field">Opens (optional)<input type="datetime-local" value={opens} onChange={(e) => setOpens(e.target.value)} /></label>
           <label className="field">Due (optional)<input type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} /></label>
-          <button className="btn" disabled={!target} onClick={add} data-testid="assign">Assign</button>
+          <WriteButton className="btn" disabled={!target} onClick={add} data-testid="assign">Assign</WriteButton>
         </div>
       )}
       <ErrorNote error={err} />
@@ -413,7 +413,7 @@ function Assignments({ version }: { version: Version }) {
               <tr key={a.id} style={{ opacity: a.archived_at ? 0.5 : 1 }}>
                 <td>{a.cohorts?.name ? `Cohort: ${a.cohorts.name}` : a.profiles?.full_name || a.profiles?.email}</td>
                 <td>{fmtDate(a.opens_at)}</td><td>{fmtDate(a.due_at)}</td><td>{fmtDate(a.created_at, false)}</td>
-                <td>{!a.archived_at && <button className="btn ghost small" onClick={async () => { await supabase.from('assignments').update({ archived_at: new Date().toISOString() }).eq('id', a.id); list.reload(); }}>Withdraw</button>}</td>
+                <td>{!a.archived_at && <WriteButton className="btn ghost small" onClick={async () => { await supabase.from('assignments').update({ archived_at: new Date().toISOString() }).eq('id', a.id); list.reload(); }}>Withdraw</WriteButton>}</td>
               </tr>
             ))}
           </tbody></table>

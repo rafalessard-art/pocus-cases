@@ -77,6 +77,31 @@ export const SECTIONS = [
     ['10-attempt-review', 'Attempt review and grading'],
     ['11-exam-results', 'Exam results'],
   ]],
+  ['Demonstration access — owner', [
+    ['w1-owner-demo-access', 'Owner: demonstration access (code masked)'],
+    ['w2-owner-resident-perspective', 'Owner: Resident perspective (a fictional resident, read-only)'],
+    ['w3-owner-preview', 'Owner: previewing the reviewer experience'],
+    ['w20-owner-feedback-inbox', 'Owner: feedback inbox'],
+  ]],
+  ['Demonstration access — reviewer', [
+    ['w4-reviewer-sign-in', 'Reviewer sign-in (name and shared code)'],
+    ['w5-reviewer-invalid-code', 'Invalid code'],
+    ['w6-reviewer-landing', 'Reviewer landing — choose a perspective'],
+    ['w7-resident-home', 'Resident perspective — home'],
+    ['w8-resident-requirements', 'Resident perspective — requirements and scans'],
+    ['w9-resident-evidence', 'Resident perspective — evidence'],
+    ['w10-resident-exams', 'Resident perspective — examinations (walkthrough instead of attempts)'],
+    ['w11-walkthrough-question', 'Examination walkthrough — question with a simulated loop'],
+    ['w12-walkthrough-feedback', 'Examination walkthrough — result and feedback view'],
+    ['w13-faculty-dashboard', 'Faculty perspective — dashboard'],
+    ['w14-faculty-block', 'Faculty perspective — block overview'],
+    ['w15-faculty-workspace', 'Faculty perspective — resident workspace (write controls disabled)'],
+    ['w16-admin-home', 'Admin perspective — admin home'],
+    ['w17-admin-exams', 'Admin perspective — examinations (demonstration exam only)'],
+    ['w18-feedback-form', 'Feedback — form'],
+    ['w19-feedback-sent', 'Feedback — sent'],
+    ['w21-reviewer-access-ended', 'Reviewer — access ended by the owner'],
+  ]],
   ['ITER Quick Copy', [
     ['12c-iter-quick-copy', 'ITER Quick Copy — draft'],
     ['12d-iter-approved', 'Draft approved — ready for One45'],
@@ -111,6 +136,8 @@ function localStack() {
   const s = {
     api: explicit ?? env.API_URL,
     anonKey: process.env.LOCAL_SUPABASE_ANON_KEY ?? env.ANON_KEY ?? env.PUBLISHABLE_KEY,
+    // used only to put the synthetic demonstration files into LOCAL Storage (tests/e2e/reviewer.spec.ts)
+    serviceKey: process.env.LOCAL_SUPABASE_SERVICE_KEY ?? env.SERVICE_ROLE_KEY ?? env.SECRET_KEY,
     db: process.env.DATABASE_URL ?? env.DB_URL,
     mailpit: process.env.LOCAL_MAILPIT_URL ?? env.MAILPIT_URL ?? env.INBUCKET_URL,
     viaCli: !explicit,
@@ -214,7 +241,8 @@ async function main() {
   console.log('building the site against the local stack…');
   sh(process.execPath, ['scripts/build-site.mjs'], {
     stdio: 'inherit',
-    env: { ...process.env, VERCEL_ENV: '', VITE_SUPABASE_URL: site, VITE_SUPABASE_ANON_KEY: stack.anonKey, VITE_SUPABASE_PUBLISHABLE_KEY: '' },
+    // local builds include demonstration (reviewer) sign-in so the reviewer journey can be tested
+    env: { ...process.env, VERCEL_ENV: '', VITE_SUPABASE_URL: site, VITE_SUPABASE_ANON_KEY: stack.anonKey, VITE_SUPABASE_PUBLISHABLE_KEY: '', VITE_DEMO_ACCESS: 'true' },
   });
 
   assertBuiltForLocal(site);
@@ -230,7 +258,8 @@ async function main() {
   const run = await new Promise((done) => {
     const child = spawn('npx', ['playwright', 'test'], {
       cwd: root, stdio: 'inherit',
-      env: { ...process.env, E2E_BASE_URL: site, E2E_MAIL_URL: `${site}/__mail/messages`, DATABASE_URL: stack.db, E2E_SHOTS: shotsDir, E2E_RESET_CMD: '' },
+      env: { ...process.env, E2E_BASE_URL: site, E2E_MAIL_URL: `${site}/__mail/messages`, DATABASE_URL: stack.db, E2E_SHOTS: shotsDir, E2E_RESET_CMD: '',
+             E2E_STORAGE_URL: stack.api, E2E_SERVICE_KEY: stack.serviceKey ?? '', E2E_ANON_KEY: stack.anonKey },
     });
     child.on('exit', (code) => done({ status: code }));
     child.on('error', () => done({ status: 1 }));

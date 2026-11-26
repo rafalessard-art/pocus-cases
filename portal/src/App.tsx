@@ -3,6 +3,7 @@ import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { Layout, TopNav } from './components/Layout';
 import { Spinner } from './components/ui';
 import { isAdmin, isReviewer, isStaff, useAuth } from './lib/auth';
+import { useView } from './lib/viewMode';
 import { configured } from './lib/supabase';
 import { Curriculum } from './pages/Curriculum';
 import { ExamPlayer } from './pages/ExamPlayer';
@@ -10,6 +11,7 @@ import { ExamsList, LearnerHome } from './pages/LearnerHome';
 import { Login } from './pages/Login';
 import { MfaChallenge } from './pages/Mfa';
 import { Result } from './pages/Result';
+import { DemoWalkthrough, ReviewerHome } from './pages/Demo';
 // Staff-only screens are split into separate chunks so learners never download them.
 const AdminHome = lazy(() => import('./pages/admin/AdminHome').then((m) => ({ default: m.AdminHome })));
 const ExamsAdmin = lazy(() => import('./pages/admin/Exams').then((m) => ({ default: m.ExamsAdmin })));
@@ -30,39 +32,36 @@ const ItarSetup = lazy(() => import('./pages/admin/ItarSetup').then((m) => ({ de
 const MyEvidence = lazy(() => import('./pages/MyEvidence').then((m) => ({ default: m.MyEvidence })));
 const AccountSecurity = lazy(() => import('./pages/Account').then((m) => ({ default: m.AccountSecurity })));
 const MyRequirements = lazy(() => import('./pages/Requirements').then((m) => ({ default: m.Requirements })));
+const DemoAccess = lazy(() => import('./pages/admin/DemoAccess').then((m) => ({ default: m.DemoAccess })));
 
-function RequireAuth({ role }: { role?: 'staff' | 'admin' }) {
+/**
+ * Route guard. Reviewers may open the learner, faculty and admin screens (read-only,
+ * fictional data — the database decides what they can read); learner screens need a
+ * fictional resident chosen first (staff keep their own access). role 'owner' is the real administrator only.
+ */
+function RequireAuth({ role }: { role?: 'staff' | 'admin' | 'owner' | 'learner' }) {
   const { loading, session, profile, noAccess, mfaChallengeNeeded, mfaEnrollmentNeeded } = useAuth();
+  const view = useView();
   const loc = useLocation();
   if (loading) return <Spinner />;
   if (session && mfaChallengeNeeded) return <Navigate to="/mfa" replace state={{ from: loc.pathname }} />;
   if (session && mfaEnrollmentNeeded && loc.pathname !== '/account') return <Navigate to="/account" replace />;
   if (!session || !profile || noAccess) return <Navigate to={{ pathname: "/login", hash: loc.hash }} replace state={{ from: loc.pathname }} />;
-  // Reviewer (demonstration) views arrive with perspective switching; until then reviewers see only the landing page.
-  if (isReviewer(profile) && loc.pathname !== '/') return <Navigate to="/" replace />;
-  if (role === 'staff' && !isStaff(profile)) return <Navigate to="/" replace />;
-  if (role === 'admin' && !isAdmin(profile)) return <Navigate to="/" replace />;
+  const reviewer = isReviewer(profile);
+  if (reviewer && (loc.pathname === '/account' || loc.pathname.startsWith('/exams/attempt/'))) return <Navigate to="/" replace />;
+  if (role === 'learner' && reviewer && !view.actingLearner) return <Navigate to="/" replace />;
+  if (role === 'staff' && !isStaff(profile) && !reviewer) return <Navigate to="/" replace />;
+  if (role === 'admin' && !isAdmin(profile) && !reviewer) return <Navigate to="/" replace />;
+  if (role === 'owner' && !isAdmin(profile)) return <Navigate to="/" replace />;
   return role ? <Suspense fallback={<Spinner />}><Outlet /></Suspense> : <Outlet />;
 }
 
 function Home() {
   const { profile } = useAuth();
+  const view = useView();
+  if (view.actingLearner) return <LearnerHome />;
   if (isReviewer(profile)) return <ReviewerHome />;
   return isStaff(profile) ? <Navigate to="/faculty" replace /> : <LearnerHome />;
-}
-
-function ReviewerHome() {
-  const { access } = useAuth();
-  return (
-    <div className="wrap narrow">
-      <p className="kicker">Demonstration access</p>
-      <h1>Welcome{access?.demo?.display_name ? `, ${access.demo.display_name}` : ''}</h1>
-      <p className="muted">
-        You have read-only access to a demonstration with fictional residents. The Resident, Faculty and Admin views are being prepared.
-        {access?.demo?.expires_at ? ` Your access ends ${new Date(access.demo.expires_at).toLocaleDateString()}.` : ''}
-      </p>
-    </div>
-  );
 }
 
 function NotConfigured() {
@@ -91,12 +90,15 @@ export function App() {
         <Route path="/exams/attempt/:attemptId" element={<ExamPlayer />} />
         <Route element={<Layout />}>
           <Route index element={<Home />} />
-          <Route path="/curriculum" element={<Curriculum />} />
-          <Route path="/exams" element={<ExamsList />} />
-          <Route path="/exams/result/:attemptId" element={<Result />} />
-          <Route path="/evidence" element={<Suspense fallback={<Spinner />}><MyEvidence /></Suspense>} />
-          <Route path="/requirements" element={<Suspense fallback={<Spinner />}><MyRequirements /></Suspense>} />
           <Route path="/account" element={<Suspense fallback={<Spinner />}><AccountSecurity /></Suspense>} />
+          <Route path="/demo/walkthrough/:versionId" element={<DemoWalkthrough />} />
+          <Route element={<RequireAuth role="learner" />}>
+            <Route path="/curriculum" element={<Curriculum />} />
+            <Route path="/exams" element={<ExamsList />} />
+            <Route path="/exams/result/:attemptId" element={<Result />} />
+            <Route path="/evidence" element={<MyEvidence />} />
+            <Route path="/requirements" element={<MyRequirements />} />
+          </Route>
           <Route element={<RequireAuth role="staff" />}>
             <Route path="/faculty" element={<FacultyDashboard />} />
             <Route path="/faculty/exams/:versionId" element={<ExamResults />} />
@@ -116,6 +118,9 @@ export function App() {
             <Route path="/admin/import" element={<ImportExam />} />
             <Route path="/admin/people" element={<People />} />
             <Route path="/admin/itar" element={<ItarSetup />} />
+          </Route>
+          <Route element={<RequireAuth role="owner" />}>
+            <Route path="/admin/demo-access" element={<DemoAccess />} />
           </Route>
           <Route path="*" element={<div className="wrap"><h1>Not found</h1><p><a href="/app/">Portal home</a></p></div>} />
         </Route>

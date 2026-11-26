@@ -29,7 +29,7 @@ const TYPES = {
   '.mp4': 'video/mp4', '.webm': 'video/webm', '.woff2': 'font/woff2', '.woff': 'font/woff', '.pdf': 'application/pdf',
   '.txt': 'text/plain; charset=utf-8', '.wasm': 'application/wasm',
 };
-const API_PREFIXES = ['/auth/v1', '/rest/v1', '/storage/v1'];
+const API_PREFIXES = ['/auth/v1', '/rest/v1', '/storage/v1', '/functions/v1'];
 
 /**
  * @param {object} o
