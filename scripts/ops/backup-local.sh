@@ -37,7 +37,7 @@ for repo in "$HOME/pocus-cases" "$PORTAL"; do
   if git -C "$repo" bundle verify "$b" >/dev/null 2>&1; then v=verified; else v=NOT-VERIFIED; fi
   branches=$(git -C "$repo" for-each-ref --format='%(refname:short)' refs/heads | tr '\n' ' ')
   unpushed=$(git -C "$repo" log --branches --not --remotes --oneline | wc -l | tr -d ' ')
-  say "$name: bundle $v · branches: $branches· commits not on GitHub: $unpushed"
+  say "$name: bundle $v · branches: ${branches}· commits not on GitHub: $unpushed"
   n=$( (cd "$repo" && git ls-files -z --others | tr '\0' '\n' | grep -Ev "$skip" | grep -c . ) || true)
   if [ "${n:-0}" -gt 0 ]; then
     mkdir -p "$OUT/$name-untracked-and-ignored"
